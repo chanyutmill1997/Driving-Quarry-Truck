@@ -1,10 +1,12 @@
 /**
  * หน้าจอสรุปรายงานและส่งออก Excel (Reports & Excel Export Component)
- * เพิ่มระบบ: เจาะลึกประวัติรายบุคคล (Individual Driver Deep-Dive Profile)
+ * เพิ่มระบบ: 
+ * 1) เจาะลึกประวัติรายบุคคล (Individual Driver Deep-Dive Profile)
+ * 2) กระทบยอดสิบล้อ vs แม็คโคร (Truck vs Excavator Reconciliation Audit Tab)
  */
 class ReportsView {
   constructor() {
-    this.viewMode = 'overview'; // 'overview' หรือ 'individual'
+    this.viewMode = 'overview'; // 'overview', 'individual', 'reconciliation'
     this.filterDateFrom = '';
     this.filterDateTo = '';
     this.filterVehicle = '';
@@ -34,16 +36,19 @@ class ReportsView {
               <span class="p-2 bg-emerald-500 text-slate-950 rounded-xl">📑</span>
               รายงานและสรุปยอดค่าจ้าง (Reports & Audits)
             </h1>
-            <p class="text-sm text-slate-400 mt-1">กรองดูภาพรวมตามช่วงเวลา หรือเจาะลึกดูประวัติรายคนขับอย่างละเอียด</p>
+            <p class="text-sm text-slate-400 mt-1">กรองดูภาพรวม, เจาะลึกรายคนขับ หรือตรวจสอบการกระทบยอดสิบล้อ vs แม็คโคร</p>
           </div>
           
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <!-- View Mode Switcher -->
             <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800">
-              <button onclick="reportsView.setViewMode('overview')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('overview')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 สรุปภาพรวม
               </button>
-              <button onclick="reportsView.setViewMode('individual')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('reconciliation')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'reconciliation' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                ⚖️ กระทบยอดสิบล้อ/แม็คโคร
+              </button>
+              <button onclick="reportsView.setViewMode('individual')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 👤 เจาะลึกรายคน
               </button>
             </div>
@@ -51,12 +56,12 @@ class ReportsView {
             <!-- Export Excel Button -->
             <button onclick="reportsView.exportToExcel()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black rounded-xl text-xs shadow-lg transition flex items-center gap-1.5">
               <i data-lucide="download" class="w-4 h-4"></i>
-              Export Excel
+              Export Excel (3 ชีท)
             </button>
           </div>
         </div>
 
-        ${this.viewMode === 'overview' ? this.renderOverviewMode(trips, trucks, drivers) : this.renderIndividualMode(trips, drivers)}
+        ${this.renderActiveView(trips, excLogs, trucks, drivers)}
 
       </div>
     `;
@@ -65,6 +70,13 @@ class ReportsView {
   setViewMode(mode) {
     this.viewMode = mode;
     window.app.render();
+  }
+
+  renderActiveView(trips, excLogs, trucks, drivers) {
+    if (this.viewMode === 'overview') return this.renderOverviewMode(trips, trucks, drivers);
+    if (this.viewMode === 'reconciliation') return this.renderReconciliationMode(trips, excLogs, trucks);
+    if (this.viewMode === 'individual') return this.renderIndividualMode(trips, drivers);
+    return '';
   }
 
   // 1. โหมดภาพรวม (Overview Mode)
@@ -173,29 +185,28 @@ class ReportsView {
           <table class="w-full text-left text-xs text-slate-300">
             <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
               <tr>
-                <th class="p-3">ลำดับ</th>
-                <th class="p-3">ชื่อ-สกุล คนขับ</th>
+                <th class="p-3">ชื่อคนขับ</th>
                 <th class="p-3">เบอร์โทรศัพท์</th>
-                <th class="p-3">เบอร์รถล่าสุด</th>
-                <th class="p-3 text-right">จำนวนเที่ยว</th>
-                <th class="p-3 text-right">ยอดเงินที่ต้องจ่าย</th>
-                <th class="p-3 text-center">ดูเจาะลึก</th>
+                <th class="p-3">รถประจำ</th>
+                <th class="p-3 text-center">จำนวนเที่ยววิ่ง</th>
+                <th class="p-3 text-right">ยอดรวมค่าจ้าง (บาท)</th>
+                <th class="p-3 text-right">การจัดการ</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-800">
-              ${driverSummaries.length === 0 ? `
-                <tr><td colspan="7" class="p-6 text-center text-slate-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>
-              ` : driverSummaries.map((d, idx) => `
-                <tr class="hover:bg-slate-800/50">
-                  <td class="p-3 font-bold text-slate-400">${idx + 1}</td>
-                  <td class="p-3 font-bold text-white">${d.name}</td>
+              ${driverSummaries.map(d => `
+                <tr class="hover:bg-slate-800/50 cursor-pointer" onclick="reportsView.openDrilldown('${d.name}')">
+                  <td class="p-3 font-bold text-white flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-black text-[10px]">👤</span>
+                    ${d.name}
+                  </td>
                   <td class="p-3 text-slate-400">${d.phone || '-'}</td>
-                  <td class="p-3 font-semibold text-blue-400">${d.truck || '-'}</td>
-                  <td class="p-3 text-right font-black text-white">${d.trips}</td>
-                  <td class="p-3 text-right font-black text-emerald-400 text-sm">฿${d.totalAmount.toLocaleString()}</td>
-                  <td class="p-3 text-center">
-                    <button onclick="reportsView.openDrilldown('${d.name}')" class="px-2.5 py-1 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold rounded-lg text-[11px] shadow">
-                      🔍 เจาะลึก
+                  <td class="p-3 font-mono font-bold text-slate-300">${d.truck || '-'}</td>
+                  <td class="p-3 text-center font-black text-blue-400">${d.trips} เที่ยว</td>
+                  <td class="p-3 text-right font-black text-emerald-400">฿${d.totalAmount.toLocaleString()}</td>
+                  <td class="p-3 text-right">
+                    <button class="px-2.5 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-slate-950 font-black rounded-lg transition text-[11px]">
+                      เจาะลึก ➔
                     </button>
                   </td>
                 </tr>
@@ -207,113 +218,247 @@ class ReportsView {
     `;
   }
 
-  // 2. โหมดเจาะลึกรายคน (Individual Drill-Down Mode)
-  renderIndividualMode(trips, drivers) {
-    const driverTrips = trips.filter(t => t.driverName === this.selectedDrilldownDriver);
-    
-    let filteredTrips = driverTrips.filter(t => {
+  // 2. NEW: โหมดกระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Mode)
+  renderReconciliationMode(trips, excLogs, trucks) {
+    let filteredTrips = trips.filter(t => {
       if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
       if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      if (this.filterVehicle && t.truckPlate !== this.filterVehicle) return false;
       return true;
     });
 
-    const totalAmount = filteredTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
-    const vehiclesUsed = [...new Set(filteredTrips.map(t => t.truckPlate))];
-    const driverObj = drivers.find(d => d.name === this.selectedDrilldownDriver) || {};
+    let filteredExcLogs = excLogs.filter(l => {
+      if (this.filterDateFrom && l.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && l.date > this.filterDateTo) return false;
+      if (this.filterVehicle && l.targetTruckPlate !== this.filterVehicle) return false;
+      return true;
+    });
+
+    const totalTruck = filteredTrips.length;
+    const totalExc = filteredExcLogs.length;
+    const netDiff = totalTruck - totalExc;
+
+    // แยกรายเบอร์รถสิบล้อ
+    const truckMap = {};
+    trucks.forEach(t => {
+      truckMap[t.code] = {
+        code: t.code,
+        capacityTon: t.capacity_ton || 30,
+        driverName: t.driver_name || '-',
+        truckReported: 0,
+        excavatorRecorded: 0
+      };
+    });
+
+    filteredTrips.forEach(t => {
+      const c = t.truckPlate || 'UNKNOWN';
+      if (!truckMap[c]) {
+        truckMap[c] = { code: c, capacityTon: t.capacityTon || 30, driverName: t.driverName || '-', truckReported: 0, excavatorRecorded: 0 };
+      }
+      truckMap[c].truckReported += 1;
+    });
+
+    filteredExcLogs.forEach(l => {
+      const c = l.targetTruckPlate || 'UNKNOWN';
+      if (!truckMap[c]) {
+        truckMap[c] = { code: c, capacityTon: 30, driverName: '-', truckReported: 0, excavatorRecorded: 0 };
+      }
+      truckMap[c].excavatorRecorded += 1;
+    });
+
+    const reconList = Object.values(truckMap)
+      .filter(item => item.truckReported > 0 || item.excavatorRecorded > 0)
+      .map(item => {
+        const diff = item.truckReported - item.excavatorRecorded;
+        return {
+          ...item,
+          diff,
+          status: diff === 0 ? 'match' : (diff > 0 ? 'truck_over' : 'exc_over')
+        };
+      })
+      .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+
+    const matchCount = reconList.filter(x => x.status === 'match').length;
+    const matchRate = reconList.length > 0 ? Math.round((matchCount / reconList.length) * 100) : 100;
 
     return `
-      <!-- Driver Selector & Profile Header -->
-      <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-lg space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <div class="w-14 h-14 rounded-2xl bg-blue-500 text-slate-950 flex items-center justify-center font-black text-3xl shadow-md">
-              👤
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-xl font-black text-white">${this.selectedDrilldownDriver}</h2>
-                <span class="text-xs bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/30">
-                  ${driverObj.nickname ? 'น้า' + driverObj.nickname : 'คนขับ'}
-                </span>
-              </div>
-              <p class="text-xs text-slate-400 mt-1">เบอร์โทร: <span class="text-slate-200 font-mono">${driverObj.phone || '-'}</span> | รถที่ขับ: <span class="text-blue-300 font-bold">${vehiclesUsed.join(', ') || 'ไม่มี'}</span></p>
-            </div>
-          </div>
-
-          <!-- Driver Picker Dropdown -->
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-slate-400 font-bold">เลือกคนขับ:</label>
-            <select onchange="reportsView.openDrilldown(this.value)" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none">
-              ${drivers.map(d => `<option value="${d.name}" ${d.name === this.selectedDrilldownDriver ? 'selected' : ''}>${d.name} (${d.nickname || ''})</option>`).join('')}
-            </select>
+      <!-- Filter Controls Bar -->
+      <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider">ตัวกรองช่วงเวลากระทบยอด (Reconciliation Filter)</h3>
+          <div class="flex items-center gap-1.5">
+            <button onclick="reportsView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">วันนี้</button>
+            <button onclick="reportsView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">7 วัน</button>
+            <button onclick="reportsView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">เดือนนี้</button>
+            <button onclick="reportsView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-blue-400">ทั้งหมด</button>
           </div>
         </div>
-
-        <!-- Date Filter for Individual -->
-        <div class="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-400 font-bold">ช่วงวันที่:</span>
-            <input type="date" value="${this.filterDateFrom}" onchange="reportsView.handleDateFrom(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
-            <span class="text-xs text-slate-500">ถึง</span>
-            <input type="date" value="${this.filterDateTo}" onchange="reportsView.handleDateTo(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
+            <div class="relative flex items-center">
+              <input type="date" id="filter-date-from" value="${this.filterDateFrom}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 pr-9 text-white text-xs focus:outline-none cursor-pointer">
+              <button onclick="document.getElementById('filter-date-from')?.showPicker ? document.getElementById('filter-date-from').showPicker() : document.getElementById('filter-date-from')?.focus()" class="absolute right-2.5 text-blue-400"><i data-lucide="calendar" class="w-4 h-4"></i></button>
+            </div>
           </div>
-
-          <div class="flex items-center gap-4 text-xs font-bold">
-            <span class="text-slate-300">จำนวนเที่ยว: <b class="text-blue-400 text-sm font-black">${filteredTrips.length}</b> เที่ยว</span>
-            <span class="text-slate-300">ยอดเงินรวม: <b class="text-emerald-400 text-sm font-black">฿${totalAmount.toLocaleString()}</b> บาท</span>
+          <div>
+            <label class="block text-xs text-slate-400 font-bold mb-1">ถึงวันที่</label>
+            <div class="relative flex items-center">
+              <input type="date" id="filter-date-to" value="${this.filterDateTo}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 pr-9 text-white text-xs focus:outline-none cursor-pointer">
+              <button onclick="document.getElementById('filter-date-to')?.showPicker ? document.getElementById('filter-date-to').showPicker() : document.getElementById('filter-date-to')?.focus()" class="absolute right-2.5 text-blue-400"><i data-lucide="calendar" class="w-4 h-4"></i></button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 font-bold mb-1">กรองเบอร์รถ</label>
+            <select id="filter-vehicle" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+              <option value="">-- รถทุกคัน --</option>
+              ${trucks.map(t => `<option value="${t.code}" ${this.filterVehicle === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
+            </select>
           </div>
         </div>
       </div>
 
-      <!-- Detailed Trip Log with Photos -->
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-        <h3 class="text-base font-black text-white flex items-center gap-2">
-          <i data-lucide="list" class="w-4 h-4 text-blue-400"></i>
-          ประวัติการวิ่งรายรอบและรูปถ่าย GPS (${filteredTrips.length} รอบ)
-        </h3>
+      <!-- Reconciliation KPI Cards Strip -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-blue-500/40 p-5 rounded-2xl">
+          <span class="text-xs text-slate-400 font-bold uppercase">🚚 สิบล้อรายงานรับหิน</span>
+          <p class="text-2xl font-black text-blue-400 mt-1">${totalTruck.toLocaleString()} เที่ยว</p>
+        </div>
+        <div class="bg-slate-900 border border-purple-500/40 p-5 rounded-2xl">
+          <span class="text-xs text-slate-400 font-bold uppercase">🚜 แม็คโครบันทึกตัก</span>
+          <p class="text-2xl font-black text-purple-400 mt-1">${totalExc.toLocaleString()} คัน</p>
+        </div>
+        <div class="bg-slate-900 border ${netDiff !== 0 ? 'border-amber-500/50 bg-amber-950/20' : 'border-emerald-500/50'} p-5 rounded-2xl">
+          <span class="text-xs text-slate-400 font-bold uppercase">⚖️ ผลต่างสุทธิ</span>
+          <p class="text-2xl font-black ${netDiff === 0 ? 'text-emerald-400' : (netDiff > 0 ? 'text-amber-400' : 'text-purple-400')} mt-1 font-mono">
+            ${netDiff > 0 ? `+${netDiff} เที่ยว` : (netDiff < 0 ? `${netDiff} คัน` : '0 (ตรงกัน 100%)')}
+          </p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+          <span class="text-xs text-slate-400 font-bold uppercase">🎯 อัตราความสอดคล้อง</span>
+          <p class="text-2xl font-black ${matchRate >= 90 ? 'text-emerald-400' : 'text-amber-400'} mt-1">${matchRate}%</p>
+        </div>
+      </div>
 
-        <div class="overflow-x-auto max-h-[500px]">
+      <!-- Reconciliation Full Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black text-white flex items-center gap-2">
+            <i data-lucide="scale" class="w-5 h-5 text-amber-400"></i>
+            ตารางกระทบยอดเปรียบเทียบสิบล้อ vs แม็คโครรายคัน (${reconList.length} คัน)
+          </h2>
+          <span class="text-xs text-slate-400">คลิกที่ปุ่มเพื่อดูไทม์ไลน์เปรียบเทียบ</span>
+        </div>
+
+        <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
               <tr>
-                <th class="p-3">รอบที่</th>
-                <th class="p-3">วันที่-เวลา</th>
-                <th class="p-3">รถที่ใช้</th>
-                <th class="p-3">ประเภทงานวิ่ง</th>
-                <th class="p-3 text-right">ยอดเงิน</th>
-                <th class="p-3 text-center">รูปรับหิน</th>
-                <th class="p-3 text-center">รูปเทหิน</th>
-                <th class="p-3 text-center">พิกัด GPS</th>
+                <th class="p-3">เบอร์รถสิบล้อ</th>
+                <th class="p-3">คนขับประจำ</th>
+                <th class="p-3 text-center">พิกัดตัน</th>
+                <th class="p-3 text-center">สิบล้อแจ้งวิ่ง</th>
+                <th class="p-3 text-center">แม็คโครตักให้</th>
+                <th class="p-3 text-center">ผลต่าง (Diff)</th>
+                <th class="p-3 text-center">สถานะความถูกต้อง</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-800">
-              ${filteredTrips.length === 0 ? `
-                <tr><td colspan="8" class="p-6 text-center text-slate-500">ไม่มีประวัติการวิ่งของ ${this.selectedDrilldownDriver} ในช่วงเวลานี้</td></tr>
-              ` : filteredTrips.map(t => `
-                <tr class="hover:bg-slate-800/50">
-                  <td class="p-3 font-black text-blue-400">#${t.roundNumber}</td>
-                  <td class="p-3 text-slate-400">${t.timestamp || t.date}</td>
-                  <td class="p-3 font-bold text-white">${t.truckPlate}</td>
-                  <td class="p-3 text-slate-300">${t.jobTypeName}</td>
-                  <td class="p-3 text-right font-black text-emerald-400">฿${t.amount}</td>
-                  <td class="p-3 text-center">
-                    <button onclick="adminDashboard.viewPhoto('${t.loadPhotoBase64}', 'จุดรับหิน', '${t.truckPlate}', '${t.timestamp}')" class="px-2 py-1 bg-blue-900/60 hover:bg-blue-800 text-blue-300 rounded font-bold text-[10px]">
-                      📷 ดูรูปรับ
-                    </button>
+              ${reconList.map(item => `
+                <tr class="hover:bg-slate-800/50 ${item.diff !== 0 ? 'bg-amber-950/10' : ''}">
+                  <td class="p-3 font-bold text-white">🚚 ${item.code}</td>
+                  <td class="p-3 text-slate-400">${item.driverName || '-'}</td>
+                  <td class="p-3 text-center font-bold text-slate-300">${item.capacityTon} ตัน</td>
+                  <td class="p-3 text-center font-bold text-blue-400">${item.truckReported} เที่ยว</td>
+                  <td class="p-3 text-center font-bold text-purple-400">${item.excavatorRecorded} คัน</td>
+                  <td class="p-3 text-center font-mono font-black ${item.diff === 0 ? 'text-emerald-400' : (item.diff > 0 ? 'text-amber-400' : 'text-purple-400')}">
+                    ${item.diff > 0 ? `+${item.diff}` : (item.diff < 0 ? `${item.diff}` : '0')}
                   </td>
                   <td class="p-3 text-center">
-                    <button onclick="adminDashboard.viewPhoto('${t.dumpPhotoBase64}', 'จุดเทหิน', '${t.truckPlate}', '${t.timestamp}')" class="px-2 py-1 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 rounded font-bold text-[10px]">
-                      📷 ดูรูปเท
-                    </button>
-                  </td>
-                  <td class="p-3 text-center text-[10px] text-slate-400 font-mono">
-                    ${t.loadLat || '14.88'}, ${t.loadLng || '102.01'}
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'match' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : (item.status === 'truck_over' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-purple-950 text-purple-300 border border-purple-800')}">
+                      ${item.status === 'match' ? '✓ ตรงกัน 100%' : (item.status === 'truck_over' ? `⚠️ สิบล้อแจ้งเกิน ${item.diff}` : `แม็คโครตักเกิน ${Math.abs(item.diff)}`)}
+                    </span>
                   </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
+      </div>
+    `;
+  }
+
+  // 3. โหมดเจาะลึกรายคน (Individual Mode)
+  renderIndividualMode(trips, drivers) {
+    const driverName = this.selectedDrilldownDriver;
+    const driverTrips = trips.filter(t => t.driverName === driverName);
+    const totalAmount = driverTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    return `
+      <div class="space-y-6">
+        
+        <!-- Driver Selector Strip -->
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-3xl flex items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-black text-slate-400 uppercase">เลือกคนขับ:</span>
+            <select onchange="reportsView.openDrilldown(this.value)" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs font-bold focus:outline-none">
+              ${drivers.map(d => `<option value="${d.name}" ${d.name === driverName ? 'selected' : ''}>${d.name} (${d.nickname || ''})</option>`).join('')}
+            </select>
+          </div>
+          <button onclick="reportsView.setViewMode('overview')" class="text-xs text-blue-400 hover:underline font-bold">
+            ← กลับสู่สรุปภาพรวม
+          </button>
+        </div>
+
+        <!-- Driver Profile & Stats Card -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <span class="text-xs text-slate-400 font-bold uppercase">คนขับ</span>
+            <p class="text-xl font-black text-white mt-1">👤 ${driverName}</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <span class="text-xs text-slate-400 font-bold uppercase">จำนวนเที่ยวสะสม</span>
+            <p class="text-2xl font-black text-blue-400 mt-1">${driverTrips.length} เที่ยว</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+            <span class="text-xs text-slate-400 font-bold uppercase">ยอดรายได้สะสม</span>
+            <p class="text-2xl font-black text-emerald-400 mt-1">฿${totalAmount.toLocaleString()} บาท</p>
+          </div>
+        </div>
+
+        <!-- Detailed Trips Table -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+          <h2 class="text-lg font-black text-white">ประวัติเที่ยววิ่งทั้งหมดของ ${driverName}</h2>
+
+          <div class="overflow-x-auto max-h-[500px]">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
+                <tr>
+                  <th class="p-3">วันที่</th>
+                  <th class="p-3">เวลา</th>
+                  <th class="p-3">รอบที่</th>
+                  <th class="p-3">เบอร์รถ</th>
+                  <th class="p-3">ประเภทงาน</th>
+                  <th class="p-3 text-right">ค่าจ้าง</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                ${driverTrips.map(t => `
+                  <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 text-white font-bold">${t.date}</td>
+                    <td class="p-3 text-slate-400">${t.timestamp || '-'}</td>
+                    <td class="p-3 font-black text-blue-400">#${t.roundNumber}</td>
+                    <td class="p-3 font-mono">${t.truckPlate}</td>
+                    <td class="p-3">${t.jobTypeName}</td>
+                    <td class="p-3 text-right font-black text-emerald-400">฿${t.amount}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
     `;
   }
@@ -329,16 +474,6 @@ class ReportsView {
     this.filterDateTo = document.getElementById('filter-date-to')?.value || '';
     this.filterVehicle = document.getElementById('filter-vehicle')?.value || '';
     this.filterDriver = document.getElementById('filter-driver')?.value || '';
-    window.app.render();
-  }
-
-  handleDateFrom(v) {
-    this.filterDateFrom = v;
-    window.app.render();
-  }
-
-  handleDateTo(v) {
-    this.filterDateTo = v;
     window.app.render();
   }
 
@@ -366,12 +501,14 @@ class ReportsView {
   exportToExcel() {
     const trips = window.quarryStore.getTrips();
     const excLogs = window.quarryStore.getExcavatorLogs();
+    const trucks = window.quarryStore.getTrucks();
     
     // Sheet 1: Detailed Trips
     const tripsRows = trips.map((t, idx) => ({
       "ลำดับ": idx + 1,
       "รหัสรอบ (Trip ID)": t.id,
-      "วันที่-เวลา": t.timestamp,
+      "วันที่": t.date,
+      "เวลา": t.timestamp,
       "เบอร์รถ/ทะเบียน": t.truckPlate,
       "ขนาดพิกัด (ตัน)": t.capacityTon,
       "ชื่อคนขับ": t.driverName,
@@ -387,7 +524,8 @@ class ReportsView {
     const excRows = excLogs.map((l, idx) => ({
       "ลำดับ": idx + 1,
       "รหัสตัก (Log ID)": l.id,
-      "วันที่-เวลา": l.timestamp,
+      "วันที่": l.date,
+      "เวลา": l.timestamp,
       "เบอร์แม็คโคร": l.excavatorCode,
       "ผู้ควบคุม": l.operatorName,
       "รถบรรทุกที่รับหิน": l.targetTruckPlate,
@@ -395,15 +533,42 @@ class ReportsView {
       "พิกัด (Lat,Lng)": `${l.lat || ''}, ${l.lng || ''}`
     }));
 
-    // Generate workbook
+    // Sheet 3: Reconciliation Summary
+    const truckMap = {};
+    trucks.forEach(t => {
+      truckMap[t.code] = { code: t.code, capacity: t.capacity_ton, driver: t.driver_name, truck: 0, exc: 0 };
+    });
+    trips.forEach(t => {
+      if (!truckMap[t.truckPlate]) truckMap[t.truckPlate] = { code: t.truckPlate, capacity: t.capacityTon, driver: t.driverName, truck: 0, exc: 0 };
+      truckMap[t.truckPlate].truck += 1;
+    });
+    excLogs.forEach(l => {
+      if (!truckMap[l.targetTruckPlate]) truckMap[l.targetTruckPlate] = { code: l.targetTruckPlate, capacity: 30, driver: '-', truck: 0, exc: 0 };
+      truckMap[l.targetTruckPlate].exc += 1;
+    });
+
+    const reconRows = Object.values(truckMap).map((r, idx) => ({
+      "ลำดับ": idx + 1,
+      "เบอร์รถสิบล้อ": r.code,
+      "พิกัดตัน": r.capacity,
+      "คนขับ": r.driver,
+      "สิบล้อรายงานรับหิน (เที่ยว)": r.truck,
+      "แม็คโครบันทึกตัก (คัน)": r.exc,
+      "ผลต่าง (Diff)": r.truck - r.exc,
+      "สถานะ": r.truck === r.exc ? 'ตรงกัน' : (r.truck > r.exc ? 'สิบล้อแจ้งเกิน' : 'แม็คโครตักเกิน')
+    }));
+
+    // Generate workbook with 3 sheets
     const wb = XLSX.utils.book_new();
     const wsTrips = XLSX.utils.json_to_sheet(tripsRows);
     const wsExc = XLSX.utils.json_to_sheet(excRows);
+    const wsRecon = XLSX.utils.json_to_sheet(reconRows);
 
-    XLSX.utils.book_append_sheet(wb, wsTrips, "รอบวิ่งรถบรรทุก");
+    XLSX.utils.book_append_sheet(wb, wsTrips, "รอบวิ่งสิบล้อ");
     XLSX.utils.book_append_sheet(wb, wsExc, "รายการตักแม็คโคร");
+    XLSX.utils.book_append_sheet(wb, wsRecon, "กระทบยอดสิบล้อVSแม็คโคร");
 
-    const fileName = `รายงานโรงโม่_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `รายงานกระทบยอดโรงโม่_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
   }
 }

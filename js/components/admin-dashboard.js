@@ -1,6 +1,8 @@
 /**
  * หน้าจอแดชบอร์ดสำหรับผู้บริหารและหัวหน้างาน (Admin & Supervisor Dashboard)
- * เพิ่มระบบ: AI Anomaly Detection & Speed / Time Anomaly Deep-Dive Inspector
+ * เพิ่มระบบ: 
+ * 1) AI Anomaly Detection & Speed Anomaly Deep-Dive Inspector
+ * 2) Truck vs Excavator Daily Reconciliation Cross-Audit Engine (ตรวจยอดรับสิบล้อ vs ตักแม็คโคร)
  */
 class AdminDashboard {
   constructor() {
@@ -32,9 +34,19 @@ class AdminDashboard {
     const totalPayoutToday = todayTrips.reduce((sum, t) => sum + (t.amount || 0), 0) +
                             todayExcLogs.reduce((sum, l) => sum + (l.amount || 5), 0);
 
-    // เรียกใช้ AI ตรวจจับความผิดปกติ
+    // 1. ตรวจสอบการกระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Audit)
+    const recon = window.quarryAI ? window.quarryAI.getReconciliationReport(currentDate) : {
+      totalTruckTrips: todayTrips.length,
+      totalExcavatorScoops: todayExcLogs.length,
+      diff: todayTrips.length - todayExcLogs.length,
+      matchRate: 100,
+      perTruckList: []
+    };
+
+    // 2. เรียกใช้ AI ตรวจจับความผิดปกติ
     const anomalies = window.quarryAI ? window.quarryAI.detectAnomalies() : [];
     const speedAnomaliesCount = anomalies.filter(a => a.type === 'speed_dump_fast').length;
+    const reconAnomaliesCount = anomalies.filter(a => a.type.startsWith('recon')).length;
 
     return `
       <div class="space-y-6">
@@ -143,21 +155,126 @@ class AdminDashboard {
           </div>
         </div>
 
+        <!-- ⚖️ NEW: Truck vs Excavator Reconciliation Matrix Section (ระบบตรวจสอบกระทบยอด) -->
+        <div class="bg-slate-900 border ${recon.diff !== 0 ? 'border-amber-500/80 shadow-amber-500/10 shadow-2xl' : 'border-emerald-500/50'} rounded-3xl p-5 shadow-lg space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2.5 ${recon.diff !== 0 ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-slate-950'} rounded-2xl shadow">
+                <i data-lucide="scale" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="font-black text-lg text-white flex items-center gap-2">
+                  ตรวจสอบการกระทบยอด: เที่ยวรับสิบล้อ VS เที่ยวตักแม็คโคร
+                  <span class="text-xs px-2.5 py-0.5 rounded-full font-black ${recon.diff === 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500 text-slate-950 animate-pulse'}">
+                    ${recon.diff === 0 ? '✓ ยอดตรงกันสมบูรณ์ 100%' : `⚠️ ผลต่าง ${Math.abs(recon.diff)} เที่ยว (${recon.matchRate}% Match)`}
+                  </span>
+                </h2>
+                <p class="text-xs text-slate-400">ตรวจนับยอดรอบวิ่งที่สิบล้อกดรับ เทียบกับยอดที่คนขับแม็คโครกดบันทึกตัก เพื่อป้องกันการคลาดเคลื่อนและการทุจริต</p>
+              </div>
+            </div>
+
+            <button onclick="adminDashboard.openFullReconModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1.5 border border-slate-700 self-start sm:self-auto">
+              <i data-lucide="search" class="w-4 h-4 text-blue-400"></i>
+              ดูตารางกระทบยอดละเอียด
+            </button>
+          </div>
+
+          <!-- Reconciliation Top KPI Strip -->
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            <div class="bg-slate-950 p-3.5 rounded-2xl border border-blue-500/30 space-y-1">
+              <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                🚚 สิบล้อรายงานรับหิน:
+              </span>
+              <p class="text-xl font-black text-blue-400">${recon.totalTruckTrips} <span class="text-xs text-slate-400 font-normal">เที่ยว</span></p>
+            </div>
+
+            <div class="bg-slate-950 p-3.5 rounded-2xl border border-purple-500/30 space-y-1">
+              <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                🚜 แม็คโครบันทึกตัก:
+              </span>
+              <p class="text-xl font-black text-purple-400">${recon.totalExcavatorScoops} <span class="text-xs text-slate-400 font-normal">คัน</span></p>
+            </div>
+
+            <div class="bg-slate-950 p-3.5 rounded-2xl border ${recon.diff !== 0 ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800'} space-y-1">
+              <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                ⚖️ ผลต่างสุทธิ (Variance):
+              </span>
+              <p class="text-xl font-black ${recon.diff === 0 ? 'text-emerald-400' : (recon.diff > 0 ? 'text-amber-400' : 'text-purple-400')} font-mono">
+                ${recon.diff > 0 ? `+${recon.diff} เที่ยว` : (recon.diff < 0 ? `${recon.diff} คัน` : '0 (ตรงกัน)')}
+              </p>
+            </div>
+
+            <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1">
+              <span class="text-slate-400 font-bold">🎯 อัตราความสอดคล้อง:</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xl font-black ${recon.matchRate >= 90 ? 'text-emerald-400' : (recon.matchRate >= 70 ? 'text-amber-400' : 'text-red-400')}">${recon.matchRate}%</span>
+                <span class="text-[10px] text-slate-400">(${recon.perTruckList.filter(x => x.status === 'match').length}/${recon.perTruckList.length} คัน)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Per-Truck Summary Table -->
+          ${recon.perTruckList.length === 0 ? `
+            <div class="text-center py-6 text-slate-500 text-xs bg-slate-950/40 rounded-2xl border border-slate-800">
+              ยังไม่มีการบันทึกงานของสิบล้อหรือแม็คโครในวันที่ ${currentDate}
+            </div>
+          ` : `
+            <div class="overflow-x-auto max-h-64 overflow-y-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
+                  <tr>
+                    <th class="p-3">เบอร์รถสิบล้อ</th>
+                    <th class="p-3">คนขับประจำ</th>
+                    <th class="p-3 text-center">สิบล้อแจ้งวิ่ง</th>
+                    <th class="p-3 text-center">แม็คโครตักให้</th>
+                    <th class="p-3 text-center">ผลต่าง (Diff)</th>
+                    <th class="p-3 text-center">สถานะความถูกต้อง</th>
+                    <th class="p-3 text-right">เจาะลึก</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                  ${recon.perTruckList.slice(0, 10).map(item => `
+                    <tr class="hover:bg-slate-800/50 ${item.variance !== 0 ? 'bg-amber-950/10' : ''}">
+                      <td class="p-3 font-bold text-white">🚚 ${item.code}</td>
+                      <td class="p-3 text-slate-400">${item.driverName || '-'}</td>
+                      <td class="p-3 text-center font-bold text-blue-400">${item.truckReported} เที่ยว</td>
+                      <td class="p-3 text-center font-bold text-purple-400">${item.excavatorRecorded} คัน</td>
+                      <td class="p-3 text-center font-mono font-bold ${item.variance === 0 ? 'text-emerald-400' : (item.variance > 0 ? 'text-amber-400' : 'text-purple-400')}">
+                        ${item.variance > 0 ? `+${item.variance}` : (item.variance < 0 ? `${item.variance}` : '0')}
+                      </td>
+                      <td class="p-3 text-center">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'match' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : (item.status === 'truck_over' ? 'bg-amber-950 text-amber-300 border border-amber-800 animate-pulse' : 'bg-purple-950 text-purple-300 border border-purple-800')}">
+                          ${item.status === 'match' ? '✓ ตรงกัน' : (item.status === 'truck_over' ? `⚠️ สิบล้อแจ้งเกิน ${item.variance}` : `แม็คโครตักเกิน ${Math.abs(item.variance)}`)}
+                        </span>
+                      </td>
+                      <td class="p-3 text-right">
+                        <button onclick="adminDashboard.openTruckReconDetail('${item.code}')" class="text-blue-400 hover:underline font-bold">
+                          เทียบเวลา ➔
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+
         <!-- AI Anomaly Detection Alert Section -->
-        <div class="bg-slate-900 border ${speedAnomaliesCount > 0 ? 'border-red-500/80 shadow-red-500/10 shadow-2xl' : 'border-slate-800'} rounded-3xl p-5 shadow-lg space-y-4">
+        <div class="bg-slate-900 border ${speedAnomaliesCount > 0 || reconAnomaliesCount > 0 ? 'border-red-500/80 shadow-red-500/10 shadow-2xl' : 'border-slate-800'} rounded-3xl p-5 shadow-lg space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div class="flex items-center gap-2.5">
-              <div class="p-2 ${speedAnomaliesCount > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-slate-950'} rounded-xl">
+              <div class="p-2 ${speedAnomaliesCount > 0 || reconAnomaliesCount > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-slate-950'} rounded-xl">
                 <i data-lucide="alert-triangle" class="w-5 h-5"></i>
               </div>
               <div>
                 <h2 class="font-black text-lg text-white flex items-center gap-2">
                   ระบบตรวจจับความผิดปกติ & เที่ยววิ่งต้องสงสัย (AI Anomaly Alerts)
-                  <span class="text-xs ${speedAnomaliesCount > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-slate-950'} px-2.5 py-0.5 rounded-full font-black">
-                    ${anomalies.length} รายการ ${speedAnomaliesCount > 0 ? `(🔴 ถ่ายเร็วเกินจริง ${speedAnomaliesCount} เที่ยว)` : ''}
+                  <span class="text-xs ${speedAnomaliesCount > 0 || reconAnomaliesCount > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-slate-950'} px-2.5 py-0.5 rounded-full font-black">
+                    ${anomalies.length} รายการ ${speedAnomaliesCount > 0 ? `(🔴 ถ่ายเร็ว ${speedAnomaliesCount})` : ''} ${reconAnomaliesCount > 0 ? `(⚠️ ยอดไม่ตรง ${reconAnomaliesCount})` : ''}
                   </span>
                 </h2>
-                <p class="text-xs text-slate-400">ตรวจจับการถ่ายรูปจุดรับ-จุดเทเร็วผิดปกติ, พิกัด GPS ซ้ำซ้อน และพฤติกรรมผิดสังเกต</p>
+                <p class="text-xs text-slate-400">ตรวจจับการถ่ายรูปจุดรับ-จุดเทเร็วผิดปกติ, พิกัด GPS ซ้ำซ้อน และความไม่สอดคล้องระหว่างสิบล้อกับแม็คโคร</p>
               </div>
             </div>
 
@@ -428,12 +545,162 @@ class AdminDashboard {
           <div id="anomaly-modal-content" class="p-4 sm:p-6 overflow-y-auto space-y-6"></div>
         </div>
       </div>
+
+      <!-- Truck Reconciliation Drill-Down Modal -->
+      <div id="recon-detail-modal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-lg hidden items-center justify-center p-3 sm:p-5">
+        <div class="bg-slate-900 border border-amber-500/50 max-w-4xl w-full max-h-[95vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+          <div class="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-950">
+            <div class="flex items-center gap-3">
+              <span class="p-2.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-2xl">
+                <i data-lucide="scale" class="w-6 h-6"></i>
+              </span>
+              <div>
+                <p class="text-[10px] text-amber-400 font-black uppercase tracking-wider">การกระทบยอดสิบล้อ vs แม็คโครรายคัน</p>
+                <h3 id="recon-modal-title" class="font-black text-lg text-white">เปรียบเทียบไทม์ไลน์งาน</h3>
+              </div>
+            </div>
+            <button onclick="adminDashboard.closeReconModal()" class="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold">✕</button>
+          </div>
+          <div id="recon-modal-content" class="p-4 sm:p-6 overflow-y-auto space-y-6"></div>
+        </div>
+      </div>
     `;
+  }
+
+  openTruckReconDetail(truckCode) {
+    const currentDate = this.selectedDate || new Date().toISOString().split('T')[0];
+    const recon = window.quarryAI.getReconciliationReport(currentDate);
+    const truckItem = recon.perTruckList.find(x => x.code === truckCode);
+    if (!truckItem) return;
+
+    const modal = document.getElementById('recon-detail-modal');
+    const title = document.getElementById('recon-modal-title');
+    const content = document.getElementById('recon-modal-content');
+    if (!modal || !title || !content) return;
+
+    title.innerText = `🚚 กระทบยอด: รถ ${truckItem.code} (${currentDate})`;
+
+    const truckTrips = truckItem.trips || [];
+    const excavatorScoops = truckItem.scoops || [];
+
+    content.innerHTML = `
+      <!-- Summary Header -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+        <div>
+          <p class="text-[10px] text-slate-400 font-bold uppercase">สิบล้อรายงานรับหิน</p>
+          <p class="text-xl font-black text-blue-400 mt-0.5">${truckItem.truckReported} เที่ยว</p>
+          <p class="text-[11px] text-slate-400">คนขับ: ${truckItem.driverName || '-'}</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-400 font-bold uppercase">แม็คโครบันทึกตักให้</p>
+          <p class="text-xl font-black text-purple-400 mt-0.5">${truckItem.excavatorRecorded} คัน</p>
+          <p class="text-[11px] text-slate-400">รวมทุกคันแม็คโคร</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-400 font-bold uppercase">ผลต่าง (Variance)</p>
+          <p class="text-xl font-black ${truckItem.variance === 0 ? 'text-emerald-400' : (truckItem.variance > 0 ? 'text-amber-400' : 'text-purple-400')} mt-0.5 font-mono">
+            ${truckItem.variance > 0 ? `+${truckItem.variance} เที่ยว (แจ้งเกิน)` : (truckItem.variance < 0 ? `${truckItem.variance} (ตักเกิน)` : '0 (ตรงกัน 100%)')}
+          </p>
+          <p class="text-[11px] ${truckItem.variance === 0 ? 'text-emerald-400' : 'text-amber-400'} font-bold">
+            ${truckItem.variance === 0 ? '✓ หลักฐานสมบูรณ์' : '⚠️ ตรวจสอบรายการด้านล่าง'}
+          </p>
+        </div>
+      </div>
+
+      <!-- Side-by-Side Timeline Comparison -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Left: Truck Trips -->
+        <div class="bg-slate-950 border border-blue-500/40 rounded-2xl p-4 space-y-3">
+          <h4 class="font-black text-sm text-blue-400 flex items-center justify-between">
+            <span>🚚 เที่ยววิ่งที่สิบล้อบันทึก (${truckTrips.length} รอบ)</span>
+          </h4>
+
+          <div class="space-y-2 max-h-80 overflow-y-auto pr-1">
+            ${truckTrips.length === 0 ? `
+              <p class="text-xs text-slate-500 text-center py-6">ไม่มีบันทึกรอบวิ่งของสิบล้อ</p>
+            ` : truckTrips.map(t => `
+              <div class="p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-black text-white">รอบ #${t.roundNumber} • ${t.jobTypeName}</span>
+                  <span class="text-blue-400 font-mono font-bold">${t.timestamp}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>พิกัด: ${t.loadLat ? `${t.loadLat}, ${t.loadLng}` : 'ไม่ระบุ'}</span>
+                  <span class="text-emerald-400 font-bold">฿${t.amount}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Right: Excavator Scoop Logs -->
+        <div class="bg-slate-950 border border-purple-500/40 rounded-2xl p-4 space-y-3">
+          <h4 class="font-black text-sm text-purple-400 flex items-center justify-between">
+            <span>🚜 บันทึกตักของแม็คโคร (${excavatorScoops.length} ครั้ง)</span>
+          </h4>
+
+          <div class="space-y-2 max-h-80 overflow-y-auto pr-1">
+            ${excavatorScoops.length === 0 ? `
+              <p class="text-xs text-slate-500 text-center py-6">ไม่มีแม็คโครคันใดบันทึกตักให้รถคันนี้</p>
+            ` : excavatorScoops.map(l => `
+              <div class="p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-black text-white">🚜 ${l.excavatorCode}</span>
+                  <span class="text-purple-400 font-mono font-bold">${l.timestamp}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>ผู้ควบคุม: ${l.operatorName}</span>
+                  <span class="text-purple-300 font-bold">฿${l.amount}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>
+
+      <div class="flex justify-end pt-3 border-t border-slate-800">
+        <button onclick="adminDashboard.closeReconModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    `;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  closeReconModal() {
+    const modal = document.getElementById('recon-detail-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  openFullReconModal() {
+    const currentDate = this.selectedDate || new Date().toISOString().split('T')[0];
+    const recon = window.quarryAI.getReconciliationReport(currentDate);
+    if (recon.perTruckList.length > 0) {
+      this.openTruckReconDetail(recon.perTruckList[0].code);
+    } else {
+      alert(`ยังไม่มีข้อมูลการวิ่งงานในวันที่ ${currentDate}`);
+    }
   }
 
   openAnomalyInspector(referenceId) {
     const trips = window.quarryStore.getTrips();
-    const trip = trips.find(t => t.id === referenceId) || trips[0];
+    let trip = trips.find(t => t.id === referenceId);
+
+    if (!trip && referenceId && referenceId.startsWith('RECON_')) {
+      const truckCode = referenceId.replace('RECON_', '');
+      this.openTruckReconDetail(truckCode);
+      return;
+    }
+
+    if (!trip) trip = trips[0];
     if (!trip) return;
 
     const modal = document.getElementById('anomaly-inspector-modal');

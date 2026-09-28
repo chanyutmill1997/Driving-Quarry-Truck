@@ -115,7 +115,48 @@ class QuarryAIEngine {
       }
     });
 
-    // กฎที่ 4: ตรวจจับรถจอดไม่ได้วิ่งเกินเกณฑ์ (Fleet Idleness)
+    // กฎที่ 4: ตรวจสอบความสอดคล้องระหว่างสิบล้อกับแม็คโคร (Truck-Excavator Daily Reconciliation Audit)
+    const recon = this.getReconciliationReport(today);
+    if (recon.perTruckList.length > 0) {
+      const mismatchedTrucks = recon.perTruckList.filter(x => x.variance !== 0);
+      if (mismatchedTrucks.length > 0) {
+        mismatchedTrucks.forEach(m => {
+          if (Math.abs(m.variance) >= 2) {
+            anomalies.push({
+              id: 'ANO_RECON_' + m.code,
+              type: 'recon_mismatch',
+              severity: m.variance > 0 ? 'critical' : 'warning',
+              title: m.variance > 0 
+                ? `🚨 รถ ${m.code} แจ้งวิ่งเกินกว่าแม็คโครตัก (${m.variance} เที่ยว)`
+                : `⚠️ รถ ${m.code} แม็คโครบันทึกตักมากกว่ารอบวิ่ง (${Math.abs(m.variance)} คัน)`,
+              desc: `รถบรรทุก ${m.code} (คนขับ: ${m.driverName || 'ไม่ระบุ'}) รายงานรอบวิ่ง ${m.truckReported} เที่ยว แต่ฝั่งแม็คโครบันทึกการตักให้เพียง ${m.excavatorRecorded} คัน (ผลต่าง ${m.variance > 0 ? '+' : ''}${m.variance} เที่ยว)`,
+              referenceId: 'RECON_' + m.code,
+              vehicleCode: m.code,
+              driverName: m.driverName || 'คนขับสิบล้อ',
+              timestamp: new Date().toLocaleTimeString('th-TH'),
+              recommendedAction: 'ตรวจสอบการกระทบยอดในแท็บ [⚖️ ตรวจสอบการกระทบยอด] และเปรียบเทียบเวลากับคนขับแม็คโคร'
+            });
+          }
+        });
+      }
+
+      if (Math.abs(recon.diff) >= 5) {
+        anomalies.unshift({
+          id: 'ANO_RECON_TOTAL',
+          type: 'recon_total',
+          severity: 'critical',
+          title: `🚨 ผลต่างยอดรวมทั้งโรงโม่: สิบล้อวิ่ง ${recon.totalTruckTrips} vs แม็คโครตัก ${recon.totalExcavatorScoops} (ต่างกัน ${Math.abs(recon.diff)} เที่ยว)`,
+          desc: `ยอดรวมรอบวิ่งของสิบล้อทุกคัน (${recon.totalTruckTrips} เที่ยว) ไม่สอดคล้องกับยอดที่แม็คโครทุกคันบันทึกไว้ (${recon.totalExcavatorScoops} คัน) อัตราความตรงกัน ${recon.matchRate}%`,
+          referenceId: 'RECON_TOTAL',
+          vehicleCode: 'ภาพรวมทั้งโรงโม่',
+          driverName: 'ทุกแผนก',
+          timestamp: new Date().toLocaleTimeString('th-TH'),
+          recommendedAction: 'เปิดแผงตรวจสอบการกระทบยอด (Reconciliation Matrix) เพื่อตรวจเช็ครายเบอร์รถทันที'
+        });
+      }
+    }
+
+    // กฎที่ 5: ตรวจจับรถจอดไม่ได้วิ่งเกินเกณฑ์ (Fleet Idleness)
     const activePlates = new Set(todayTrips.map(t => t.truckPlate));
     const idleTrucks = trucks.filter(t => !activePlates.has(t.code));
     if (idleTrucks.length >= 8) {
@@ -134,6 +175,101 @@ class QuarryAIEngine {
     }
 
     return anomalies;
+  }
+
+  // ------------------------------------------------------------------------
+  // เครื่องยนต์กระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Audit Engine)
+  // ------------------------------------------------------------------------
+  getReconciliationReport(targetDate) {
+    const date = targetDate || new Date().toISOString().split('T')[0];
+    const trips = window.quarryStore.getTrips().filter(t => t.date === date);
+    const excLogs = window.quarryStore.getExcavatorLogs().filter(l => l.date === date);
+    const trucks = window.quarryStore.getTrucks();
+
+    const totalTruckTrips = trips.length;
+    const totalExcavatorScoops = excLogs.length;
+    const diff = totalTruckTrips - totalExcavatorScoops;
+
+    // แยกรายเบอร์รถสิบล้อ
+    const truckMap = {};
+    trucks.forEach(t => {
+      truckMap[t.code] = {
+        code: t.code,
+        capacityTon: t.capacity_ton || 30,
+        driverName: t.driver_name || '-',
+        truckReported: 0,
+        excavatorRecorded: 0,
+        trips: [],
+        scoops: []
+      };
+    });
+
+    trips.forEach(t => {
+      const code = t.truckPlate || 'UNKNOWN';
+      if (!truckMap[code]) {
+        truckMap[code] = {
+          code: code,
+          capacityTon: t.capacityTon || 30,
+          driverName: t.driverName || '-',
+          truckReported: 0,
+          excavatorRecorded: 0,
+          trips: [],
+          scoops: []
+        };
+      }
+      truckMap[code].truckReported += 1;
+      truckMap[code].trips.push(t);
+    });
+
+    excLogs.forEach(l => {
+      const target = l.targetTruckPlate;
+      if (target) {
+        if (!truckMap[target]) {
+          truckMap[target] = {
+            code: target,
+            capacityTon: 30,
+            driverName: '-',
+            truckReported: 0,
+            excavatorRecorded: 0,
+            trips: [],
+            scoops: []
+          };
+        }
+        truckMap[target].excavatorRecorded += 1;
+        truckMap[target].scoops.push(l);
+      }
+    });
+
+    const perTruckList = Object.values(truckMap)
+      .filter(item => item.truckReported > 0 || item.excavatorRecorded > 0)
+      .map(item => {
+        const variance = item.truckReported - item.excavatorRecorded;
+        let status = 'match';
+        if (variance > 0) status = 'truck_over'; // สิบล้อแจ้งเกิน
+        else if (variance < 0) status = 'exc_over'; // แม็คโครตักเกิน
+        return {
+          ...item,
+          variance,
+          status
+        };
+      })
+      .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance));
+
+    const matchCount = perTruckList.filter(x => x.status === 'match').length;
+    const matchRate = perTruckList.length > 0 
+      ? Math.round((matchCount / perTruckList.length) * 100) 
+      : 100;
+
+    return {
+      date,
+      totalTruckTrips,
+      totalExcavatorScoops,
+      diff,
+      matchRate,
+      perTruckList,
+      trips,
+      excLogs
+    };
   }
 
   // ------------------------------------------------------------------------
