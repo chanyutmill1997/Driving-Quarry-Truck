@@ -36,15 +36,15 @@ class LoginView {
             </button>
 
             <!-- Company Sign Badge (Like Signboard on Silo) -->
-            <div class="absolute inset-x-4 bottom-3 text-center">
+            <div class="absolute inset-x-4 bottom-3 text-center hero-branding">
               <div class="inline-flex items-center gap-2.5 px-3 py-1 bg-emerald-900/90 border border-emerald-500/40 rounded-xl text-emerald-100 text-xs font-bold backdrop-blur-md shadow-lg mb-1.5">
                 <span>🏔️</span>
-                <span>โรงโม่หิน ป.ศรีวิไลลักษณ์ (ป.ศรีฯ)</span>
+                <span class="text-emerald-100">โรงโม่หิน ป.ศรีวิไลลักษณ์ (ป.ศรีฯ)</span>
               </div>
               <h1 class="text-sm font-bold text-white tracking-wide drop-shadow-md">
                 บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด
               </h1>
-              <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mt-0.5">
+              <p class="text-[10px] text-blue-300 font-bold uppercase tracking-wider mt-0.5">
                 CHANYUTH MILL (1997) CO., LTD. • FLEET SYSTEM
               </p>
             </div>
@@ -90,8 +90,8 @@ class LoginView {
             </div>
 
             <!-- Submit Button -->
-            <button id="login-button" onclick="loginView.handleLogin()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 text-slate-950 text-base font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
-              <i data-lucide="log-in" class="w-5 h-5"></i> เข้าสู่ระบบ
+            <button id="login-button" onclick="loginView.handleLogin()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white text-base font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
+              <i data-lucide="log-in" class="w-5 h-5 text-white"></i> เข้าสู่ระบบ
             </button>
             
             <p id="login-error" class="hidden text-xs text-red-300 bg-red-950/60 border border-red-800 rounded-2xl p-3"></p>

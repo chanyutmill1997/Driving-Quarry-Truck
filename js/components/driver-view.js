@@ -84,8 +84,8 @@ class DriverView {
             </select>
           </div>
 
-          <button onclick="driverView.handleStartShift()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
-            <i data-lucide="play" class="w-6 h-6"></i>
+          <button onclick="driverView.handleStartShift()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 active:scale-98 text-white text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <i data-lucide="play" class="w-6 h-6 text-white"></i>
             เริ่มงานประจำวันทันที
           </button>
         </div>
@@ -250,9 +250,9 @@ class DriverView {
           </div>
 
           <!-- Big Finish Round Button -->
-          <button onclick="driverView.handleCompleteRound()" ${this.isCompletingRound ? 'disabled' : ''} class="w-full py-4.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:scale-98 disabled:opacity-60 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
-            <i data-lucide="check-circle-2" class="w-7 h-7 text-slate-950"></i>
-            <span>${this.isCompletingRound ? 'กำลังบันทึกงาน...' : `จบงานรอบที่ ${nextRoundNumber} (นับ 1 เที่ยว)`}</span>
+          <button onclick="driverView.handleCompleteRound()" ${this.isCompletingRound ? 'disabled' : ''} class="w-full py-4.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 active:scale-98 disabled:opacity-60 text-white text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
+            <i data-lucide="check-circle-2" class="w-7 h-7 text-white"></i>
+            <span class="text-white">${this.isCompletingRound ? 'กำลังบันทึกงาน...' : `จบงานรอบที่ ${nextRoundNumber} (นับ 1 เที่ยว)`}</span>
           </button>
 
         </div>

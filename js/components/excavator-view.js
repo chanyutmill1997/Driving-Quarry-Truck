@@ -73,8 +73,8 @@ class ExcavatorView {
             </select>
           </div>
 
-          <button onclick="excavatorView.handleStartShift()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
-            <i data-lucide="play" class="w-6 h-6"></i>
+          <button onclick="excavatorView.handleStartShift()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 active:scale-98 text-white text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <i data-lucide="play" class="w-6 h-6 text-white"></i>
             เปิดงานประจำวัน
           </button>
         </div>
@@ -217,9 +217,9 @@ class ExcavatorView {
           </div>
 
           <!-- Submit Button -->
-          <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
-            <i data-lucide="check" class="w-7 h-7"></i>
-            <span>บันทึกการตักสำเร็จ (+฿${defaultRate})</span>
+          <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-98 text-white text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
+            <i data-lucide="check" class="w-7 h-7 text-white"></i>
+            <span class="text-white">บันทึกการตักสำเร็จ (+฿${defaultRate})</span>
           </button>
         </div>
 
