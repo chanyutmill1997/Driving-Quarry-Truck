@@ -96,13 +96,17 @@ class LoginView {
             
             <p id="login-error" class="hidden text-xs text-red-300 bg-red-950/60 border border-red-800 rounded-2xl p-3"></p>
 
-            <!-- Register New Driver Action Button -->
-            <div class="pt-2 border-t border-slate-800 text-center">
-              <p class="text-xs text-slate-400 mb-2.5">เป็นพนักงานขับรถใหม่ที่ยังไม่มีชื่อในระบบ?</p>
-              <button onclick="loginView.showRegisterForm()" class="w-full py-3 bg-slate-950 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-emerald-800/80 rounded-2xl text-xs font-black transition flex items-center justify-center gap-2">
-                <i data-lucide="user-plus" class="w-4 h-4"></i>
-                ลงทะเบียนพนักงานขับรถใหม่ (กดที่นี่)
-              </button>
+            <!-- Notice for New Drivers -->
+            <div class="pt-3 border-t border-slate-800 text-center">
+              <div class="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl text-xs space-y-1">
+                <p class="text-slate-300 font-bold flex items-center justify-center gap-1.5">
+                  <i data-lucide="shield-alert" class="w-4 h-4 text-blue-400"></i>
+                  สำหรับพนักงานขับรถใหม่
+                </p>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                  กรุณาติดต่อ <strong class="text-blue-400">หัวหน้างาน</strong> หรือ <strong class="text-white">ผู้บริหาร</strong> เพื่อลงทะเบียนเปิดบัญชีและกำหนดรหัส PIN ในระบบ
+                </p>
+              </div>
             </div>
 
           </div>
@@ -112,100 +116,6 @@ class LoginView {
           </div>
         </div>
       </div>`;
-  }
-
-  // แบบฟอร์มลงทะเบียนพนักงานขับรถใหม่
-  renderRegisterForm() {
-    const trucks = window.quarryStore.getTrucks();
-    const excavators = window.quarryStore.getExcavators();
-
-    return `
-      <div class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
-          
-          <!-- Header Bar with Company Logo -->
-          <div class="bg-gradient-to-r from-slate-900 to-slate-950 p-6 text-slate-100 text-center relative border-b border-slate-800">
-            <button onclick="loginView.showLoginForm()" class="absolute top-4 left-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 font-bold text-xs transition flex items-center gap-1 border border-slate-700">
-              <i data-lucide="arrow-left" class="w-4 h-4"></i> กลับ
-            </button>
-            <div class="inline-flex p-2 bg-white rounded-2xl mb-2 shadow-lg border border-slate-700">
-              <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-12 h-12 object-contain rounded-xl">
-            </div>
-            <h1 class="text-lg font-black text-white">ลงทะเบียนพนักงานขับรถใหม่</h1>
-            <p class="text-xs text-emerald-400 font-bold mt-0.5">โรงโม่หิน ป.ศรีวิไลลักษณ์ • บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
-          </div>
-
-          <!-- Registration Form -->
-          <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-            
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">ชื่อ-นามสกุลจริง <span class="text-red-400">*</span></label>
-              <input type="text" id="reg-name" placeholder="เช่น นาย สมศักดิ์ มีสุข" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">ชื่อเล่น</label>
-                <input type="text" id="reg-nickname" placeholder="เช่น ศักดิ์" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">เบอร์โทรศัพท์ <span class="text-red-400">*</span></label>
-                <input type="tel" id="reg-phone" maxlength="10" placeholder="08xxxxxxxx" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">ประเภทการปฏิบัติงาน <span class="text-red-400">*</span></label>
-              <div class="grid grid-cols-2 gap-2">
-                <label class="flex items-center gap-2 p-3 bg-slate-950 border border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500">
-                  <input type="radio" name="reg-role" value="truck_driver" checked class="accent-emerald-500" onchange="loginView.handleRoleChange('truck_driver')">
-                  <span class="text-xs font-bold text-white">🚚 ขับรถสิบล้อ</span>
-                </label>
-                <label class="flex items-center gap-2 p-3 bg-slate-950 border border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500">
-                  <input type="radio" name="reg-role" value="excavator_operator" class="accent-emerald-500" onchange="loginView.handleRoleChange('excavator_operator')">
-                  <span class="text-xs font-bold text-white">🚜 ขับรถแม็คโคร</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">เบอร์รถประจำ (ถ้ามี)</label>
-              <select id="reg-vehicle" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                <option value="">-- ยังไม่มีรถประจำ (เลือกหน้างานทุกวัน) --</option>
-                <optgroup label="รถบรรทุกสิบล้อ" id="reg-trucks-group">
-                  ${trucks.map(t => `<option value="${t.code}">${t.code} (${t.capacity_ton} ตัน)</option>`).join('')}
-                </optgroup>
-                <optgroup label="รถขุด/แม็คโคร" id="reg-excs-group">
-                  ${excavators.map(e => `<option value="${e.code}">${e.code}</option>`).join('')}
-                </optgroup>
-              </select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 pt-2">
-              <div>
-                <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">ตั้งรหัส PIN (4 หลัก) <span class="text-red-400">*</span></label>
-                <input type="password" id="reg-pin" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">ยืนยันรหัส PIN <span class="text-red-400">*</span></label>
-                <input type="password" id="reg-pin-confirm" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-              </div>
-            </div>
-
-            <p id="reg-error" class="hidden text-xs text-red-300 bg-red-950/60 border border-red-800 rounded-xl p-3"></p>
-
-            <button id="reg-button" onclick="loginView.handleRegister()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-base font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 mt-2">
-              <i data-lucide="check" class="w-5 h-5"></i> ยืนยันการลงทะเบียนและเริ่มงาน
-            </button>
-
-            <button onclick="loginView.showLoginForm()" class="w-full py-2.5 text-slate-400 hover:text-white text-xs font-bold">
-              มีบัญชีอยู่แล้ว? กลับไปหน้าเข้าสู่ระบบ
-            </button>
-
-          </div>
-        </div>
-      </div>
-    `;
   }
 
   roleButton(role, icon, label) {
@@ -242,30 +152,6 @@ class LoginView {
     }
   }
 
-  showRegisterForm() {
-    this.mode = 'register';
-    window.app.render();
-  }
-
-  showLoginForm() {
-    this.mode = 'login';
-    window.app.render();
-  }
-
-  handleRoleChange(role) {
-    const truckGroup = document.getElementById('reg-trucks-group');
-    const excGroup = document.getElementById('reg-excs-group');
-    if (truckGroup && excGroup) {
-      if (role === 'truck_driver') {
-        truckGroup.style.display = '';
-        excGroup.style.display = 'none';
-      } else {
-        truckGroup.style.display = 'none';
-        excGroup.style.display = '';
-      }
-    }
-  }
-
   async handleLogin() {
     const typedIdentifier = document.getElementById('login-identifier')?.value.trim();
     const identifier = typedIdentifier || (this.selectedRole === 'supervisor' ? 'SUP_1' : (this.selectedRole === 'admin' ? 'ADMIN_1' : ''));
@@ -288,61 +174,8 @@ class LoginView {
     window.app.route();
   }
 
-  async handleRegister() {
-    const name = document.getElementById('reg-name')?.value.trim();
-    const nickname = document.getElementById('reg-nickname')?.value.trim();
-    const phone = document.getElementById('reg-phone')?.value.trim();
-    const roleEl = document.querySelector('input[name="reg-role"]:checked');
-    const role = roleEl ? roleEl.value : 'truck_driver';
-    const vehicle = document.getElementById('reg-vehicle')?.value;
-    const pin = document.getElementById('reg-pin')?.value.trim();
-    const pinConfirm = document.getElementById('reg-pin-confirm')?.value.trim();
-    const errorBox = document.getElementById('reg-error');
-
-    if (!name) return this.showRegError('กรุณาระบุชื่อ-นามสกุลจริง');
-    if (!phone || phone.length < 9) return this.showRegError('กรุณาระบุเบอร์โทรศัพท์ที่ถูกต้อง (9-10 หลัก)');
-    if (!pin || pin.length < 4) return this.showRegError('กรุณากำหนดรหัส PIN อย่างน้อย 4 หลัก');
-    if (pin !== pinConfirm) return this.showRegError('รหัส PIN และการยืนยัน PIN ไม่ตรงกัน');
-
-    const regBtn = document.getElementById('reg-button');
-    if (regBtn) {
-      regBtn.disabled = true;
-      regBtn.innerHTML = '<span class="inline-block w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span> กำลังบันทึกข้อมูล...';
-    }
-
-    const result = await window.authService.registerDriver({
-      name,
-      nickname,
-      phone,
-      role,
-      assigned_vehicle: vehicle,
-      pin
-    });
-
-    if (!result.success) {
-      if (regBtn) {
-        regBtn.disabled = false;
-        regBtn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> ยืนยันการลงทะเบียนและเริ่มงาน';
-        if (window.lucide) lucide.createIcons();
-      }
-      return this.showRegError(result.message);
-    }
-
-    alert(`🎉 ลงทะเบียนสำเร็จ! ยินดีต้อนรับ ${nickname || name} เข้าสู่ระบบโรงโม่`);
-    this.mode = 'login';
-    window.app.route();
-  }
-
   showError(message) {
     const box = document.getElementById('login-error');
-    if (box) {
-      box.textContent = message;
-      box.classList.remove('hidden');
-    }
-  }
-
-  showRegError(message) {
-    const box = document.getElementById('reg-error');
     if (box) {
       box.textContent = message;
       box.classList.remove('hidden');
