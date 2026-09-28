@@ -262,26 +262,42 @@ class CameraEngine {
 
   applyWatermark(img, metadata, gps) {
     const canvas = document.createElement('canvas');
-    const MAX_WIDTH = 960;
-    const scale = Math.min(1, MAX_WIDTH / img.width);
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
+    const maxWidth = (window.CONFIG && window.CONFIG.IMAGE_COMPRESSION && window.CONFIG.IMAGE_COMPRESSION.MAX_WIDTH) || 1280;
+    const maxHeight = (window.CONFIG && window.CONFIG.IMAGE_COMPRESSION && window.CONFIG.IMAGE_COMPRESSION.MAX_HEIGHT) || 1280;
+    
+    // คำนวณ Scale เพื่อคงสัดส่วนเดิม (Aspect Ratio) ไม่ให้ภาพเบี้ยวหรือยืด
+    let width = img.width;
+    let height = img.height;
+
+    if (width > maxWidth || height > maxHeight) {
+      const ratio = Math.min(maxWidth / width, maxHeight / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+    }
+
+    canvas.width = width;
+    canvas.height = height;
 
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     return this.drawWatermarkOnCanvas(canvas, metadata, gps);
   }
 
   drawWatermarkOnCanvas(canvas, metadata, gps) {
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
     const bannerHeight = Math.max(140, canvas.height * 0.22);
     const bannerY = canvas.height - bannerHeight;
 
     // แถบสีดำโปร่งแสงด้านล่าง
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
     ctx.fillRect(0, bannerY, canvas.width, bannerHeight);
 
-    // เส้นขอบสีส้ม/เหลือง
+    // เส้นขอบสีน้ำเงินแบรนด์โรงโม่
     ctx.fillStyle = '#2563eb';
     ctx.fillRect(0, bannerY, canvas.width, 6);
 
@@ -298,7 +314,7 @@ class CameraEngine {
                      (metadata.stepType === 'dump' ? '🏁 [จุดเทหิน / ส่งมอบ]' : '🚜 [ตักหินแม็คโคร]');
     
     const badgeColor = metadata.stepType === 'load' ? '#3b82f6' : 
-                      (metadata.stepType === 'dump' ? '#10b981' : '#2563eb');
+                      (metadata.stepType === 'dump' ? '#10b981' : '#38bdf8');
 
     // บรรทัดที่ 1: สถานะและเวลา
     ctx.font = `bold ${baseFontSize * 1.3}px 'Sarabun', -apple-system, sans-serif`;
@@ -322,11 +338,41 @@ class CameraEngine {
     const roundText = metadata.roundNumber ? `รอบที่ ${metadata.roundNumber}` : '';
     const jobText = metadata.jobName ? ` [${metadata.jobName}]` : '';
     const gpsText = gps && gps.isAvailable
-      ? `🌐 พิกัดโทรศัพท์: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`
-      : '🌐 พิกัดโทรศัพท์: ไม่ได้รับอนุญาต/ไม่พบสัญญาณ';
+      ? `🌐 พิกัดดาวเทียม: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`
+      : '🌐 พิกัดดาวเทียม: ไม่ได้รับอนุญาต/ไม่พบสัญญาณ';
     ctx.fillText(`${roundText}${jobText}  •  ${gpsText}`, 20, bannerY + (bannerHeight * 0.82));
 
-    return canvas.toDataURL('image/jpeg', 0.72);
+    // การบีบอัดไฟล์ภาพอัตโนมัติ: ลดขนาดไฟล์เหลือ ~100-150KB แต่รักษาความคมชัดของทะเบียนและตัวอักษร 100%
+    const quality = (window.CONFIG && window.CONFIG.IMAGE_COMPRESSION && window.CONFIG.IMAGE_COMPRESSION.QUALITY) || 0.75;
+    const format = (window.CONFIG && window.CONFIG.IMAGE_COMPRESSION && window.CONFIG.IMAGE_COMPRESSION.FORMAT) || 'image/jpeg';
+    return canvas.toDataURL(format, quality);
+  }
+
+  /**
+   * แปลง DataURL (Base64) เป็น Blob Binary สำหรับอัปโหลดตรงขึ้น Supabase Storage
+   */
+  dataURLToBlob(dataURL) {
+    const parts = dataURL.split(';base64,');
+    const contentType = parts[0].split(':')[1] || 'image/jpeg';
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+
+    for (let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i);
+    }
+
+    return new Blob([uInt8Array], { type: contentType });
+  }
+
+  /**
+   * ตรวจสอบขนาดไฟล์ภาพ (Bytes) เพื่อแสดงผลในระบบ
+   */
+  getApproximateSizeKB(base64Str) {
+    if (!base64Str) return 0;
+    const stringLength = base64Str.length - 'data:image/jpeg;base64,'.length;
+    const sizeInBytes = 4 * Math.ceil(stringLength / 3) * 0.562489633438347;
+    return Math.round(sizeInBytes / 1024);
   }
 }
 

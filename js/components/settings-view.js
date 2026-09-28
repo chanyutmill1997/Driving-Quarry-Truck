@@ -265,29 +265,71 @@ class SettingsView {
     `;
   }
 
-  // 5. Tab Cloud Sync
+  // 5. Tab Cloud Sync (Supabase PostgreSQL & Storage)
   renderCloudTab() {
+    const syncStatus = window.quarryStore.getSyncStatus();
+    const currentKey = window.quarryStore.getSupabaseKey();
+    const isOnline = navigator.onLine;
+
     return `
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-lg space-y-6 max-w-2xl">
-        <h2 class="text-lg font-black text-white flex items-center gap-2">
-          <i data-lucide="cloud" class="w-5 h-5 text-blue-400"></i>
-          การเชื่อมต่อ Cloud และ Google Apps Script
-        </h2>
-
-        <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
-          <p class="text-xs font-bold text-slate-400 uppercase">Web App URL ปัจจุบัน:</p>
-          <p class="text-xs text-blue-400 font-mono break-all">${CONFIG.API_URL}</p>
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black text-white flex items-center gap-2">
+            <i data-lucide="database" class="w-5 h-5 text-blue-400"></i>
+            การเชื่อมต่อฐานข้อมูล Supabase & Storage
+          </h2>
+          <span class="px-3 py-1 rounded-full text-xs font-bold ${isOnline ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-red-950 text-red-300 border border-red-800'}">
+            ${isOnline ? '🟢 ออนไลน์พร้อมเชื่อมต่อ' : '🔴 ออฟไลน์ (ทำงานในเครื่อง)'}
+          </span>
         </div>
 
+        <!-- Connection Details Card -->
         <div class="space-y-3">
-          <button onclick="settingsView.syncInitialDatabaseToCloud()" class="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base">
-            <i data-lucide="upload-cloud" class="w-5 h-5"></i>
-            ส่งข้อมูล Master Data เริ่มต้นขึ้น Google Sheets อัตโนมัติ
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-slate-400 uppercase">Supabase Project URL:</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 font-mono">PostgreSQL</span>
+            </div>
+            <p class="text-xs text-blue-400 font-mono break-all">${CONFIG.SUPABASE_URL}</p>
+          </div>
+
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-slate-400 uppercase">Storage Bucket (รูปถ่ายรอบวิ่ง):</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">Auto Compress JPEG</span>
+            </div>
+            <p class="text-xs text-emerald-400 font-mono">${CONFIG.STORAGE_BUCKET}</p>
+          </div>
+
+          <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-slate-400 uppercase">สถานะการซิงค์:</span>
+              <span class="text-xs font-bold ${syncStatus.status === 'online' ? 'text-emerald-400' : (syncStatus.status === 'connecting' ? 'text-amber-400' : 'text-slate-400')}">
+                ${syncStatus.status === 'online' ? 'ซิงค์สำเร็จล่าสุด' : (syncStatus.status === 'connecting' ? 'กำลังเชื่อมต่อ...' : 'พร้อมทำงาน')}
+              </span>
+            </div>
+            <p class="text-xs text-slate-400">
+              คิวที่รอส่ง: <span class="font-bold text-white">${syncStatus.pending}</span> รายการ 
+              ${syncStatus.lastSyncAt ? ` | อัปเดตล่าสุด: ${new Date(syncStatus.lastSyncAt).toLocaleTimeString('th-TH')}` : ''}
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="space-y-3 pt-2">
+          <button onclick="settingsView.syncInitialDatabaseToCloud()" class="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base transition">
+            <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+            ดึงและซิงค์ข้อมูลล่าสุดกับ Supabase เดี๋ยวนี้
           </button>
 
-          <button onclick="settingsView.resetData()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-red-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm border border-slate-700">
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-            รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นจากไฟล์ Excel
+          <button onclick="settingsView.promptConfigureSupabaseKey()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm border border-slate-700 transition">
+            <i data-lucide="key" class="w-4 h-4 text-amber-400"></i>
+            ตั้งค่า Supabase Anon Key
+          </button>
+
+          <button onclick="settingsView.resetData()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-red-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm border border-slate-800 transition">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นจาก Master Data
           </button>
         </div>
       </div>
@@ -432,22 +474,28 @@ class SettingsView {
   }
 
   async syncInitialDatabaseToCloud() {
-    const seed = window.quarryStore.masterData;
     try {
-      alert("⏳ กำลังส่งข้อมูลเริ่มต้นขึ้น Google Sheets...");
-      const resp = await fetch(CONFIG.API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'initDatabase', seedData: seed })
-      });
-      const resJson = await resp.json();
-      if (resJson.status === 'success') {
-        alert("🎉 สร้างชีทตารางใน Google Sheets เรียบร้อยแล้วครับ!");
+      alert("⏳ กำลังเชื่อมต่อและซิงค์ข้อมูลกับ Supabase...");
+      const success = await window.quarryStore.seedAllToSupabase();
+      if (success) {
+        alert("🎉 ซิงค์ข้อมูล Master Data ขึ้นฐานข้อมูล Supabase สำเร็จเรียบร้อยแล้วครับ!");
       } else {
-        alert("แจ้งเตือน: " + resJson.message);
+        await window.quarryStore.refreshMasterDataFromCloud();
+        alert("🔄 อัปเดตข้อมูลล่าสุดจาก Supabase เรียบร้อยแล้วครับ!");
       }
+      window.app.render();
     } catch (e) {
-      alert("การเชื่อมต่อขัดข้อง: " + e.toString());
+      alert("การเชื่อมต่อ Supabase ขัดข้อง: " + e.toString());
+    }
+  }
+
+  promptConfigureSupabaseKey() {
+    const currentKey = window.quarryStore.getSupabaseKey() || '';
+    const newKey = prompt("ระบุ Supabase anon / public key:", currentKey);
+    if (newKey !== null && newKey.trim() !== '') {
+      window.quarryStore.setSupabaseKey(newKey.trim());
+      alert("✅ บันทึก Supabase Key เรียบร้อยแล้ว ระบบจะเริ่มเชื่อมต่อใหม่อัตโนมัติ");
+      window.app.render();
     }
   }
 
@@ -461,3 +509,4 @@ class SettingsView {
 }
 
 window.settingsView = new SettingsView();
+

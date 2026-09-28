@@ -314,14 +314,22 @@ class AdminDashboard {
 
                   <!-- Photos Preview -->
                   <div class="grid grid-cols-2 gap-2">
-                    <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-blue-500/40" onclick="adminDashboard.viewPhoto('${t.loadPhotoBase64}', 'จุดรับหิน', '${t.truckPlate}', '${t.timestamp}')">
-                      <img src="${t.loadPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
-                      <span class="absolute bottom-1 left-1 bg-blue-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">📍 จุดรับหิน</span>
-                    </div>
-                    <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-emerald-500/40" onclick="adminDashboard.viewPhoto('${t.dumpPhotoBase64}', 'จุดเทหิน', '${t.truckPlate}', '${t.timestamp}')">
-                      <img src="${t.dumpPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
-                      <span class="absolute bottom-1 left-1 bg-emerald-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">🏁 จุดเทหิน</span>
-                    </div>
+                    ${(t.loadPhotoUrl || t.loadPhotoBase64) ? `
+                      <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-blue-500/40 bg-slate-950" onclick="adminDashboard.viewPhoto('${t.loadPhotoUrl || t.loadPhotoBase64}', 'จุดรับหิน', '${t.truckPlate}', '${t.timestamp}')">
+                        <img src="${t.loadPhotoUrl || t.loadPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
+                        <span class="absolute bottom-1 left-1 bg-blue-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">📍 จุดรับหิน</span>
+                      </div>
+                    ` : `
+                      <div class="h-24 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-[10px] text-slate-500 font-bold bg-slate-950">ไม่มีรูปรับหิน</div>
+                    `}
+                    ${(t.dumpPhotoUrl || t.dumpPhotoBase64) ? `
+                      <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-950" onclick="adminDashboard.viewPhoto('${t.dumpPhotoUrl || t.dumpPhotoBase64}', 'จุดเทหิน', '${t.truckPlate}', '${t.timestamp}')">
+                        <img src="${t.dumpPhotoUrl || t.dumpPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
+                        <span class="absolute bottom-1 left-1 bg-emerald-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">🏁 จุดเทหิน</span>
+                      </div>
+                    ` : `
+                      <div class="h-24 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-[10px] text-slate-500 font-bold bg-slate-950">ไม่มีรูปเทหิน</div>
+                    `}
                   </div>
 
                   <div class="text-[11px] text-slate-400 flex items-center justify-between">
