@@ -146,8 +146,11 @@ class QuarryApp {
                 <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-full h-full object-contain rounded-xl">
               </div>
               <div>
-                <h1 class="font-black text-base text-white tracking-tight">โรงโม่ชาญยุทธ</h1>
-                <p class="text-[11px] text-blue-400 font-semibold">ศูนย์ควบคุมกลาง (Executive Control Panel)</p>
+                <h1 class="font-black text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5">
+                  <span>โรงโม่หิน ป.ศรีวิไลลักษณ์</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">ป.ศรีฯ</span>
+                </h1>
+                <p class="text-[10px] sm:text-[11px] text-blue-400 font-semibold truncate">บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
               </div>
             </div>
 

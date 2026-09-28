@@ -2,9 +2,12 @@
  * การตั้งค่าระบบโรงโม่ (System Configuration)
  */
 const CONFIG = {
-  APP_NAME: "โรงโม่ชาญยุทธ (CHANYUTH MILL)",
-  COMPANY_NAME: "บริษัท โรงโม่หินชาญยุทธ จำกัด",
-  VERSION: "2.2.0",
+  APP_NAME: "โรงโม่หิน ป.ศรีวิไลลักษณ์",
+  PLANT_NAME: "โรงโม่หิน ป.ศรีวิไลลักษณ์ (ป.ศรีฯ)",
+  COMPANY_NAME: "บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด",
+  COMPANY_ENG_NAME: "CHANYUTH MILL (1997) CO., LTD.",
+  COMPANY_SLOGAN: "ให้บริการโม่หินผสมคลุก ยางแอสฟัลท์ติกคอนกรีต หินคลุก หินเกล็ด และวัสดุก่อสร้างครบวงจร",
+  VERSION: "2.3.0",
   // Supabase PostgreSQL & Storage Settings
   SUPABASE_URL: "https://gkkndbjgkzninlddfxyj.supabase.co",
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdra25kYmpna3puaW5sZGRmeHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY3MjM4NTgsImV4cCI6MjA0MjI5OTg1OH0.kS9b24jYVb4XpWwO8Vv8nZpWlqZ3_placeholder",

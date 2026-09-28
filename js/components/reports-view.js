@@ -746,6 +746,46 @@ class ReportsView {
       `;
     }
 
+    return `
+      <div class="space-y-4 text-slate-900">
+        <!-- Header -->
+        <div class="border-b-2 border-slate-800 pb-3 flex justify-between items-end">
+          <div>
+            <h1 class="text-xl font-black text-slate-900">${CONFIG.PLANT_NAME}</h1>
+            <p class="text-xs font-bold text-blue-900">${CONFIG.COMPANY_NAME}</p>
+            <h2 class="text-base font-bold text-slate-700 mt-1">${title}</h2>
+            <p class="text-xs text-slate-500 mt-0.5">${dateRangeStr}</p>
+          </div>
+          <div class="text-right text-xs text-slate-500">
+            <p>พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
+            <p class="font-bold text-slate-800">เอกสารทางการโรงโม่</p>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="pt-2">
+          ${tableHtml}
+        </div>
+
+        <!-- Signatures Block -->
+        <div class="pt-12 grid grid-cols-3 gap-8 text-center text-xs text-slate-700">
+          <div class="border-t border-slate-400 pt-2">
+            <p>ผู้จัดทำรายงาน / เจ้าหน้าที่ลาน</p>
+            <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
+          </div>
+          <div class="border-t border-slate-400 pt-2">
+            <p>ผู้ตรวจสอบ / หัวหน้างาน</p>
+            <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
+          </div>
+          <div class="border-t border-slate-400 pt-2">
+            <p>ผู้อนุมัติ / ผู้บริหารโรงโม่</p>
+            <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // -------------------------------------------------------------
   // EXPORT MODAL (2 วัตถุประสงค์: สรุปการเงินอนุมัติ VS หลักฐานรูปถ่ายรับ-เท)
   // -------------------------------------------------------------
@@ -966,9 +1006,10 @@ class ReportsView {
         <!-- Header -->
         <div class="border-b-2 border-slate-800 pb-3 flex justify-between items-end">
           <div>
-            <h1 class="text-xl font-black text-slate-900">${CONFIG.APP_NAME}</h1>
-            <h2 class="text-base font-bold text-slate-700 mt-0.5">ชุดเอกสารหลักฐานประกอบรอบวิ่งและรูปถ่ายรับ-เท (Trip Evidence Dossier)</h2>
-            <p class="text-xs text-slate-500 mt-1">${dateRangeStr} | ทั้งหมด ${trips.length} รอบวิ่ง</p>
+            <h1 class="text-xl font-black text-slate-900">${CONFIG.PLANT_NAME}</h1>
+            <p class="text-xs font-bold text-blue-900">${CONFIG.COMPANY_NAME}</p>
+            <h2 class="text-base font-bold text-slate-700 mt-1">ชุดเอกสารหลักฐานประกอบรอบวิ่งและรูปถ่ายรับ-เท (Trip Evidence Dossier)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">${dateRangeStr} | ทั้งหมด ${trips.length} รอบวิ่ง</p>
           </div>
           <div class="text-right text-xs text-slate-500">
             <p>พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>

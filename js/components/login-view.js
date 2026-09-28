@@ -20,19 +20,34 @@ class LoginView {
   renderLoginForm() {
     return `
       <div class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden glass-card">
           
-          <!-- Header Bar with Company Logo -->
-          <div class="bg-gradient-to-r from-slate-900 to-slate-950 p-6 text-center relative border-b border-slate-800">
-            <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="absolute top-3 right-3 p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 font-bold text-xs transition">
+          <!-- Hero Banner with Real Quarry Plant & Official Branding -->
+          <div class="relative overflow-hidden border-b border-slate-800">
+            <!-- Plant Image Backdrop -->
+            <div class="h-44 w-full bg-slate-950 relative overflow-hidden">
+              <img src="assets/quarry_plant.png" alt="โรงโม่หิน ป.ศรีวิไลลักษณ์" class="w-full h-full object-cover opacity-60">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/30"></div>
+            </div>
+
+            <!-- Floating Theme Switcher Button -->
+            <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="absolute top-3 right-3 p-2 bg-slate-900/80 hover:bg-slate-900 backdrop-blur-md rounded-xl text-slate-200 font-bold text-xs border border-white/10 transition z-10">
               ${window.app && window.app.theme === 'dark' ? '☀️ สว่าง' : '🌙 มืด'}
             </button>
-            <div class="inline-flex p-2 bg-white rounded-2xl mb-3 shadow-lg border border-slate-700">
-              <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-16 h-16 object-contain rounded-xl">
+
+            <!-- Company Sign Badge (Like Signboard on Silo) -->
+            <div class="absolute inset-x-4 bottom-3 text-center">
+              <div class="inline-flex items-center gap-2.5 px-3 py-1 bg-emerald-900/90 border border-emerald-500/40 rounded-xl text-emerald-100 text-xs font-bold backdrop-blur-md shadow-lg mb-1.5">
+                <span>🏔️</span>
+                <span>โรงโม่หิน ป.ศรีวิไลลักษณ์ (ป.ศรีฯ)</span>
+              </div>
+              <h1 class="text-sm font-bold text-white tracking-wide drop-shadow-md">
+                บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด
+              </h1>
+              <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mt-0.5">
+                CHANYUTH MILL (1997) CO., LTD. • FLEET SYSTEM
+              </p>
             </div>
-            <h1 class="text-xl font-black text-white tracking-wide">โรงโม่ชาญยุทธ</h1>
-            <p class="text-[11px] font-bold text-blue-400 mt-0.5 tracking-wider uppercase">CHANYUTH MILL FLEET MANAGEMENT</p>
-            <p class="text-xs text-slate-400 mt-1">ระบบบันทึกเที่ยววิ่งและตรวจสอบจุดรับ-เทหิน</p>
           </div>
 
           <!-- Login Form Content -->
@@ -108,16 +123,16 @@ class LoginView {
       <div class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
         <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
           
-          <!-- Header Bar -->
-          <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-slate-950 text-center relative">
-            <button onclick="loginView.showLoginForm()" class="absolute top-4 left-4 p-2 bg-slate-950/20 hover:bg-slate-950/30 rounded-xl text-slate-950 font-bold text-xs transition flex items-center gap-1">
+          <!-- Header Bar with Company Logo -->
+          <div class="bg-gradient-to-r from-slate-900 to-slate-950 p-6 text-slate-100 text-center relative border-b border-slate-800">
+            <button onclick="loginView.showLoginForm()" class="absolute top-4 left-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 font-bold text-xs transition flex items-center gap-1 border border-slate-700">
               <i data-lucide="arrow-left" class="w-4 h-4"></i> กลับ
             </button>
-            <div class="inline-flex p-3 bg-slate-950/15 rounded-2xl mb-2 shadow-inner">
-              <i data-lucide="user-plus" class="w-8 h-8"></i>
+            <div class="inline-flex p-2 bg-white rounded-2xl mb-2 shadow-lg border border-slate-700">
+              <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-12 h-12 object-contain rounded-xl">
             </div>
-            <h1 class="text-xl font-black">ลงทะเบียนพนักงานขับรถใหม่</h1>
-            <p class="text-xs font-bold text-slate-900/80 mt-1">กรอกข้อมูลเพื่อสร้างบัญชีและเริ่มบันทึกงาน</p>
+            <h1 class="text-lg font-black text-white">ลงทะเบียนพนักงานขับรถใหม่</h1>
+            <p class="text-xs text-emerald-400 font-bold mt-0.5">โรงโม่หิน ป.ศรีวิไลลักษณ์ • บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
           </div>
 
           <!-- Registration Form -->
