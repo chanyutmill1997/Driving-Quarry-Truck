@@ -112,12 +112,22 @@ class ReportsView {
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
-            <label class="block text-xs text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
-            <input type="date" id="filter-date-from" value="${this.filterDateFrom}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+            <label class="block text-xs text-slate-400 font-bold mb-1">ตั้งแต่วันที่ (เลือกปฏิทินหรือพิมพ์)</label>
+            <div class="relative flex items-center">
+              <input type="date" id="filter-date-from" value="${this.filterDateFrom}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 pr-9 text-white text-xs focus:outline-none cursor-pointer" title="คลิกเลือกจากปฏิทิน หรือพิมพ์วันที่ได้โดยตรง">
+              <button onclick="document.getElementById('filter-date-from')?.showPicker ? document.getElementById('filter-date-from').showPicker() : document.getElementById('filter-date-from')?.focus()" class="absolute right-2.5 text-blue-400 hover:text-blue-300" title="คลิกเปิดปฏิทิน">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+              </button>
+            </div>
           </div>
           <div>
-            <label class="block text-xs text-slate-400 font-bold mb-1">ถึงวันที่</label>
-            <input type="date" id="filter-date-to" value="${this.filterDateTo}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+            <label class="block text-xs text-slate-400 font-bold mb-1">ถึงวันที่ (เลือกปฏิทินหรือพิมพ์)</label>
+            <div class="relative flex items-center">
+              <input type="date" id="filter-date-to" value="${this.filterDateTo}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 pr-9 text-white text-xs focus:outline-none cursor-pointer" title="คลิกเลือกจากปฏิทิน หรือพิมพ์วันที่ได้โดยตรง">
+              <button onclick="document.getElementById('filter-date-to')?.showPicker ? document.getElementById('filter-date-to').showPicker() : document.getElementById('filter-date-to')?.focus()" class="absolute right-2.5 text-blue-400 hover:text-blue-300" title="คลิกเปิดปฏิทิน">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+              </button>
+            </div>
           </div>
           <div>
             <label class="block text-xs text-slate-400 font-bold mb-1">เลือกรถ</label>

@@ -24,50 +24,98 @@ class QuarryAIEngine {
 
     const anomalies = [];
 
-    // กฎที่ 1: ตรวจจับรอบวิ่งเร็วเกินจริง (Impossible Fast Trip Duration)
-    // ถ้ารอบวิ่งคนเดียวกันมีเวลาห่างกันน้อยกว่า 2 นาที
+    // กฎที่ 1: ตรวจจับความเร็วในการอัปรูปจุดรับและจุดเท (Load-to-Dump Speed Anomaly)
+    // หากระยะเวลาจากจุดรับถึงจุดเทน้อยกว่า 3 นาที (180 วินาที) ถือว่าผิดปกติอย่างยิ่ง
+    trips.forEach(t => {
+      let durationSec = t.durationSeconds;
+      
+      // คำนวณจาก timestamp ถ้าไม่มี durationSeconds ใน record เก่า
+      if (durationSec === undefined || durationSec === null) {
+        if (t.loadTime && t.dumpTime) {
+          durationSec = Math.max(1, Math.round((t.dumpTime - t.loadTime) / 1000));
+        }
+      }
+
+      // ตรวจสอบเงื่อนไขความเร็วผิดปกติ (น้อยกว่า 3 นาที / 180 วินาที)
+      if (durationSec !== undefined && durationSec !== null && durationSec > 0 && durationSec < 180) {
+        const mins = Math.floor(durationSec / 60);
+        const secs = durationSec % 60;
+        const durationStr = mins > 0 ? `${mins} นาที ${secs} วินาที` : `${secs} วินาที`;
+
+        anomalies.unshift({
+          id: 'ANO_SPEED_' + t.id,
+          type: 'speed_dump_fast',
+          severity: 'critical',
+          title: `🚨 ถ่ายจุดรับและจุดเทเร็วผิดปกติ (${durationStr})`,
+          desc: `รถ ${t.truckPlate} โดยคนขับ ${t.driverName} บันทึกรอบ #${t.roundNumber} (${t.jobTypeName || 'รับ-เทหิน'}) เมื่อ ${t.date} เวลา ${t.timestamp} ใช้เวลาระหว่างจุดรับและจุดเทเพียง ${durationStr} (เกณฑ์มาตรฐานอย่างน้อย 3-5 นาที)`,
+          referenceId: t.id,
+          trip: t,
+          vehicleCode: t.truckPlate,
+          driverName: t.driverName,
+          driverPhone: t.driverPhone,
+          date: t.date,
+          roundNumber: t.roundNumber,
+          jobTypeName: t.jobTypeName,
+          timestamp: t.timestamp,
+          loadTimestampText: t.loadTimestampText || 'ไม่ระบุ',
+          dumpTimestampText: t.dumpTimestampText || 'ไม่ระบุ',
+          durationText: durationStr,
+          durationSeconds: durationSec,
+          loadPhotoUrl: t.loadPhotoUrl || t.loadPhotoBase64,
+          dumpPhotoUrl: t.dumpPhotoUrl || t.dumpPhotoBase64,
+          loadGps: { lat: t.loadLat, lng: t.loadLng },
+          dumpGps: { lat: t.dumpLat, lng: t.dumpLng },
+          recommendedAction: 'คลิกปุ่ม [🔍 ตรวจสอบเที่ยววิ่งนี้] ด้านล่าง เพื่อดูรูปจุดรับและจุดเทเทียบกัน หรือโทรสอบถามคนขับ'
+        });
+      }
+    });
+
+    // กฎที่ 2: ตรวจจับรอบวิ่งต่อเนื่องเร็วเกินจริง (Continuous Trips Gap < 2 นาที)
     for (let i = 0; i < todayTrips.length - 1; i++) {
       const current = todayTrips[i];
       const prev = todayTrips[i + 1];
       if (current.driverPhone === prev.driverPhone && current.truckPlate === prev.truckPlate) {
-        // หากระยะเวลาใกล้เคียงกันมาก
         anomalies.push({
           id: 'ANO_' + current.id,
-          type: 'speed',
+          type: 'speed_consecutive',
           severity: 'warning',
-          title: `รอบวิ่งเร็วผิดปกติ (ความถี่สูง)`,
+          title: `รอบวิ่งต่อเนื่องเร็วผิดปกติ (ความถี่สูง)`,
           desc: `คนขับ ${current.driverName} (${current.truckPlate}) บันทึกรอบ #${current.roundNumber} ต่อจากรอบก่อนหน้าเร็วเกินเกณฑ์มาตรฐาน`,
           referenceId: current.id,
+          trip: current,
           vehicleCode: current.truckPlate,
           driverName: current.driverName,
+          driverPhone: current.driverPhone,
           timestamp: current.timestamp,
-          photoUrl: current.loadPhotoBase64,
+          photoUrl: current.loadPhotoUrl || current.loadPhotoBase64,
           recommendedAction: 'ตรวจสอบรูปถ่ายจุดรับและจุดเทหินว่าถ่ายจากหน้างานจริงหรือไม่ หรือโทรสอบถามคนขับ'
         });
-        break; // แจ้งเตือนตัวอย่าง
+        break;
       }
     }
 
-    // กฎที่ 2: ตรวจจับพิกัด GPS ซ้ำซ้อน หรือรับ-เทที่เดิม (GPS Inconsistency)
+    // กฎที่ 3: ตรวจจับพิกัด GPS ซ้ำซ้อน หรือรับ-เทที่เดิม (GPS Inconsistency)
     todayTrips.forEach(t => {
-      if (t.loadLat && t.dumpLat && t.loadLat === t.dumpLat && t.loadLng === t.dumpLng) {
+      if (t.loadLat && t.dumpLat && t.loadLat === t.dumpLat && t.loadLng === t.dumpLng && Number(t.loadLat) !== 0) {
         anomalies.push({
           id: 'ANO_GPS_' + t.id,
           type: 'gps',
           severity: 'critical',
           title: `พิกัดจุดรับและจุดเทเป็นตำแหน่งเดียวกัน`,
-          desc: `รอบที่ #${t.roundNumber} ของรถ ${t.truckPlate} มีพิกัดรับหินและเทหินอยู่ที่เดียวกัน (${t.loadLat}, ${t.loadLng})`,
+          desc: `รอบที่ #${t.roundNumber} ของรถ ${t.truckPlate} มีพิกัดรับหินและเทหินอยู่ที่พิกัดเดียวกัน (${t.loadLat}, ${t.loadLng})`,
           referenceId: t.id,
+          trip: t,
           vehicleCode: t.truckPlate,
           driverName: t.driverName,
+          driverPhone: t.driverPhone,
           timestamp: t.timestamp,
-          photoUrl: t.dumpPhotoBase64 || t.loadPhotoBase64,
+          photoUrl: t.dumpPhotoUrl || t.dumpPhotoBase64 || t.loadPhotoUrl || t.loadPhotoBase64,
           recommendedAction: 'ตรวจสอบตำแหน่งบนแผนที่ว่าคนขับกดถ่ายรูปที่จุดรับทั้งสองครั้งหรือไม่'
         });
       }
     });
 
-    // กฎที่ 3: ตรวจจับรถจอดไม่ได้วิ่งเกินเกณฑ์ (Fleet Idleness)
+    // กฎที่ 4: ตรวจจับรถจอดไม่ได้วิ่งเกินเกณฑ์ (Fleet Idleness)
     const activePlates = new Set(todayTrips.map(t => t.truckPlate));
     const idleTrucks = trucks.filter(t => !activePlates.has(t.code));
     if (idleTrucks.length >= 8) {
@@ -75,29 +123,13 @@ class QuarryAIEngine {
         id: 'ANO_FLEET_IDLE',
         type: 'fleet',
         severity: 'info',
-        title: `มีรถบรรทุกจอดอยู่ ${idleTrucks.length} คัน (อัตราว่าง ${Math.round((idleTrucks.length / trucks.length) * 100)}%)`,
+        title: `มีรถบรรทุกจอดอยู่ ${idleTrucks.length} คัน (อัตราว่าง ${Math.round((idleTrucks.length / (trucks.length || 1)) * 100)}%)`,
         desc: `พบรถสิบล้อจอดไม่ได้เปิดกะจำนวนมาก เช่น ${idleTrucks.slice(0, 4).map(t => t.code).join(', ')}`,
         referenceId: 'FLEET',
         vehicleCode: 'หลายคัน',
         driverName: 'ไม่ได้วิ่ง',
         timestamp: new Date().toLocaleTimeString('th-TH'),
         recommendedAction: 'ตรวจสอบคิวงาน หรือจัดสรรคนขับเสริมเพื่อเพิ่มกำลังการขนหิน'
-      });
-    }
-
-    // กฎที่ 4: ตรวจสอบความสอดคล้องระหว่างสิบล้อกับแม็คโคร (Excavator-Truck Match)
-    if (todayTrips.length > 0 && todayExcLogs.length === 0) {
-      anomalies.push({
-        id: 'ANO_EXC_GAP',
-        type: 'match',
-        severity: 'warning',
-        title: `มีรอบวิ่งสิบล้อ ${todayTrips.length} รอบ แต่ยังไม่มีการบันทึกจากแม็คโคร`,
-        desc: `สิบล้อเริ่มวิ่งงานแล้ว แต่ฝั่งคนขับแม็คโครยังไม่ได้เปิดกะบันทึกการตัก`,
-        referenceId: 'EXCAVATOR',
-        vehicleCode: 'แม็คโคร',
-        driverName: 'แผนกขับรถขุด',
-        timestamp: new Date().toLocaleTimeString('th-TH'),
-        recommendedAction: 'แจ้งหัวหน้างานหน้างานเตือนคนขับแม็คโครให้เปิดระบบและกดบันทึกการตัก'
       });
     }
 

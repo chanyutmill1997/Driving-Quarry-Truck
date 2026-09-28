@@ -266,11 +266,21 @@ class DriverView {
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-[10px] text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
-                <input type="date" id="driver-filter-from" value="${this.historyFromDate}" onchange="driverView.setHistoryDateFilter(this.value, null)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <div class="relative flex items-center">
+                  <input type="date" id="driver-filter-from" value="${this.historyFromDate}" onchange="driverView.setHistoryDateFilter(this.value, null)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 pr-8 text-xs text-white cursor-pointer" title="คลิกเปิดปฏิทิน หรือพิมพ์วันที่">
+                  <button onclick="document.getElementById('driver-filter-from')?.showPicker ? document.getElementById('driver-filter-from').showPicker() : document.getElementById('driver-filter-from')?.focus()" class="absolute right-2 text-blue-400" title="เปิดปฏิทิน">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
               </div>
               <div>
                 <label class="block text-[10px] text-slate-400 font-bold mb-1">ถึงวันที่</label>
-                <input type="date" id="driver-filter-to" value="${this.historyToDate}" onchange="driverView.setHistoryDateFilter(null, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <div class="relative flex items-center">
+                  <input type="date" id="driver-filter-to" value="${this.historyToDate}" onchange="driverView.setHistoryDateFilter(null, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 pr-8 text-xs text-white cursor-pointer" title="คลิกเปิดปฏิทิน หรือพิมพ์วันที่">
+                  <button onclick="document.getElementById('driver-filter-to')?.showPicker ? document.getElementById('driver-filter-to').showPicker() : document.getElementById('driver-filter-to')?.focus()" class="absolute right-2 text-blue-400" title="เปิดปฏิทิน">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -404,6 +414,8 @@ class DriverView {
 
       this.loadPhoto = result.photoBase64;
       this.loadGPS = result.gps;
+      this.loadTime = Date.now();
+      this.loadTimestampText = new Date().toLocaleTimeString('th-TH');
       window.app.render();
     } catch (err) {
       if (err.message !== "ยกเลิกการถ่ายรูป") {
@@ -430,6 +442,8 @@ class DriverView {
 
       this.dumpPhoto = result.photoBase64;
       this.dumpGPS = result.gps;
+      this.dumpTime = Date.now();
+      this.dumpTimestampText = new Date().toLocaleTimeString('th-TH');
       window.app.render();
     } catch (err) {
       if (err.message !== "ยกเลิกการถ่ายรูป") {
@@ -466,6 +480,11 @@ class DriverView {
     this.isCompletingRound = true;
     const amount = window.quarryStore.calculateTruckRate(jobObj.id, shift.capacityTon);
 
+    // คำนวณระยะเวลาจริงระหว่างจุดรับหิน และ จุดเทหิน (วินาที)
+    const durationSec = (this.loadTime && this.dumpTime) 
+      ? Math.max(1, Math.round((this.dumpTime - this.loadTime) / 1000))
+      : null;
+
     const tripRecord = {
       id: 'TRIP_' + Date.now(),
       date: today,
@@ -479,6 +498,11 @@ class DriverView {
       jobTypeId: jobObj.id,
       jobTypeName: jobObj.name,
       amount: amount,
+      loadTime: this.loadTime,
+      loadTimestampText: this.loadTimestampText || new Date().toLocaleTimeString('th-TH'),
+      dumpTime: this.dumpTime,
+      dumpTimestampText: this.dumpTimestampText || new Date().toLocaleTimeString('th-TH'),
+      durationSeconds: durationSec,
       loadPhotoBase64: this.loadPhoto,
       loadLat: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lat : '',
       loadLng: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lng : '',
@@ -490,8 +514,12 @@ class DriverView {
     // รีเซ็ตก่อนแจ้งซิงก์ เพื่อให้หน้าจอพร้อมสำหรับรอบถัดไปเสมอ
     this.loadPhoto = null;
     this.loadGPS = null;
+    this.loadTime = null;
+    this.loadTimestampText = null;
     this.dumpPhoto = null;
     this.dumpGPS = null;
+    this.dumpTime = null;
+    this.dumpTimestampText = null;
     this.activeJobId = null;
 
     try {

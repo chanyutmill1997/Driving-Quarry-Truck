@@ -232,11 +232,21 @@ class ExcavatorView {
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-[10px] text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
-                <input type="date" id="exc-filter-from" value="${this.historyFromDate}" onchange="excavatorView.setHistoryDateFilter(this.value, null)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <div class="relative flex items-center">
+                  <input type="date" id="exc-filter-from" value="${this.historyFromDate}" onchange="excavatorView.setHistoryDateFilter(this.value, null)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 pr-8 text-xs text-white cursor-pointer" title="คลิกเปิดปฏิทิน หรือพิมพ์วันที่">
+                  <button onclick="document.getElementById('exc-filter-from')?.showPicker ? document.getElementById('exc-filter-from').showPicker() : document.getElementById('exc-filter-from')?.focus()" class="absolute right-2 text-blue-400" title="เปิดปฏิทิน">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
               </div>
               <div>
                 <label class="block text-[10px] text-slate-400 font-bold mb-1">ถึงวันที่</label>
-                <input type="date" id="exc-filter-to" value="${this.historyToDate}" onchange="excavatorView.setHistoryDateFilter(null, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <div class="relative flex items-center">
+                  <input type="date" id="exc-filter-to" value="${this.historyToDate}" onchange="excavatorView.setHistoryDateFilter(null, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 pr-8 text-xs text-white cursor-pointer" title="คลิกเปิดปฏิทิน หรือพิมพ์วันที่">
+                  <button onclick="document.getElementById('exc-filter-to')?.showPicker ? document.getElementById('exc-filter-to').showPicker() : document.getElementById('exc-filter-to')?.focus()" class="absolute right-2 text-blue-400" title="เปิดปฏิทิน">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
