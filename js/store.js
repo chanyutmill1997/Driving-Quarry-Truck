@@ -761,6 +761,138 @@ class QuarryStore {
     }
   }
 
+  // -------------------------------------------------------------
+  // ระบบตรวจสอบสิทธิ์ เข้าสู่ระบบ และลงทะเบียนผู้ใช้
+  // -------------------------------------------------------------
+  async authenticateUser(identifier, pin) {
+    if (!identifier || !pin) {
+      return { success: false, message: 'กรุณาระบุเบอร์โทรหรือรหัสผู้ใช้ และ PIN' };
+    }
+
+    const cleanId = String(identifier).trim().replace(/[-\s]/g, '');
+    const cleanPin = String(pin).trim();
+
+    // ดึงข้อมูลผู้ใช้ทั้งหมด
+    const drivers = this.getDrivers();
+
+    // ค้นหาผู้ใช้ตาม เบอร์โทร, ID หรือ รหัสพนักงาน
+    let user = drivers.find(d => {
+      const userPhone = String(d.phone || '').replace(/[-\s]/g, '');
+      const userId = String(d.id || '').toLowerCase();
+      const userName = String(d.name || '').toLowerCase();
+      
+      // เทียบกับเบอร์โทร (รองรับทั้งแบบมี 0 และตัด 0)
+      if (userPhone && (userPhone === cleanId || userPhone.endsWith(cleanId) || cleanId.endsWith(userPhone))) {
+        return true;
+      }
+      // เทียบกับ ID
+      if (userId === cleanId.toLowerCase()) return true;
+
+      // เทียบกับ Admin / Supervisor alias
+      if (cleanId.toUpperCase() === 'ADMIN_1' && (d.role === 'admin' || userId === 'admin_1')) return true;
+      if (cleanId.toUpperCase() === 'SUP_1' && (d.role === 'supervisor' || userId === 'sup_1')) return true;
+
+      return false;
+    });
+
+    // หากไม่พบใน Local และเชื่อมต่อ Supabase ให้ลองค้นจาก Cloud
+    if (!user && this.supabase && navigator.onLine) {
+      try {
+        const { data, error } = await this.supabase
+          .from('drivers')
+          .select('*')
+          .or(`phone.eq.${identifier},id.eq.${identifier}`);
+        if (data && data.length > 0) {
+          user = data[0];
+          this.addOrUpdateDriver(user);
+        }
+      } catch (err) {
+        console.warn("Supabase auth lookup error:", err);
+      }
+    }
+
+    // กรณีทดสอบระบบบัญชี Admin / Supervisor ถ้าไม่มีในฐานข้อมูล ให้สร้างบัญชีเริ่มต้น
+    if (!user && (cleanId.toUpperCase() === 'ADMIN_1' || cleanId.toLowerCase() === 'admin')) {
+      user = { id: 'ADMIN_1', name: 'ผู้บริหารโรงโม่ (แอดมิน)', phone: '0888888888', role: 'admin', pin: '1234', status: 'active' };
+      this.addOrUpdateDriver(user);
+    } else if (!user && (cleanId.toUpperCase() === 'SUP_1' || cleanId.toLowerCase() === 'supervisor')) {
+      user = { id: 'SUP_1', name: 'หัวหน้างานหน้างาน', phone: '0999999999', role: 'supervisor', pin: '1234', status: 'active' };
+      this.addOrUpdateDriver(user);
+    }
+
+    if (!user) {
+      return { success: false, message: 'ไม่พบบัญชีผู้ใช้งานนี้ในระบบ หรือเบอร์โทรศัพท์ไม่ถูกต้อง' };
+    }
+
+    // ตรวจสอบสถานะบัญชี (Status)
+    if (user.status === 'suspended') {
+      return { success: false, message: 'บัญชีนี้ถูกระงับสิทธิ์การใช้งานชั่วคราว กรุณาติดต่อผู้ดูแลระบบ' };
+    }
+    if (user.status === 'pending') {
+      return { success: false, message: 'บัญชีนี้อยู่ระหว่างรอผู้ดูแลระบบอนุมัติการใช้งาน' };
+    }
+
+    // ตรวจสอบรหัส PIN
+    const expectedPin = String(user.pin || '1234').trim();
+    if (cleanPin !== expectedPin) {
+      return { success: false, message: 'รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' };
+    }
+
+    return { success: true, user };
+  }
+
+  // ลงทะเบียนคนขับรถใหม่ (New Driver Self-Registration)
+  async registerDriver(driverData) {
+    const { name, nickname, phone, role, assigned_vehicle, pin } = driverData;
+    if (!name || !phone || !pin) {
+      return { success: false, message: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน' };
+    }
+
+    const cleanPhone = String(phone).trim().replace(/[-\s]/g, '');
+    const drivers = this.getDrivers();
+
+    // เช็คเบอร์โทรซ้ำ
+    const existing = drivers.find(d => {
+      const p = String(d.phone || '').replace(/[-\s]/g, '');
+      return p && p === cleanPhone;
+    });
+
+    if (existing) {
+      return { success: false, message: `เบอร์โทรศัพท์นี้ลงทะเบียนไว้แล้วในชื่อ "${existing.name}"` };
+    }
+
+    const newDriver = {
+      id: 'D_' + Date.now(),
+      name: name.trim(),
+      nickname: (nickname || '').trim(),
+      phone: phone.trim(),
+      role: role || 'truck_driver',
+      assigned_vehicle: assigned_vehicle || '',
+      pin: String(pin).trim(),
+      status: 'active', // เปิดใช้งานทันที
+      created_at: new Date().toISOString()
+    };
+
+    await this.addOrUpdateDriver(newDriver);
+    return { success: true, user: newDriver };
+  }
+
+  // เปลี่ยนรหัส PIN
+  async changeDriverPin(driverId, oldPin, newPin) {
+    const drivers = this.getDrivers();
+    const user = drivers.find(d => d.id === driverId);
+    if (!user) return { success: false, message: 'ไม่พบข้อมูลผู้ใช้' };
+
+    const currentPin = String(user.pin || '1234').trim();
+    if (String(oldPin).trim() !== currentPin) {
+      return { success: false, message: 'รหัส PIN เดิมไม่ถูกต้อง' };
+    }
+
+    user.pin = String(newPin).trim();
+    await this.addOrUpdateDriver(user);
+    return { success: true, message: 'เปลี่ยนรหัส PIN เรียบร้อยแล้ว' };
+  }
+
   // รีเซ็ตข้อมูลกลับเป็นค่าเริ่มต้นจากไฟล์ Excel / Seed JSON
   async resetToSeedData() {
     try {

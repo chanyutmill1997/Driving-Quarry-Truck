@@ -40,16 +40,25 @@ class AuthService {
   // เข้าสู่ระบบด้วย เบอร์โทร/ชื่อ และ PIN
   async login(identifier, pin, selectedRole = 'driver') {
     try {
-      const result = await window.quarryStore.apiRequest({ action: 'login', identifier, pin }, 30000);
+      const result = await window.quarryStore.authenticateUser(identifier, pin);
+      if (!result.success) {
+        return result;
+      }
+
       this.currentUser = result.user;
       const actualRole = this.currentUser.role;
       const roleMatches = selectedRole === 'driver'
         ? ['truck_driver', 'excavator_operator'].includes(actualRole)
         : actualRole === selectedRole;
-      if (!roleMatches) {
+
+      if (!roleMatches && actualRole !== 'admin') {
         this.currentUser = null;
-        return { success: false, message: 'บัญชีนี้ไม่ตรงกับประเภทผู้ใช้งานที่เลือก' };
+        return { 
+          success: false, 
+          message: `บัญชีนี้มีสิทธิ์เป็น "${this.getRoleLabel(actualRole)}" ไม่ตรงกับประเภทผู้ใช้ที่เลือกไว้ (${this.getRoleLabel(selectedRole)})` 
+        };
       }
+
       this.workMode = selectedRole === 'driver' ? null : actualRole;
       localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE);
       localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
@@ -57,6 +66,30 @@ class AuthService {
     } catch (error) {
       return { success: false, message: error.message || 'เข้าสู่ระบบไม่สำเร็จ' };
     }
+  }
+
+  // ลงทะเบียนคนขับใหม่
+  async registerDriver(driverData) {
+    try {
+      const result = await window.quarryStore.registerDriver(driverData);
+      if (!result.success) return result;
+
+      this.currentUser = result.user;
+      this.workMode = result.user.role;
+      localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+      localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE, this.workMode);
+      return { success: true, user: this.currentUser };
+    } catch (error) {
+      return { success: false, message: error.message || 'ลงทะเบียนไม่สำเร็จ' };
+    }
+  }
+
+  getRoleLabel(role) {
+    if (role === 'admin') return 'ผู้บริหาร / แอดมิน';
+    if (role === 'supervisor') return 'หัวหน้างาน';
+    if (role === 'excavator_operator') return 'พนักงานขับแม็คโคร';
+    if (role === 'truck_driver' || role === 'driver') return 'พนักงานขับรถสิบล้อ';
+    return role;
   }
 
   getWorkMode() { return this.workMode; }

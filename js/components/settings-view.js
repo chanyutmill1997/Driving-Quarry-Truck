@@ -217,50 +217,156 @@ class SettingsView {
     `;
   }
 
-  // 4. Tab พนักงาน
+  // 4. Tab บัญชีผู้ใช้งานและสิทธิ์ (User Accounts & Role Permissions)
   renderDriversTab() {
     const drivers = window.quarryStore.getDrivers();
+    const trucks = window.quarryStore.getTrucks();
+    const excavators = window.quarryStore.getExcavators();
+
+    const roleFilter = this.userRoleFilter || 'all';
+    const searchQuery = (this.userSearchQuery || '').toLowerCase().trim();
+
+    let filteredDrivers = drivers.filter(d => {
+      if (roleFilter !== 'all' && d.role !== roleFilter) return false;
+      if (searchQuery) {
+        const nameMatch = (d.name || '').toLowerCase().includes(searchQuery);
+        const nickMatch = (d.nickname || '').toLowerCase().includes(searchQuery);
+        const phoneMatch = (d.phone || '').includes(searchQuery);
+        const codeMatch = (d.assigned_vehicle || '').toLowerCase().includes(searchQuery);
+        if (!nameMatch && !nickMatch && !phoneMatch && !codeMatch) return false;
+      }
+      return true;
+    });
+
+    const activeCount = drivers.filter(d => d.status !== 'suspended').length;
+    const suspendedCount = drivers.filter(d => d.status === 'suspended').length;
+
     return `
-      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-black text-white">รายชื่อพนักงานและสิทธิ์การใช้งาน (${drivers.length} คน)</h2>
-          <button onclick="settingsView.promptAddDriver()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
-            <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มพนักงานใหม่
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-5">
+        
+        <!-- Top Action Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-black text-white flex items-center gap-2">
+              <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
+              จัดการบัญชีผู้ใช้งานและกำหนดสิทธิ์ (${drivers.length} บัญชี)
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">
+              เปิดใช้งาน: <span class="text-emerald-400 font-bold">${activeCount}</span> บัญชี | 
+              ระงับสิทธิ์: <span class="text-red-400 font-bold">${suspendedCount}</span> บัญชี
+            </p>
+          </div>
+
+          <button onclick="settingsView.openAddUserModal()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center justify-center gap-2 shadow-lg transition">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> เพิ่มบัญชีผู้ใช้ใหม่
           </button>
         </div>
 
-        <div class="overflow-x-auto max-h-[500px]">
+        <!-- Filter & Search Controls -->
+        <div class="flex flex-col md:flex-row gap-3 items-center justify-between bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+          
+          <!-- Search input -->
+          <div class="relative w-full md:w-80">
+            <input type="text" id="user-search-input" value="${this.userSearchQuery || ''}" oninput="settingsView.handleUserSearch(this.value)" placeholder="ค้นหาชื่อ, ชื่อเล่น, เบอร์โทร..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 pl-9 text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <div class="absolute left-3 top-2.5 text-slate-400">
+              <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            </div>
+          </div>
+
+          <!-- Role Filter Chips -->
+          <div class="flex flex-wrap gap-1.5 w-full md:w-auto">
+            ${[
+              { id: 'all', label: 'ทั้งหมด' },
+              { id: 'truck_driver', label: '🚚 สิบล้อ' },
+              { id: 'excavator_operator', label: '🚜 แม็คโคร' },
+              { id: 'supervisor', label: '📋 หัวหน้างาน' },
+              { id: 'admin', label: '💼 ผู้บริหาร' }
+            ].map(r => `
+              <button onclick="settingsView.setUserRoleFilter('${r.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${roleFilter === r.id ? 'bg-blue-500 text-slate-950 font-black shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+                ${r.label}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="overflow-x-auto max-h-[550px] border border-slate-800 rounded-2xl">
           <table class="w-full text-left text-xs text-slate-300">
             <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
               <tr>
-                <th class="p-3">ชื่อ-สกุล</th>
-                <th class="p-3">ชื่อเล่น</th>
-                <th class="p-3">เบอร์โทรศัพท์ (ใช้ล็อกอิน)</th>
-                <th class="p-3 text-center">บทบาท (Role)</th>
+                <th class="p-3">ชื่อ-นามสกุล / ชื่อเล่น</th>
+                <th class="p-3">เบอร์โทรศัพท์ (Login ID)</th>
+                <th class="p-3">เบอร์รถประจำ</th>
+                <th class="p-3 text-center">บทบาทและสิทธิ์</th>
                 <th class="p-3 text-center">รหัส PIN</th>
+                <th class="p-3 text-center">สถานะ</th>
                 <th class="p-3 text-right">จัดการ</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-800">
-              ${drivers.map(d => `
-                <tr class="hover:bg-slate-800/50">
-                  <td class="p-3 font-bold text-white">${d.name}</td>
-                  <td class="p-3 text-blue-400 font-semibold">${d.nickname || '-'}</td>
-                  <td class="p-3 text-slate-300">${d.phone || '-'}</td>
+              ${filteredDrivers.length === 0 ? `
+                <tr>
+                  <td colspan="7" class="p-8 text-center text-slate-500 font-bold">ไม่พบข้อมูลบัญชีผู้ใช้ตามเงื่อนไขที่ค้นหา</td>
+                </tr>
+              ` : filteredDrivers.map(d => `
+                <tr class="hover:bg-slate-800/50 transition">
+                  <td class="p-3">
+                    <span class="font-bold text-white text-sm">${d.name}</span>
+                    ${d.nickname ? `<span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-blue-300 border border-slate-700">(${d.nickname})</span>` : ''}
+                  </td>
+                  <td class="p-3 font-mono font-bold text-slate-300">${d.phone || '-'}</td>
+                  <td class="p-3 text-slate-400">${d.assigned_vehicle || '-'}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.role === 'admin' ? 'bg-blue-500 text-slate-950' : (d.role === 'supervisor' ? 'bg-blue-900 text-blue-200' : 'bg-slate-800 text-slate-300')}">
-                      ${d.role === 'admin' ? 'ผู้บริหาร' : (d.role === 'supervisor' ? 'หัวหน้างาน' : (d.role === 'excavator_operator' ? 'แม็คโคร' : 'คนขับสิบล้อ'))}
+                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-black ${
+                      d.role === 'admin' ? 'bg-amber-500 text-slate-950 shadow-sm' :
+                      d.role === 'supervisor' ? 'bg-blue-600 text-white shadow-sm' :
+                      d.role === 'excavator_operator' ? 'bg-cyan-900/80 text-cyan-200 border border-cyan-700' :
+                      'bg-slate-800 text-slate-300'
+                    }">
+                      ${
+                        d.role === 'admin' ? '👑 ผู้บริหาร / แอดมิน' :
+                        d.role === 'supervisor' ? '📋 หัวหน้างาน' :
+                        d.role === 'excavator_operator' ? '🚜 แม็คโคร' :
+                        '🚚 พนักงานขับสิบล้อ'
+                      }
                     </span>
                   </td>
-                  <td class="p-3 text-center font-mono font-bold text-slate-400">${d.pin || '1234'}</td>
+                  <td class="p-3 text-center font-mono font-bold text-blue-400">${d.pin || '1234'}</td>
+                  <td class="p-3 text-center">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                      d.status === 'suspended' ? 'bg-red-950 text-red-300 border border-red-800' :
+                      d.status === 'pending' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
+                      'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                    }">
+                      ${
+                        d.status === 'suspended' ? '⛔ ระงับสิทธิ์' :
+                        d.status === 'pending' ? '⏳ รออนุมัติ' :
+                        '🟢 พร้อมใช้งาน'
+                      }
+                    </span>
+                  </td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.deleteDriver('${d.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="settingsView.openEditUserModal('${d.id}')" class="px-2.5 py-1 bg-blue-950 hover:bg-blue-900 text-blue-300 rounded-lg font-bold border border-blue-800 text-[11px] transition" title="แก้ไขข้อมูล">
+                        ✏️ แก้ไข
+                      </button>
+                      <button onclick="settingsView.toggleUserStatus('${d.id}')" class="px-2.5 py-1 ${d.status === 'suspended' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-amber-950 text-amber-300 border-amber-800'} rounded-lg font-bold border text-[11px] transition" title="${d.status === 'suspended' ? 'ปลดระงับสิทธิ์' : 'ระงับสิทธิ์ชั่วคราว'}">
+                        ${d.status === 'suspended' ? '🔓 ปลดระงับ' : '🔒 ระงับ'}
+                      </button>
+                      <button onclick="settingsView.deleteDriver('${d.id}')" class="px-2.5 py-1 bg-red-950/60 hover:bg-red-900 text-red-300 rounded-lg font-bold border border-red-800 text-[11px] transition" title="ลบบัญชี">
+                        🗑️ ลบ
+                      </button>
+                    </div>
                   </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         </div>
+
+        <!-- User Management Modals Container (Rendered dynamically) -->
+        <div id="user-modal-container"></div>
+
       </div>
     `;
   }
@@ -444,30 +550,291 @@ class SettingsView {
     }
   }
 
-  promptAddDriver() {
-    const name = prompt("ชื่อ-สกุล พนักงานใหม่:");
-    if (!name) return;
-    const nickname = prompt("ชื่อเล่น:") || "";
-    const phone = prompt("เบอร์โทรศัพท์ (ใช้ล็อกอิน):") || "";
-    const roleChoice = prompt("ระบุบทบาท (1: คนขับสิบล้อ, 2: แม็คโคร, 3: หัวหน้างาน, 4: ผู้บริหาร):", "1");
-    let role = "truck_driver";
-    if (roleChoice === "2") role = "excavator_operator";
-    if (roleChoice === "3") role = "supervisor";
-    if (roleChoice === "4") role = "admin";
-
-    window.quarryStore.addOrUpdateDriver({
-      id: 'D_' + Date.now(),
-      name: name,
-      nickname: nickname,
-      phone: phone,
-      role: role,
-      pin: "1234"
-    });
+  // -------------------------------------------------------------
+  // USER ACCOUNTS & PERMISSION HANDLERS
+  // -------------------------------------------------------------
+  handleUserSearch(query) {
+    this.userSearchQuery = query;
     window.app.render();
   }
 
+  setUserRoleFilter(role) {
+    this.userRoleFilter = role;
+    window.app.render();
+  }
+
+  openAddUserModal() {
+    const trucks = window.quarryStore.getTrucks();
+    const excavators = window.quarryStore.getExcavators();
+
+    const container = document.getElementById('user-modal-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+          
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <i data-lucide="user-plus" class="w-5 h-5 text-emerald-400"></i>
+              เพิ่มบัญชีผู้ใช้งานและกำหนดสิทธิ์
+            </h3>
+            <button onclick="settingsView.closeUserModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+              ✕
+            </button>
+          </div>
+
+          <div class="space-y-3.5 text-xs">
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">ชื่อ-นามสกุลจริง <span class="text-red-400">*</span></label>
+              <input type="text" id="modal-user-name" placeholder="เช่น นาย สันติ ผ่องใส" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">ชื่อเล่น</label>
+                <input type="text" id="modal-user-nickname" placeholder="เช่น ต้อย, แดง" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">เบอร์โทรศัพท์ (Login ID) <span class="text-red-400">*</span></label>
+                <input type="tel" id="modal-user-phone" maxlength="10" placeholder="08xxxxxxxx" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">บทบาทและสิทธิ์การใช้งาน (Role) <span class="text-red-400">*</span></label>
+              <select id="modal-user-role" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option value="truck_driver">🚚 พนักงานขับรถสิบล้อ (Truck Driver)</option>
+                <option value="excavator_operator">🚜 พนักงานขับรถขุด / แม็คโคร (Excavator Operator)</option>
+                <option value="supervisor">📋 หัวหน้างาน / ผู้ตรวจสอบ (Supervisor)</option>
+                <option value="admin">💼 ผู้บริหาร / เจ้าของกิจการ (Admin)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">เบอร์รถประจำ (ถ้ามี)</label>
+              <select id="modal-user-vehicle" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option value="">-- ไม่มีรถประจำ (เลือกหน้างาน) --</option>
+                <optgroup label="รถบรรทุกสิบล้อ">
+                  ${trucks.map(t => `<option value="${t.code}">${t.code}</option>`).join('')}
+                </optgroup>
+                <optgroup label="รถขุด/แม็คโคร">
+                  ${excavators.map(e => `<option value="${e.code}">${e.code}</option>`).join('')}
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">รหัส PIN เข้าสู่ระบบ (4 หลัก)</label>
+                <input type="text" id="modal-user-pin" value="1234" maxlength="6" inputmode="numeric" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-center text-blue-400 font-mono font-black focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">สถานะเริ่มต้น</label>
+                <select id="modal-user-status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="active">🟢 เปิดใช้งาน (Active)</option>
+                  <option value="suspended">⛔ ระงับสิทธิ์ (Suspended)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-3 border-t border-slate-800">
+            <button onclick="settingsView.closeUserModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">
+              ยกเลิก
+            </button>
+            <button onclick="settingsView.saveNewUser()" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition">
+              บันทึกบัญชีผู้ใช้
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  openEditUserModal(userId) {
+    const drivers = window.quarryStore.getDrivers();
+    const user = drivers.find(d => d.id === userId);
+    if (!user) return;
+
+    const trucks = window.quarryStore.getTrucks();
+    const excavators = window.quarryStore.getExcavators();
+    const container = document.getElementById('user-modal-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+          
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <i data-lucide="edit-3" class="w-5 h-5 text-blue-400"></i>
+              แก้ไขข้อมูลและสิทธิ์ผู้ใช้งาน
+            </h3>
+            <button onclick="settingsView.closeUserModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+              ✕
+            </button>
+          </div>
+
+          <div class="space-y-3.5 text-xs">
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">ชื่อ-นามสกุลจริง</label>
+              <input type="text" id="edit-user-name" value="${user.name || ''}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">ชื่อเล่น</label>
+                <input type="text" id="edit-user-nickname" value="${user.nickname || ''}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">เบอร์โทรศัพท์ (Login ID)</label>
+                <input type="tel" id="edit-user-phone" value="${user.phone || ''}" maxlength="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">บทบาทและสิทธิ์การใช้งาน (Role)</label>
+              <select id="edit-user-role" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option value="truck_driver" ${user.role === 'truck_driver' ? 'selected' : ''}>🚚 พนักงานขับรถสิบล้อ (Truck Driver)</option>
+                <option value="excavator_operator" ${user.role === 'excavator_operator' ? 'selected' : ''}>🚜 พนักงานขับรถขุด / แม็คโคร (Excavator Operator)</option>
+                <option value="supervisor" ${user.role === 'supervisor' ? 'selected' : ''}>📋 หัวหน้างาน / ผู้ตรวจสอบ (Supervisor)</option>
+                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>💼 ผู้บริหาร / เจ้าของกิจการ (Admin)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">เบอร์รถประจำ</label>
+              <select id="edit-user-vehicle" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option value="">-- ไม่มีรถประจำ (เลือกหน้างาน) --</option>
+                <optgroup label="รถบรรทุกสิบล้อ">
+                  ${trucks.map(t => `<option value="${t.code}" ${user.assigned_vehicle === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
+                </optgroup>
+                <optgroup label="รถขุด/แม็คโคร">
+                  ${excavators.map(e => `<option value="${e.code}" ${user.assigned_vehicle === e.code ? 'selected' : ''}>${e.code}</option>`).join('')}
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">กำหนดรหัส PIN ใหม่</label>
+                <input type="text" id="edit-user-pin" value="${user.pin || '1234'}" maxlength="6" inputmode="numeric" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-center text-blue-400 font-mono font-black focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">สถานะบัญชี</label>
+                <select id="edit-user-status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="active" ${user.status !== 'suspended' ? 'selected' : ''}>🟢 เปิดใช้งาน (Active)</option>
+                  <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>⛔ ระงับสิทธิ์ (Suspended)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-3 border-t border-slate-800">
+            <button onclick="settingsView.closeUserModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">
+              ยกเลิก
+            </button>
+            <button onclick="settingsView.saveEditUser('${user.id}')" class="flex-1 py-3 bg-blue-500 hover:bg-blue-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition">
+              บันทึกการเปลี่ยนแปลง
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  closeUserModal() {
+    const container = document.getElementById('user-modal-container');
+    if (container) container.innerHTML = '';
+  }
+
+  async saveNewUser() {
+    const name = document.getElementById('modal-user-name')?.value.trim();
+    const nickname = document.getElementById('modal-user-nickname')?.value.trim();
+    const phone = document.getElementById('modal-user-phone')?.value.trim();
+    const role = document.getElementById('modal-user-role')?.value || 'truck_driver';
+    const vehicle = document.getElementById('modal-user-vehicle')?.value || '';
+    const pin = document.getElementById('modal-user-pin')?.value.trim() || '1234';
+    const status = document.getElementById('modal-user-status')?.value || 'active';
+
+    if (!name) return alert('กรุณาระบุชื่อ-นามสกุล');
+    if (!phone) return alert('กรุณาระบุเบอร์โทรศัพท์');
+
+    await window.quarryStore.addOrUpdateDriver({
+      id: 'D_' + Date.now(),
+      name,
+      nickname,
+      phone,
+      role,
+      assigned_vehicle: vehicle,
+      pin,
+      status
+    });
+
+    this.closeUserModal();
+    alert('✅ เพิ่มบัญชีผู้ใช้ใหม่เรียบร้อยแล้ว');
+    window.app.render();
+  }
+
+  async saveEditUser(userId) {
+    const drivers = window.quarryStore.getDrivers();
+    const user = drivers.find(d => d.id === userId);
+    if (!user) return;
+
+    const name = document.getElementById('edit-user-name')?.value.trim();
+    const nickname = document.getElementById('edit-user-nickname')?.value.trim();
+    const phone = document.getElementById('edit-user-phone')?.value.trim();
+    const role = document.getElementById('edit-user-role')?.value || user.role;
+    const vehicle = document.getElementById('edit-user-vehicle')?.value;
+    const pin = document.getElementById('edit-user-pin')?.value.trim() || user.pin;
+    const status = document.getElementById('edit-user-status')?.value || 'active';
+
+    if (!name) return alert('กรุณาระบุชื่อ-นามสกุล');
+
+    await window.quarryStore.addOrUpdateDriver({
+      ...user,
+      name,
+      nickname,
+      phone,
+      role,
+      assigned_vehicle: vehicle,
+      pin,
+      status
+    });
+
+    this.closeUserModal();
+    alert('✅ อัปเดตข้อมูลบัญชีเรียบร้อยแล้ว');
+    window.app.render();
+  }
+
+  async toggleUserStatus(userId) {
+    const drivers = window.quarryStore.getDrivers();
+    const user = drivers.find(d => d.id === userId);
+    if (!user) return;
+
+    const newStatus = user.status === 'suspended' ? 'active' : 'suspended';
+    const confirmMsg = newStatus === 'suspended'
+      ? `คุณต้องการระงับสิทธิ์การใช้งานของ "${user.name}" ชั่วคราวใช่หรือไม่?`
+      : `คุณต้องการปลดการระงับสิทธิ์ของ "${user.name}" ใช่หรือไม่?`;
+
+    if (confirm(confirmMsg)) {
+      await window.quarryStore.addOrUpdateDriver({
+        ...user,
+        status: newStatus
+      });
+      window.app.render();
+    }
+  }
+
   deleteDriver(driverId) {
-    if (confirm("คุณแน่ใจว่าต้องการลบพนักงานคนนี้ใช่หรือไม่?")) {
+    const drivers = window.quarryStore.getDrivers();
+    const user = drivers.find(d => d.id === driverId);
+    if (confirm(`คุณแน่ใจว่าต้องการลบบัญชีของ "${user ? user.name : driverId}" ออกจากระบบใช่หรือไม่?`)) {
       window.quarryStore.deleteDriver(driverId);
       window.app.render();
     }
@@ -509,4 +876,5 @@ class SettingsView {
 }
 
 window.settingsView = new SettingsView();
+
 

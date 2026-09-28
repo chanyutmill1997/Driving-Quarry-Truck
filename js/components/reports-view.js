@@ -53,25 +53,28 @@ class ReportsView {
               </button>
             </div>
 
-            <!-- Export Buttons Group -->
+            <!-- Export Actions Group -->
+            <button onclick="reportsView.openExportModal()" class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-2xl text-xs shadow-lg transition flex items-center gap-2" title="ส่งออกเอกสารรายงาน">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              📤 ส่งออกเอกสาร (Export)
+            </button>
+
             <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800">
-              <button onclick="reportsView.exportToExcel()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs shadow transition flex items-center gap-1.5" title="ดาวน์โหลดไฟล์ Excel (.xlsx)">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                Excel (.xlsx)
+              <button onclick="reportsView.exportToExcel()" class="px-3 py-2 bg-emerald-700/60 hover:bg-emerald-600 text-emerald-200 font-bold rounded-xl text-xs transition flex items-center gap-1.5" title="ดาวน์โหลดไฟล์ Excel (.xlsx)">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                Excel
               </button>
 
-              <button onclick="reportsView.exportToPDF()" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-xs shadow transition flex items-center gap-1.5" title="ดาวน์โหลดไฟล์ PDF (.pdf)">
-                <i data-lucide="file-text" class="w-4 h-4"></i>
-                PDF (.pdf)
-              </button>
-
-              <button onclick="reportsView.printReport()" class="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 transition flex items-center gap-1" title="พิมพ์เอกสารออกเครื่องพิมพ์">
-                <i data-lucide="printer" class="w-4 h-4"></i>
-                พิมพ์
+              <button onclick="reportsView.exportToPDF()" class="px-3 py-2 bg-red-700/60 hover:bg-red-600 text-red-200 font-bold rounded-xl text-xs transition flex items-center gap-1.5" title="ดาวน์โหลดไฟล์ PDF (.pdf)">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                PDF
               </button>
             </div>
           </div>
         </div>
+
+        <!-- Export Modal Container -->
+        <div id="export-modal-container"></div>
 
         <div id="report-printable-area">
           ${this.renderActiveView(trips, excLogs, trucks, drivers)}
@@ -743,38 +746,305 @@ class ReportsView {
       `;
     }
 
+  // -------------------------------------------------------------
+  // EXPORT MODAL (2 วัตถุประสงค์: สรุปการเงินอนุมัติ VS หลักฐานรูปถ่ายรับ-เท)
+  // -------------------------------------------------------------
+  openExportModal() {
+    const trucks = window.quarryStore.getTrucks();
+    const drivers = window.quarryStore.getDrivers();
+    const container = document.getElementById('export-modal-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 text-slate-100">
+          
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <div>
+              <h3 class="text-base font-black text-white flex items-center gap-2">
+                <i data-lucide="file-output" class="w-5 h-5 text-emerald-400"></i>
+                ส่งออกเอกสารรายงาน (Export Reports)
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">เลือกวัตถุประสงค์และรูปแบบไฟล์ที่ต้องการ</p>
+            </div>
+            <button onclick="reportsView.closeExportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+              ✕
+            </button>
+          </div>
+
+          <!-- Section 1: Choose Purpose -->
+          <div class="space-y-2.5">
+            <label class="block text-xs font-bold text-slate-300 uppercase">1. เลือกวัตถุประสงค์ของเอกสาร</label>
+            
+            <label class="flex items-start gap-3 p-3.5 bg-slate-950 border border-slate-700 hover:border-blue-500 rounded-2xl cursor-pointer transition">
+              <input type="radio" name="export-purpose" value="financial_summary" checked class="accent-blue-500 mt-1">
+              <div>
+                <span class="block text-sm font-black text-white flex items-center gap-1.5">
+                  💼 1) สรุปตัวเลขทางการเงินและเที่ยววิ่ง (เสนอผู้บริหารอนุมัติ)
+                </span>
+                <span class="block text-xs text-slate-400 mt-1">
+                  สรุปยอดรวม KPI, ค่าจ้างรายบุคคล, ยอดกระทบยอดสิบล้อ-แม็คโคร และมีช่องลงนาม 3 ฝ่าย (1–2 หน้า)
+                </span>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3.5 bg-slate-950 border border-slate-700 hover:border-emerald-500 rounded-2xl cursor-pointer transition">
+              <input type="radio" name="export-purpose" value="photo_dossier" class="accent-emerald-500 mt-1">
+              <div>
+                <span class="block text-sm font-black text-white flex items-center gap-1.5">
+                  📸 2) ชุดหลักฐานประกอบรอบวิ่ง (พร้อมรูปถ่ายจุดรับและจุดเท)
+                </span>
+                <span class="block text-xs text-slate-400 mt-1">
+                  เจาะลึกทุกเที่ยววิ่ง แสดงรูปถ่ายจุดรับ-จุดเทคู่กัน พิกัด GPS สแตมป์เวลาจริง และข้อมูลแม็คโครที่ตัก
+                </span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Section 2: Choose File Format -->
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-300 uppercase">2. รูปแบบไฟล์ที่ต้องการ</label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="flex items-center justify-center gap-2 p-3 bg-slate-950 border border-slate-700 rounded-xl cursor-pointer hover:border-blue-500 text-xs font-bold text-white">
+                <input type="radio" name="export-format" value="pdf" checked class="accent-blue-500">
+                <span>📄 PDF (.pdf)</span>
+              </label>
+              <label class="flex items-center justify-center gap-2 p-3 bg-slate-950 border border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500 text-xs font-bold text-white">
+                <input type="radio" name="export-format" value="excel" class="accent-emerald-500">
+                <span>📊 Excel (.xlsx)</span>
+              </label>
+              <label class="flex items-center justify-center gap-2 p-3 bg-slate-950 border border-slate-700 rounded-xl cursor-pointer hover:border-purple-500 text-xs font-bold text-white">
+                <input type="radio" name="export-format" value="print" class="accent-purple-500">
+                <span>🖨️ พิมพ์ออก A4</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 3: Filter Range -->
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-300 uppercase">3. ขอบเขตข้อมูล (ตัวกรอง)</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">ตั้งแต่วันที่</label>
+                <input type="date" id="export-date-from" value="${this.filterDateFrom}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white">
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">ถึงวันที่</label>
+                <input type="date" id="export-date-to" value="${this.filterDateTo}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2 pt-3 border-t border-slate-800">
+            <button onclick="reportsView.closeExportModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">
+              ยกเลิก
+            </button>
+            <button onclick="reportsView.executeExportModal()" class="flex-1 py-3 bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-400 hover:to-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-1.5">
+              <i data-lucide="download" class="w-4 h-4"></i> เริ่มการส่งออกเอกสาร
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  closeExportModal() {
+    const container = document.getElementById('export-modal-container');
+    if (container) container.innerHTML = '';
+  }
+
+  executeExportModal() {
+    const purpose = document.querySelector('input[name="export-purpose"]:checked')?.value || 'financial_summary';
+    const format = document.querySelector('input[name="export-format"]:checked')?.value || 'pdf';
+    const fromDate = document.getElementById('export-date-from')?.value;
+    const toDate = document.getElementById('export-date-to')?.value;
+
+    if (fromDate) this.filterDateFrom = fromDate;
+    if (toDate) this.filterDateTo = toDate;
+
+    this.closeExportModal();
+
+    if (purpose === 'photo_dossier') {
+      if (format === 'excel') {
+        alert("ชุดหลักฐานภาพถ่ายจะถูกส่งออกในรูปแบบไฟล์ PDF หรือพิมพ์ออก A4 เพื่อรักษาความคมชัดของรูปภาพครับ");
+        this.exportProofOfWorkPDF();
+      } else if (format === 'print') {
+        this.printProofOfWork();
+      } else {
+        this.exportProofOfWorkPDF();
+      }
+    } else {
+      // financial summary
+      if (format === 'excel') {
+        this.exportToExcel();
+      } else if (format === 'print') {
+        this.printReport();
+      } else {
+        this.exportToPDF();
+      }
+    }
+  }
+
+  // ส่งออกชุดหลักฐานภาพถ่ายรอบวิ่งเป็น PDF
+  exportProofOfWorkPDF() {
+    const reportHtml = this.generateProofOfWorkHTML();
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `ชุดหลักฐานรอบวิ่งโรงโม่_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    const element = document.createElement('div');
+    element.innerHTML = reportHtml;
+    element.style.fontFamily = "'Sarabun', -apple-system, sans-serif";
+    element.style.color = '#111827';
+    element.style.backgroundColor = '#ffffff';
+    element.style.padding = '20px';
+
+    if (window.html2pdf) {
+      window.html2pdf().set(opt).from(element).save();
+    } else {
+      this.printProofOfWork();
+    }
+  }
+
+  printProofOfWork() {
+    const reportContent = this.generateProofOfWorkHTML();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("กรุณาอนุญาตให้เปิดหน้าต่าง Pop-up เพื่อพิมพ์รายงาน");
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="th">
+      <head>
+        <meta charset="UTF-8">
+        <title>พิมพ์ชุดหลักฐานรอบวิ่งโรงโม่</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          @page { size: portrait; margin: 10mm; }
+          body { font-family: 'Sarabun', -apple-system, sans-serif; background: #fff; color: #0f172a; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #cbd5e1; padding: 6px 10px; font-size: 11px; }
+          .page-break { page-break-after: always; }
+        </style>
+      </head>
+      <body class="p-6">
+        ${reportContent}
+        <script>
+          window.onload = function() {
+            setTimeout(() => { window.print(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  // สร้างเอกสารชุดหลักฐานภาพถ่ายประกอบรอบวิ่ง (Trip Photo Audit Dossier)
+  generateProofOfWorkHTML() {
+    const trips = window.quarryStore.getTrips().filter(t => {
+      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      return true;
+    });
+
+    const dateRangeStr = (this.filterDateFrom || this.filterDateTo)
+      ? `ช่วงวันที่: ${this.filterDateFrom || 'เริ่มต้น'} ถึง ${this.filterDateTo || 'ปัจจุบัน'}`
+      : `ข้อมูลประจำวันที่: ${new Date().toLocaleDateString('th-TH', { dateStyle: 'full' })}`;
+
     return `
-      <div class="space-y-4 text-slate-900">
+      <div class="space-y-6 text-slate-900">
         <!-- Header -->
         <div class="border-b-2 border-slate-800 pb-3 flex justify-between items-end">
           <div>
             <h1 class="text-xl font-black text-slate-900">${CONFIG.APP_NAME}</h1>
-            <h2 class="text-base font-bold text-slate-700 mt-0.5">${title}</h2>
-            <p class="text-xs text-slate-500 mt-1">${dateRangeStr}</p>
+            <h2 class="text-base font-bold text-slate-700 mt-0.5">ชุดเอกสารหลักฐานประกอบรอบวิ่งและรูปถ่ายรับ-เท (Trip Evidence Dossier)</h2>
+            <p class="text-xs text-slate-500 mt-1">${dateRangeStr} | ทั้งหมด ${trips.length} รอบวิ่ง</p>
           </div>
           <div class="text-right text-xs text-slate-500">
             <p>พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
-            <p class="font-bold text-slate-800">เอกสารทางการโรงโม่</p>
+            <p class="font-bold text-emerald-800">เอกสารหลักฐานตรวจสอบความโปร่งใส</p>
           </div>
         </div>
 
-        <!-- Table -->
-        <div class="pt-2">
-          ${tableHtml}
+        <!-- Trips Proof List -->
+        <div class="space-y-5">
+          ${trips.length === 0 ? `
+            <div class="p-8 text-center text-slate-400 font-bold border border-slate-200 rounded-xl">ไม่พบรายการรอบวิ่งในช่วงเวลาที่เลือก</div>
+          ` : trips.map((t, idx) => `
+            <div class="border border-slate-300 rounded-xl p-4 bg-slate-50/50 space-y-3">
+              <div class="flex justify-between items-center bg-slate-200/80 p-2.5 rounded-lg text-xs font-bold text-slate-800">
+                <div class="flex items-center gap-3">
+                  <span class="px-2 py-0.5 bg-blue-600 text-white rounded">รอบที่ ${t.roundNumber || (idx + 1)}</span>
+                  <span>เบอร์รถ: <strong class="text-blue-900">${t.truckPlate}</strong> (${t.capacityTon || 30} ตัน)</span>
+                  <span>คนขับ: <strong>${t.driverName}</strong></span>
+                </div>
+                <div>
+                  <span>งาน: ${t.jobTypeName} | ค่าจ้าง: <strong class="text-emerald-700">฿${(t.amount || 0).toLocaleString()}</strong></span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <!-- Load Photo Proof -->
+                <div class="border border-slate-300 rounded-lg p-2.5 bg-white space-y-1.5">
+                  <div class="flex justify-between items-center text-[11px] font-bold text-slate-700">
+                    <span>📸 จุดรับหิน (ต้นทาง)</span>
+                    <span class="text-blue-700 font-mono">${t.loadTime ? new Date(t.loadTime).toLocaleTimeString('th-TH') : t.timestamp}</span>
+                  </div>
+                  <div class="h-44 bg-slate-100 rounded flex items-center justify-center overflow-hidden border border-slate-200">
+                    ${t.loadPhotoUrl ? `
+                      <img src="${t.loadPhotoUrl}" class="w-full h-full object-cover" alt="จุดรับหิน">
+                    ` : `
+                      <span class="text-xs text-slate-400 font-semibold">ไม่มีรูปถ่าย หรือบันทึกออฟไลน์</span>
+                    `}
+                  </div>
+                  <p class="text-[10px] text-slate-500 font-mono truncate">พิกัด: ${t.loadLat && t.loadLng ? `${Number(t.loadLat).toFixed(5)}, ${Number(t.loadLng).toFixed(5)}` : 'GPS สแตมป์ในภาพ'}</p>
+                </div>
+
+                <!-- Dump Photo Proof -->
+                <div class="border border-slate-300 rounded-lg p-2.5 bg-white space-y-1.5">
+                  <div class="flex justify-between items-center text-[11px] font-bold text-slate-700">
+                    <span>📸 จุดเทหิน (ปลายทาง)</span>
+                    <span class="text-emerald-700 font-mono">${t.dumpTime ? new Date(t.dumpTime).toLocaleTimeString('th-TH') : t.timestamp}</span>
+                  </div>
+                  <div class="h-44 bg-slate-100 rounded flex items-center justify-center overflow-hidden border border-slate-200">
+                    ${t.dumpPhotoUrl ? `
+                      <img src="${t.dumpPhotoUrl}" class="w-full h-full object-cover" alt="จุดเทหิน">
+                    ` : `
+                      <span class="text-xs text-slate-400 font-semibold">ไม่มีรูปถ่าย หรือบันทึกออฟไลน์</span>
+                    `}
+                  </div>
+                  <p class="text-[10px] text-slate-500 font-mono truncate">พิกัด: ${t.dumpLat && t.dumpLng ? `${Number(t.dumpLat).toFixed(5)}, ${Number(t.dumpLng).toFixed(5)}` : 'GPS สแตมป์ในภาพ'}</p>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center text-[11px] text-slate-600 bg-white p-2 rounded border border-slate-200">
+                <span>⏱️ ระยะเวลาที่ใช้จริง: <strong>${t.durationSeconds ? `${Math.floor(t.durationSeconds / 60)} นาที ${t.durationSeconds % 60} วินาที` : 'ปกติ'}</strong></span>
+                <span class="font-bold ${t.durationSeconds && t.durationSeconds < 180 ? 'text-amber-700' : 'text-emerald-700'}">
+                  ${t.durationSeconds && t.durationSeconds < 180 ? '⚠️ วิ่งเร็วผิดปกติ (< 3 นาที)' : '✓ เวลาวิ่งอยู่ในเกณฑ์มาตรฐาน'}
+                </span>
+              </div>
+            </div>
+          `).join('')}
         </div>
 
         <!-- Signatures Block -->
-        <div class="pt-12 grid grid-cols-3 gap-8 text-center text-xs text-slate-700">
+        <div class="pt-10 grid grid-cols-2 gap-8 text-center text-xs text-slate-700">
           <div class="border-t border-slate-400 pt-2">
-            <p>ผู้จัดทำรายงาน / เจ้าหน้าที่ลาน</p>
+            <p>ผู้ตรวจสอบหลักฐานภาพถ่าย / หัวหน้างาน</p>
             <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
           </div>
           <div class="border-t border-slate-400 pt-2">
-            <p>ผู้ตรวจสอบ / หัวหน้างาน</p>
-            <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
-          </div>
-          <div class="border-t border-slate-400 pt-2">
-            <p>ผู้อนุมัติ / ผู้บริหารโรงโม่</p>
+            <p>ผู้อนุมัติเบิกจ่าย / ผู้บริหารโรงโม่</p>
             <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
           </div>
         </div>
