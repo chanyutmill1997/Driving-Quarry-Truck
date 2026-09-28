@@ -487,18 +487,21 @@ class QuarryStore {
 
   async syncTripToSupabase(trip) {
     const todayStr = trip.date || new Date().toISOString().split('T')[0];
+    // ปรับชื่อโฟลเดอร์รถให้สะอาด (เช่น C2-38 หรือ C2-38_HINO)
+    const cleanVehicle = (trip.truckPlate || 'TRUCK_UNKNOWN').replace(/[\/\s]+/g, '_');
+    const roundNumber = trip.roundNumber || 1;
     let loadUrl = trip.loadPhotoUrl || null;
     let dumpUrl = trip.dumpPhotoUrl || null;
 
-    // 1. อัปโหลดรูปจุดรับหิน (ถ้ามี Base64)
+    // 1. อัปโหลดรูปจุดรับหิน (จัดเก็บในโครงสร้าง: trips/วันที่/เบอร์รถ/เที่ยวที่_X/load.jpg)
     if (trip.loadPhotoBase64 && !loadUrl) {
-      const path = `trips/${todayStr}/${trip.id}_load.jpg`;
+      const path = `trips/${todayStr}/${cleanVehicle}/round_${roundNumber}_${trip.id}_load.jpg`;
       loadUrl = await this.uploadPhotoToSupabaseStorage(trip.loadPhotoBase64, path);
     }
 
-    // 2. อัปโหลดรูปจุดเทหิน (ถ้ามี Base64)
+    // 2. อัปโหลดรูปจุดเทหิน (จัดเก็บในโครงสร้าง: trips/วันที่/เบอร์รถ/เที่ยวที่_X/dump.jpg)
     if (trip.dumpPhotoBase64 && !dumpUrl) {
-      const path = `trips/${todayStr}/${trip.id}_dump.jpg`;
+      const path = `trips/${todayStr}/${cleanVehicle}/round_${roundNumber}_${trip.id}_dump.jpg`;
       dumpUrl = await this.uploadPhotoToSupabaseStorage(trip.dumpPhotoBase64, path);
     }
 
@@ -544,10 +547,13 @@ class QuarryStore {
 
   async syncExcavatorLogToSupabase(log) {
     const todayStr = log.date || new Date().toISOString().split('T')[0];
+    const cleanExcCode = (log.excavatorCode || 'EXC_UNKNOWN').replace(/[\/\s]+/g, '_');
+    const cleanTruckPlate = (log.targetTruckPlate || 'TRUCK').replace(/[\/\s]+/g, '_');
     let photoUrl = log.photoUrl || null;
 
+    // จัดเก็บในโครงสร้าง: excavators/วันที่/รหัสแม็คโคร/scoop_X_เบอร์รถสิบล้อ.jpg
     if (log.photoBase64 && !photoUrl) {
-      const path = `excavators/${todayStr}/${log.id}.jpg`;
+      const path = `excavators/${todayStr}/${cleanExcCode}/${log.id}_to_${cleanTruckPlate}.jpg`;
       photoUrl = await this.uploadPhotoToSupabaseStorage(log.photoBase64, path);
     }
 
