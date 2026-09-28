@@ -1,0 +1,1015 @@
+{
+  "trucks": [
+    {
+      "id": "T1",
+      "code": "C2-33 UD TRUCK",
+      "plate": "C2-33 UD TRUCK",
+      "type": "truck",
+      "capacity_ton": 30,
+      "driver_name": "นาย ประหยัด อ่างมายา",
+      "nickname": "แดง",
+      "phone": "065-6348605",
+      "status": "active"
+    },
+    {
+      "id": "T2",
+      "code": "C2-38 HINO VICTOR 500",
+      "plate": "C2-38 HINO VICTOR 500",
+      "type": "truck",
+      "capacity_ton": 30,
+      "driver_name": "นาย ประเสริฐ ใสทอง อุดรัตน์",
+      "nickname": "เสริฐ",
+      "phone": "081-9195518",
+      "status": "active"
+    },
+    {
+      "id": "T3",
+      "code": "C2-39 HINO VICTOR 500",
+      "plate": "C2-39 HINO VICTOR 500",
+      "type": "truck",
+      "capacity_ton": 30,
+      "driver_name": "นาย ศักดิ์ดา แสนคำเพิงใจ",
+      "nickname": "เบี้ยว",
+      "phone": "062-2248233",
+      "status": "active"
+    },
+    {
+      "id": "T4",
+      "code": "C2-40 HINO VICTOR 500",
+      "plate": "C2-40 HINO VICTOR 500",
+      "type": "truck",
+      "capacity_ton": 30,
+      "driver_name": "นาย นายสมัก บุญจันทร์",
+      "nickname": "ซิ่ว",
+      "phone": "080-1571669",
+      "status": "active"
+    },
+    {
+      "id": "T5",
+      "code": "C2-41 HINO VICTOR 500",
+      "plate": "C2-41 HINO VICTOR 500",
+      "type": "truck",
+      "capacity_ton": 30,
+      "driver_name": "นาย ปัญญา ทดพิมพ์",
+      "nickname": "ปอ",
+      "phone": "062-1565059",
+      "status": "active"
+    },
+    {
+      "id": "T6",
+      "code": "C2-42 XCMG ดั้มใหญ่",
+      "plate": "C2-42 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย สิทธิพงษ์ หงษ์ทอง",
+      "nickname": "รุ่ง",
+      "phone": "098-9485156",
+      "status": "active"
+    },
+    {
+      "id": "T7",
+      "code": "C2-43 XCMG ดั้มใหญ่",
+      "plate": "C2-43 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "available"
+    },
+    {
+      "id": "T8",
+      "code": "C2-44 XCMG ดั้มใหญ่",
+      "plate": "C2-44 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย สมศักดิ์ มูลเอก",
+      "nickname": "นอย",
+      "phone": "094-2740808",
+      "status": "active"
+    },
+    {
+      "id": "T9",
+      "code": "C2-45 XCMG ดั้มใหญ่",
+      "plate": "C2-45 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย วิจิตร พิลาคุณ",
+      "nickname": "จิตร",
+      "phone": "086-2209773",
+      "status": "active"
+    },
+    {
+      "id": "T10",
+      "code": "C2-46 XCMG ดั้มใหญ่",
+      "plate": "C2-46 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย พงษ์พิศ ประสาริบุตร",
+      "nickname": "พงพิศ",
+      "phone": "095-9801759",
+      "status": "active"
+    },
+    {
+      "id": "T11",
+      "code": "C2-47 XCMG ดั้มใหญ่",
+      "plate": "C2-47 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย วีระ อาสาธรรม",
+      "nickname": "โจ",
+      "phone": "092-9453218",
+      "status": "active"
+    },
+    {
+      "id": "T12",
+      "code": "C2-48 XCMG ดั้มใหญ่",
+      "plate": "C2-48 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย วิรัช หดคำ",
+      "nickname": "น้อย",
+      "phone": "082-0241167",
+      "status": "active"
+    },
+    {
+      "id": "T13",
+      "code": "C2-49 XCMG ดั้มใหญ่",
+      "plate": "C2-49 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย สมชาย พิริยะประเทืองกุล",
+      "nickname": "แม้ว",
+      "phone": "061-6614953",
+      "status": "active"
+    },
+    {
+      "id": "T14",
+      "code": "C2-50 XCMG ดั้มใหญ่",
+      "plate": "C2-50 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย เทพพิทักษ์ นามมลทิพย์",
+      "nickname": "เทพ",
+      "phone": "925071764",
+      "status": "active"
+    },
+    {
+      "id": "T15",
+      "code": "C2-51 XCMG ดั้มใหญ่",
+      "plate": "C2-51 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย สันติสุข ผุดผ่อง",
+      "nickname": "แซม",
+      "phone": "098-8425271",
+      "status": "active"
+    },
+    {
+      "id": "T16",
+      "code": "C2-52 XCMG ดั้มเล็ก",
+      "plate": "C2-52 XCMG ดั้มเล็ก",
+      "type": "truck",
+      "capacity_ton": 45,
+      "driver_name": "นาย สมบูรณ์ ชื่นนอก",
+      "nickname": "หนวด",
+      "phone": "087-2365012",
+      "status": "active"
+    },
+    {
+      "id": "T17",
+      "code": "C2-53 XCMG ดั้มเล็ก",
+      "plate": "C2-53 XCMG ดั้มเล็ก",
+      "type": "truck",
+      "capacity_ton": 45,
+      "driver_name": "นาย สุริยา ทามา",
+      "nickname": "สิงห์",
+      "phone": "092-5837734",
+      "status": "active"
+    },
+    {
+      "id": "T18",
+      "code": "C2-54 XCMG ดั้มเล็ก",
+      "plate": "C2-54 XCMG ดั้มเล็ก",
+      "type": "truck",
+      "capacity_ton": 45,
+      "driver_name": "นาย พระรถ ภักดีราช",
+      "nickname": "รถ",
+      "phone": "063-6266512",
+      "status": "active"
+    },
+    {
+      "id": "T19",
+      "code": "C2-55 XCMG ดั้มเล็ก",
+      "plate": "C2-55 XCMG ดั้มเล็ก",
+      "type": "truck",
+      "capacity_ton": 45,
+      "driver_name": "นาย ชายทรง สุภาวรรณ์",
+      "nickname": "โก๊ะ",
+      "phone": "080-7190445",
+      "status": "active"
+    },
+    {
+      "id": "T20",
+      "code": "C2-56 XCMG ดั้มเล็ก",
+      "plate": "C2-56 XCMG ดั้มเล็ก",
+      "type": "truck",
+      "capacity_ton": 45,
+      "driver_name": "นาย ธัญญารักษ์ อุดรัตน์",
+      "nickname": "โอ๋",
+      "phone": "625345710",
+      "status": "active"
+    },
+    {
+      "id": "T21",
+      "code": "C2-57 XCMG ดั้มเล็ก",
+      "plate": "C2-57 XCMG ดั้มเล็ก",
+      "type": "truck",
+      "capacity_ton": 45,
+      "driver_name": "นาย รุ่งทิพย์ ทิพย์มณี",
+      "nickname": "รุ่ง",
+      "phone": "086-0423678",
+      "status": "active"
+    },
+    {
+      "id": "T22",
+      "code": "C2-58 XCMG ดั้มใหญ่",
+      "plate": "C2-58 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย สมเกียรติ ดอนชัน",
+      "nickname": "โอ",
+      "phone": "081-0511264",
+      "status": "active"
+    },
+    {
+      "id": "T23",
+      "code": "C2-59 XCMG ดั้มใหญ่",
+      "plate": "C2-59 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย ดุสิต จันทอง",
+      "nickname": "ปี๊ด",
+      "phone": "082-5291876",
+      "status": "active"
+    },
+    {
+      "id": "T24",
+      "code": "C2-60 XCMG ดั้มใหญ่",
+      "plate": "C2-60 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "นาย ประติภัทร หลักคำ",
+      "nickname": "ธูป",
+      "phone": "065-3968552",
+      "status": "active"
+    },
+    {
+      "id": "T25",
+      "code": "C2-61 XCMG ดั้มใหญ่",
+      "plate": "C2-61 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "available"
+    },
+    {
+      "id": "T26",
+      "code": "C2-62 XCMG ดั้มใหญ่",
+      "plate": "C2-62 XCMG ดั้มใหญ่",
+      "type": "truck",
+      "capacity_ton": 60,
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "available"
+    },
+    {
+      "id": "T27",
+      "code": "11729 HINO FM",
+      "plate": "11729 HINO FM",
+      "type": "truck",
+      "capacity_ton": 30,
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "available"
+    },
+    {
+      "id": "T28",
+      "code": "11730 HINO FM",
+      "plate": "11730 HINO FM",
+      "type": "truck",
+      "capacity_ton": 30,
+      "driver_name": "นาย มงคล หมึกละ",
+      "nickname": "อุ๊ด",
+      "phone": "064-2061174",
+      "status": "active"
+    }
+  ],
+  "excavators": [
+    {
+      "id": "E1",
+      "code": "C1-37 KOMATSU PC200 (C18574)",
+      "model": "C1-37 KOMATSU PC200 (C18574)",
+      "type": "excavator",
+      "driver_name": "นาย กีรติ จิราพงษ์",
+      "nickname": "ด่าน",
+      "phone": "084-1820802",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E2",
+      "code": "C1-43 HITACHI ZAXIS200",
+      "model": "C1-43 HITACHI ZAXIS200",
+      "type": "excavator",
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "available",
+      "is_contractor": false,
+      "note": "ว่าง",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E3",
+      "code": "C1-45 HITACHI ZAXIS350",
+      "model": "C1-45 HITACHI ZAXIS350",
+      "type": "excavator",
+      "driver_name": "นาย นาวี โสดาดี",
+      "nickname": "นาวี",
+      "phone": "065-5704256",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E4",
+      "code": "C1-46 HITACHI ZAXIS350",
+      "model": "C1-46 HITACHI ZAXIS350",
+      "type": "excavator",
+      "driver_name": "นาย วงศกร อรรคสูรย์",
+      "nickname": "ตาต๋อง",
+      "phone": "093-2390176",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E5",
+      "code": "C1-48 DOOSAN DX520",
+      "model": "C1-48 DOOSAN DX520",
+      "type": "excavator",
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "available",
+      "is_contractor": false,
+      "note": "ว่าง",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E6",
+      "code": "C1-49 DOOSAN DX520",
+      "model": "C1-49 DOOSAN DX520",
+      "type": "excavator",
+      "driver_name": "นาย อมรเทพ สาระวงษ์",
+      "nickname": "ที",
+      "phone": "093-1980920",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E7",
+      "code": "C1-51 DOOSAN DX200",
+      "model": "C1-51 DOOSAN DX200",
+      "type": "excavator",
+      "driver_name": "นาย สมจิตร ปะมังคะตา",
+      "nickname": "จิตร",
+      "phone": "065-4235401",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E8",
+      "code": "C1-53 CAT 349",
+      "model": "C1-53 CAT 349",
+      "type": "excavator",
+      "driver_name": "นาย เทพพิทักษ์ สาลีศรี",
+      "nickname": "ตี๋",
+      "phone": "090-9145117",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E9",
+      "code": "C1-54 HYUNDAI (ล้อยาง)",
+      "model": "C1-54 HYUNDAI (ล้อยาง)",
+      "type": "excavator",
+      "driver_name": "นาย",
+      "nickname": "น้าแอ๊ต",
+      "phone": "",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E10",
+      "code": "C1-59 KOMATSU PC500 (100053)",
+      "model": "C1-59 KOMATSU PC500 (100053)",
+      "type": "excavator",
+      "driver_name": "นาย คนอง ชุมพล",
+      "nickname": "นอง",
+      "phone": "082-8458771",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E11",
+      "code": "C1-62 CAT 336",
+      "model": "C1-62 CAT 336",
+      "type": "excavator",
+      "driver_name": "นาย ทรัพย์ โสภารักษ์",
+      "nickname": "ทรัพย์",
+      "phone": "098-1560400",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E12",
+      "code": "C1-70 KOMATSU PC200 (C52663)",
+      "model": "C1-70 KOMATSU PC200 (C52663)",
+      "type": "excavator",
+      "driver_name": "",
+      "nickname": "หนึ่ง",
+      "phone": "",
+      "status": "active",
+      "is_contractor": true,
+      "note": "ทีม ผรม.น้าภาณ",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E13",
+      "code": "C1-71 KOMATSU PC200 (C52694)",
+      "model": "C1-71 KOMATSU PC200 (C52694)",
+      "type": "excavator",
+      "driver_name": "",
+      "nickname": "โน้ต",
+      "phone": "",
+      "status": "active",
+      "is_contractor": true,
+      "note": "ทีม ผรม.น้าภาณ",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E14",
+      "code": "C1-72 KOMATSU PC500 (C100966)",
+      "model": "C1-72 KOMATSU PC500 (C100966)",
+      "type": "excavator",
+      "driver_name": "นาย ยงยุทธ เวชบรรพต",
+      "nickname": "รุต",
+      "phone": "062-1347026",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E15",
+      "code": "C1-73 KOMATSU PC200 (C52713)",
+      "model": "C1-73 KOMATSU PC200 (C52713)",
+      "type": "excavator",
+      "driver_name": "",
+      "nickname": "จ่อย",
+      "phone": "",
+      "status": "active",
+      "is_contractor": true,
+      "note": "ทีม ผรม.น้าภาณ",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E16",
+      "code": "C1-74 KOMATSU PC200 (C52730)",
+      "model": "C1-74 KOMATSU PC200 (C52730)",
+      "type": "excavator",
+      "driver_name": "นาย เจษฐ์ฎา ดวงแสงจันทร์",
+      "nickname": "เบส",
+      "phone": "092-4299064",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E17",
+      "code": "C1-75 KOMATSU PC350 (C52730)",
+      "model": "C1-75 KOMATSU PC350 (C52730)",
+      "type": "excavator",
+      "driver_name": "นาย สุภกิณห์ จันทร์ตุง",
+      "nickname": "อู๋",
+      "phone": "095-6576028",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E18",
+      "code": "C1-79 DOOSAN DX360",
+      "model": "C1-79 DOOSAN DX360",
+      "type": "excavator",
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "repair",
+      "is_contractor": false,
+      "note": "ซ่อม",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E19",
+      "code": "C1-80 DOOSAN DX360",
+      "model": "C1-80 DOOSAN DX360",
+      "type": "excavator",
+      "driver_name": "นาย จตุพันธ์ คูณเมือง",
+      "nickname": "เก้า",
+      "phone": "096-7629720",
+      "status": "active",
+      "is_contractor": false,
+      "note": "",
+      "rate_per_scoop": 5.0
+    },
+    {
+      "id": "E20",
+      "code": "C1-82 CAT 320D",
+      "model": "C1-82 CAT 320D",
+      "type": "excavator",
+      "driver_name": "",
+      "nickname": "",
+      "phone": "",
+      "status": "available",
+      "is_contractor": false,
+      "note": "ว่าง",
+      "rate_per_scoop": 5.0
+    }
+  ],
+  "drivers": [
+    {
+      "id": "D_1",
+      "name": "นาย ประหยัด อ่างมายา",
+      "nickname": "แดง",
+      "phone": "065-6348605",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-33 UD TRUCK",
+      "pin": "1234"
+    },
+    {
+      "id": "D_2",
+      "name": "นาย ประเสริฐ ใสทอง อุดรัตน์",
+      "nickname": "เสริฐ",
+      "phone": "081-9195518",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-38 HINO VICTOR 500",
+      "pin": "1234"
+    },
+    {
+      "id": "D_3",
+      "name": "นาย ศักดิ์ดา แสนคำเพิงใจ",
+      "nickname": "เบี้ยว",
+      "phone": "062-2248233",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-39 HINO VICTOR 500",
+      "pin": "1234"
+    },
+    {
+      "id": "D_4",
+      "name": "นาย นายสมัก บุญจันทร์",
+      "nickname": "ซิ่ว",
+      "phone": "080-1571669",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-40 HINO VICTOR 500",
+      "pin": "1234"
+    },
+    {
+      "id": "D_5",
+      "name": "นาย ปัญญา ทดพิมพ์",
+      "nickname": "ปอ",
+      "phone": "062-1565059",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-41 HINO VICTOR 500",
+      "pin": "1234"
+    },
+    {
+      "id": "D_6",
+      "name": "นาย สิทธิพงษ์ หงษ์ทอง",
+      "nickname": "รุ่ง",
+      "phone": "098-9485156",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-42 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_7",
+      "name": "นาย สมศักดิ์ มูลเอก",
+      "nickname": "นอย",
+      "phone": "094-2740808",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-44 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_8",
+      "name": "นาย วิจิตร พิลาคุณ",
+      "nickname": "จิตร",
+      "phone": "086-2209773",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-45 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_9",
+      "name": "นาย พงษ์พิศ ประสาริบุตร",
+      "nickname": "พงพิศ",
+      "phone": "095-9801759",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-46 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_10",
+      "name": "นาย วีระ อาสาธรรม",
+      "nickname": "โจ",
+      "phone": "092-9453218",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-47 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_11",
+      "name": "นาย วิรัช หดคำ",
+      "nickname": "น้อย",
+      "phone": "082-0241167",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-48 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_12",
+      "name": "นาย สมชาย พิริยะประเทืองกุล",
+      "nickname": "แม้ว",
+      "phone": "061-6614953",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-49 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_13",
+      "name": "นาย เทพพิทักษ์ นามมลทิพย์",
+      "nickname": "เทพ",
+      "phone": "925071764",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-50 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_14",
+      "name": "นาย สันติสุข ผุดผ่อง",
+      "nickname": "แซม",
+      "phone": "098-8425271",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-51 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_15",
+      "name": "นาย สมบูรณ์ ชื่นนอก",
+      "nickname": "หนวด",
+      "phone": "087-2365012",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-52 XCMG ดั้มเล็ก",
+      "pin": "1234"
+    },
+    {
+      "id": "D_16",
+      "name": "นาย สุริยา ทามา",
+      "nickname": "สิงห์",
+      "phone": "092-5837734",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-53 XCMG ดั้มเล็ก",
+      "pin": "1234"
+    },
+    {
+      "id": "D_17",
+      "name": "นาย พระรถ ภักดีราช",
+      "nickname": "รถ",
+      "phone": "063-6266512",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-54 XCMG ดั้มเล็ก",
+      "pin": "1234"
+    },
+    {
+      "id": "D_18",
+      "name": "นาย ชายทรง สุภาวรรณ์",
+      "nickname": "โก๊ะ",
+      "phone": "080-7190445",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-55 XCMG ดั้มเล็ก",
+      "pin": "1234"
+    },
+    {
+      "id": "D_19",
+      "name": "นาย ธัญญารักษ์ อุดรัตน์",
+      "nickname": "โอ๋",
+      "phone": "625345710",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-56 XCMG ดั้มเล็ก",
+      "pin": "1234"
+    },
+    {
+      "id": "D_20",
+      "name": "นาย รุ่งทิพย์ ทิพย์มณี",
+      "nickname": "รุ่ง",
+      "phone": "086-0423678",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-57 XCMG ดั้มเล็ก",
+      "pin": "1234"
+    },
+    {
+      "id": "D_21",
+      "name": "นาย สมเกียรติ ดอนชัน",
+      "nickname": "โอ",
+      "phone": "081-0511264",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-58 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_22",
+      "name": "นาย ดุสิต จันทอง",
+      "nickname": "ปี๊ด",
+      "phone": "082-5291876",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-59 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_23",
+      "name": "นาย ประติภัทร หลักคำ",
+      "nickname": "ธูป",
+      "phone": "065-3968552",
+      "role": "truck_driver",
+      "assigned_vehicle": "C2-60 XCMG ดั้มใหญ่",
+      "pin": "1234"
+    },
+    {
+      "id": "D_24",
+      "name": "นาย มงคล หมึกละ",
+      "nickname": "อุ๊ด",
+      "phone": "064-2061174",
+      "role": "truck_driver",
+      "assigned_vehicle": "11730 HINO FM",
+      "pin": "1234"
+    },
+    {
+      "id": "D_25",
+      "name": "นาย กีรติ จิราพงษ์",
+      "nickname": "ด่าน",
+      "phone": "084-1820802",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-37 KOMATSU PC200 (C18574)",
+      "pin": "1234"
+    },
+    {
+      "id": "D_26",
+      "name": "นาย นาวี โสดาดี",
+      "nickname": "นาวี",
+      "phone": "065-5704256",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-45 HITACHI ZAXIS350",
+      "pin": "1234"
+    },
+    {
+      "id": "D_27",
+      "name": "นาย วงศกร อรรคสูรย์",
+      "nickname": "ตาต๋อง",
+      "phone": "093-2390176",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-46 HITACHI ZAXIS350",
+      "pin": "1234"
+    },
+    {
+      "id": "D_28",
+      "name": "นาย อมรเทพ สาระวงษ์",
+      "nickname": "ที",
+      "phone": "093-1980920",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-49 DOOSAN DX520",
+      "pin": "1234"
+    },
+    {
+      "id": "D_29",
+      "name": "นาย สมจิตร ปะมังคะตา",
+      "nickname": "จิตร",
+      "phone": "065-4235401",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-51 DOOSAN DX200",
+      "pin": "1234"
+    },
+    {
+      "id": "D_30",
+      "name": "นาย เทพพิทักษ์ สาลีศรี",
+      "nickname": "ตี๋",
+      "phone": "090-9145117",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-53 CAT 349",
+      "pin": "1234"
+    },
+    {
+      "id": "D_31",
+      "name": "นาย คนอง ชุมพล",
+      "nickname": "นอง",
+      "phone": "082-8458771",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-59 KOMATSU PC500 (100053)",
+      "pin": "1234"
+    },
+    {
+      "id": "D_32",
+      "name": "นาย ทรัพย์ โสภารักษ์",
+      "nickname": "ทรัพย์",
+      "phone": "098-1560400",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-62 CAT 336",
+      "pin": "1234"
+    },
+    {
+      "id": "D_33",
+      "name": "นาย ยงยุทธ เวชบรรพต",
+      "nickname": "รุต",
+      "phone": "062-1347026",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-72 KOMATSU PC500 (C100966)",
+      "pin": "1234"
+    },
+    {
+      "id": "D_34",
+      "name": "นาย เจษฐ์ฎา ดวงแสงจันทร์",
+      "nickname": "เบส",
+      "phone": "092-4299064",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-74 KOMATSU PC200 (C52730)",
+      "pin": "1234"
+    },
+    {
+      "id": "D_35",
+      "name": "นาย สุภกิณห์ จันทร์ตุง",
+      "nickname": "อู๋",
+      "phone": "095-6576028",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-75 KOMATSU PC350 (C52730)",
+      "pin": "1234"
+    },
+    {
+      "id": "D_36",
+      "name": "นาย จตุพันธ์ คูณเมือง",
+      "nickname": "เก้า",
+      "phone": "096-7629720",
+      "role": "excavator_operator",
+      "assigned_vehicle": "C1-80 DOOSAN DX360",
+      "pin": "1234"
+    },
+    {
+      "id": "ADMIN_1",
+      "name": "ผู้บริหารโรงโม่ (Admin)",
+      "nickname": "เฮีย/ผู้บริหาร",
+      "phone": "089-9999999",
+      "role": "admin",
+      "assigned_vehicle": "",
+      "pin": "9999"
+    },
+    {
+      "id": "SUP_1",
+      "name": "หัวหน้างานหน้างาน (Supervisor)",
+      "nickname": "หัวหน้า",
+      "phone": "088-8888888",
+      "role": "supervisor",
+      "assigned_vehicle": "",
+      "pin": "8888"
+    }
+  ],
+  "job_rates": [
+    {
+      "id": "R1",
+      "name": "วิ่งหินปากโม่",
+      "rate_30_ton": 20.0,
+      "rate_45_ton": 23.0,
+      "rate_60_ton": 26.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R2",
+      "name": "Otวิ่งหินปากโม่",
+      "rate_30_ton": null,
+      "rate_45_ton": 34.0,
+      "rate_60_ton": 39.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R3",
+      "name": "วิ่งดิน",
+      "rate_30_ton": 15.0,
+      "rate_45_ton": 18.0,
+      "rate_60_ton": 22.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R4",
+      "name": "วิ่งหินดำ",
+      "rate_30_ton": 15.0,
+      "rate_45_ton": 18.0,
+      "rate_60_ton": 22.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R5",
+      "name": "วิ่งหินสต๊อกเปิดยุ้งโรง 2",
+      "rate_30_ton": 11.0,
+      "rate_45_ton": 13.0,
+      "rate_60_ton": 14.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R6",
+      "name": "วิ่งหินสต๊อกเปิดยุ้งโรง 3",
+      "rate_30_ton": 11.0,
+      "rate_45_ton": 13.0,
+      "rate_60_ton": 14.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R7",
+      "name": "วิ่งหินฝุ่นลงบอ (รถตักให้)",
+      "rate_30_ton": 14.0,
+      "rate_45_ton": 16.0,
+      "rate_60_ton": 18.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R8",
+      "name": "วิ่งหินเข้าแพล้น (ผ่าน)",
+      "rate_30_ton": 12.0,
+      "rate_45_ton": 14.0,
+      "rate_60_ton": null,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R9",
+      "name": "วิ่งหินเข้าแพล้น (ไม่ผ่าน)",
+      "rate_30_ton": 17.0,
+      "rate_45_ton": 19.0,
+      "rate_60_ton": null,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R10",
+      "name": "วิ่งหินฝุ่นเปิดยุ้ง(OT)",
+      "rate_30_ton": 24.0,
+      "rate_45_ton": 27.0,
+      "rate_60_ton": 32.0,
+      "excavator_rate": 5.0
+    },
+    {
+      "id": "R11",
+      "name": "ช่วยช่าง",
+      "rate_30_ton": 50.0,
+      "rate_45_ton": 50.0,
+      "rate_60_ton": 50.0,
+      "excavator_rate": 5.0
+    }
+  ],
+  "meta": {
+    "generated_at": "2026-08-23 10:38:23",
+    "total_trucks": 28,
+    "total_excavators": 20,
+    "total_drivers": 38,
+    "total_rates": 11
+  }
+}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบบบริหารงานโรงโม่ (Quarry Fleet Management & AI Insights)</title>
+  
+  <!-- PWA & Mobile Web Meta -->
+  <meta name="theme-color" content="#f59e0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="โรงโม่">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            quarry: {
+              amber: '#f59e0b',
+              dark: '#0f172a',
+              card: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- SheetJS (XLSX Export) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  
+  <div id="app-root">
+    <!-- App Views will render here -->
+    <div class="min-h-screen flex items-center justify-center">
+      <div class="text-center space-y-3">
+        <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-sm text-slate-400 font-bold">กำลังโหลดระบบโรงโม่และ AI Insights...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ai-engine.js"></script>
+
+  <!-- UI Components -->
+  <script src="js/components/login-view.js"></script>
+  <script src="js/components/driver-view.js"></script>
+  <script src="js/components/excavator-view.js"></script>
+  <script src="js/components/admin-dashboard.js"></script>
+  <script src="js/components/reports-view.js"></script>
+  <script src="js/components/settings-view.js"></script>
+  <script src="js/components/ai-copilot-view.js"></script>
+
+  <!-- App Main Controller -->
+  <script src="js/app.js"></script>
+</body>
+</html>

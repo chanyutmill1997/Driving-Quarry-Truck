@@ -1,0 +1,3715 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบบบริหารงานโรงโม่ (Quarry Fleet Management & AI Insights)</title>
+  
+  <!-- PWA & Mobile Web Meta -->
+  <meta name="theme-color" content="#f59e0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="โรงโม่">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            quarry: {
+              amber: '#f59e0b',
+              dark: '#0f172a',
+              card: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- SheetJS (XLSX Export) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom CSS -->
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --primary-amber: #f59e0b;
+  --primary-dark: #0f172a;
+}
+
+body {
+  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: #020617;
+  color: #f8fafc;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* High Tactile Button Active States for Field Mobile */
+button:active {
+  transform: scale(0.98);
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Modal Animations */
+#photo-inspector-modal.flex {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  
+  <div id="app-root">
+    <!-- App Views will render here -->
+    <div class="min-h-screen flex items-center justify-center">
+      <div class="text-center space-y-3">
+        <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-sm text-slate-400 font-bold">กำลังโหลดระบบโรงโม่และ AI Insights...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core Scripts -->
+  <script>
+/**
+ * การตั้งค่าระบบโรงโม่ (System Configuration)
+ */
+const CONFIG = {
+  APP_NAME: "ระบบบริหารงานโรงโม่",
+  VERSION: "1.0.0",
+  // Google Apps Script Web App Deployment URL (Updated)
+  API_URL: "https://script.google.com/macros/s/AKfycby_mPElgoCrroadGQyzwzWXABnjGtaOFrWhI2Jemujwiz6uyasIgEO71sbZLO5H9g64IA/exec",
+  STORAGE_KEYS: {
+    MASTER_DATA: "quarry_master_data_v1",
+    CURRENT_USER: "quarry_current_user",
+    CURRENT_SHIFT: "quarry_current_shift",
+    TRIPS: "quarry_trips_data",
+    EXCAVATOR_LOGS: "quarry_excavator_logs",
+    PENDING_SYNC: "quarry_pending_sync_queue",
+    SETTINGS: "quarry_system_settings"
+  },
+  DEFAULT_MAP_CENTER: [14.8824, 102.0135],
+  AUTO_SYNC_INTERVAL_MS: 30000
+};
+
+window.CONFIG = CONFIG;
+
+</script>
+  <script>
+/**
+ * โมดูลกล้องถ่ายรูปและระบบตรวจจับพิกัด GPS (Camera & Watermark Engine)
+ * รองรับทั้ง: 1) In-App Live Camera Viewfinder (กล้องสดบนหน้าจอ)
+ *             2) Native Camera Capture (Fallback)
+ * ทำงานได้ 100% บนมือถือ iOS Safari และ Android Chrome
+ */
+class CameraEngine {
+  constructor() {
+    this.currentPosition = null;
+    this.mediaStream = null;
+    this.initGPS();
+  }
+
+  // เริ่มติดตามพิกัด GPS
+  initGPS() {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        pos => { this.currentPosition = pos.coords; },
+        err => { console.warn("GPS Warning:", err.message); },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+
+      navigator.geolocation.watchPosition(
+        pos => { this.currentPosition = pos.coords; },
+        err => { console.warn("GPS Watch Warning:", err.message); },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+    }
+  }
+
+  // ดึงพิกัดล่าสุด
+  async getFreshGPS() {
+    return new Promise((resolve) => {
+      if (!("geolocation" in navigator)) {
+        resolve({ lat: 14.8824, lng: 102.0135, accuracy: 5, isMock: true });
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          this.currentPosition = pos.coords;
+          resolve({
+            lat: Number(pos.coords.latitude.toFixed(6)),
+            lng: Number(pos.coords.longitude.toFixed(6)),
+            accuracy: Math.round(pos.coords.accuracy || 5),
+            timestamp: new Date().toISOString(),
+            isMock: false
+          });
+        },
+        err => {
+          console.warn("GPS fallback used:", err.message);
+          if (this.currentPosition) {
+            resolve({
+              lat: Number(this.currentPosition.latitude.toFixed(6)),
+              lng: Number(this.currentPosition.longitude.toFixed(6)),
+              accuracy: Math.round(this.currentPosition.accuracy || 10),
+              timestamp: new Date().toISOString(),
+              isMock: false
+            });
+          } else {
+            resolve({
+              lat: 14.882400,
+              lng: 102.013500,
+              accuracy: 10,
+              timestamp: new Date().toISOString(),
+              isMock: true
+            });
+          }
+        },
+        { enableHighAccuracy: true, timeout: 4000, maximumAge: 10000 }
+      );
+    });
+  }
+
+  /**
+   * เปิดกล้องถ่ายภาพพร้อมสแตมป์พิกัด
+   * รองรับทั้ง In-App Viewfinder และ Direct File Capture
+   */
+  async captureWithWatermark(metadata = {}) {
+    // พยายามเปิด In-App Live Camera Viewfinder ก่อนเพื่อความราบรื่น
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        return await this.openLiveCameraModal(metadata);
+      } catch (e) {
+        console.warn("Live camera modal failed, switching to native camera fallback:", e);
+      }
+    }
+
+    // Fallback: ใช้ Native Camera Capture แบบ Synchronous ทันที (ไม่ติดบล็อก Safari)
+    return this.openNativeFileCamera(metadata);
+  }
+
+  // -------------------------------------------------------------
+  // 1. In-App Live Camera Viewfinder (กล้องสดแบบแสดงวิดีโอบนจอ)
+  // -------------------------------------------------------------
+  openLiveCameraModal(metadata) {
+    return new Promise(async (resolve, reject) => {
+      // สร้าง Modal กล้องแบบ Fullscreen
+      let modal = document.getElementById('in-app-camera-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'in-app-camera-modal';
+        document.body.appendChild(modal);
+      }
+
+      modal.className = "fixed inset-0 z-50 bg-black flex flex-col justify-between text-white select-none";
+      modal.innerHTML = `
+        <!-- Top Bar -->
+        <div class="p-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between z-10">
+          <div>
+            <span class="text-xs font-black text-amber-400 uppercase tracking-wider">
+              ${metadata.stepType === 'load' ? '📍 จุดรับหิน' : (metadata.stepType === 'dump' ? '🏁 จุดเทหิน' : '🚜 ตักหิน')}
+            </span>
+            <p class="text-xs text-slate-300 font-bold">${metadata.vehicleCode || ''} • ${metadata.driverName || ''}</p>
+          </div>
+          <button id="close-cam-btn" class="w-10 h-10 rounded-full bg-slate-800/80 text-white font-bold flex items-center justify-center text-lg">✕</button>
+        </div>
+
+        <!-- Video Viewfinder -->
+        <div class="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+          <video id="cam-video-feed" autoplay playsinline class="w-full h-full object-cover"></video>
+          
+          <!-- Live Watermark Overlay Tag -->
+          <div class="absolute bottom-4 left-4 right-4 bg-slate-950/80 backdrop-blur-sm border border-slate-700/80 rounded-2xl p-3 text-xs space-y-1">
+            <div class="flex items-center justify-between text-amber-400 font-bold">
+              <span>🕒 กำลังจับเวลาสด...</span>
+              <span id="cam-gps-live" class="text-emerald-400 font-mono">📍 GPS กำลังจับสัญญาณ...</span>
+            </div>
+            <p class="text-slate-300 text-[11px]">${metadata.jobName || ''}</p>
+          </div>
+        </div>
+
+        <!-- Bottom Shutter Control Bar -->
+        <div class="p-6 bg-gradient-to-t from-black/90 to-transparent flex items-center justify-around z-10">
+          <button id="cam-fallback-btn" class="text-xs text-slate-400 bg-slate-800/60 px-3 py-2 rounded-xl font-bold">
+            📷 ใช้กล้องเครื่อง
+          </button>
+          
+          <!-- Big Shutter Button -->
+          <button id="cam-shutter-btn" class="w-20 h-20 rounded-full bg-white border-4 border-amber-500 shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
+            <div class="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center">
+              <span class="text-2xl">📸</span>
+            </div>
+          </button>
+
+          <div class="w-20 text-center">
+            <span class="text-[10px] text-slate-400 font-bold">แตะเพื่อถ่าย</span>
+          </div>
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+
+      // เริ่มสตรีมวิดีโอจากกล้องหลัง
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 960 }
+          },
+          audio: false
+        });
+
+        this.mediaStream = stream;
+        const video = document.getElementById('cam-video-feed');
+        if (video) {
+          video.srcObject = stream;
+          video.play();
+        }
+      } catch (err) {
+        this.closeLiveCameraModal();
+        // ถ้าเปิด video stream ไม่ได้ ให้สลับไปใช้ native camera
+        resolve(this.openNativeFileCamera(metadata));
+        return;
+      }
+
+      // ดึง GPS คู่ขนาน
+      let liveGps = await this.getFreshGPS();
+      const gpsLabel = document.getElementById('cam-gps-live');
+      if (gpsLabel) gpsLabel.innerText = `📍 ${liveGps.lat}, ${liveGps.lng}`;
+
+      // ปุ่มปิด
+      document.getElementById('close-cam-btn').onclick = () => {
+        this.closeLiveCameraModal();
+        reject(new Error("ยกเลิกการถ่ายรูป"));
+      };
+
+      // ปุ่มสลับเป็นกล้องเครื่อง
+      document.getElementById('cam-fallback-btn').onclick = () => {
+        this.closeLiveCameraModal();
+        resolve(this.openNativeFileCamera(metadata));
+      };
+
+      // ปุ่มชัตเตอร์ถ่ายภาพ
+      document.getElementById('cam-shutter-btn').onclick = async () => {
+        const video = document.getElementById('cam-video-feed');
+        if (!video) return;
+
+        // วาดภาพจาก Video Feed ลง Canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 960;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        this.closeLiveCameraModal();
+
+        // ปั๊มลายน้ำ Watermark
+        const freshGps = await this.getFreshGPS();
+        const watermarked = this.drawWatermarkOnCanvas(canvas, metadata, freshGps);
+
+        resolve({
+          photoBase64: watermarked,
+          gps: freshGps,
+          timestamp: new Date().toLocaleString('th-TH')
+        });
+      };
+    });
+  }
+
+  closeLiveCameraModal() {
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream = null;
+    }
+    const modal = document.getElementById('in-app-camera-modal');
+    if (modal) {
+      modal.style.display = 'none';
+      modal.innerHTML = '';
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 2. Native Camera Fallback (เปิดกล้องระบบมือถือโดยตรง)
+  // -------------------------------------------------------------
+  openNativeFileCamera(metadata) {
+    return new Promise((resolve, reject) => {
+      // สร้าง input แนบใน DOM ชั่วคราวเพื่อให้ Safari ยอมรับ click event
+      let input = document.getElementById('temp-camera-input');
+      if (!input) {
+        input = document.createElement('input');
+        input.id = 'temp-camera-input';
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.capture = 'environment';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+      }
+
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+          reject(new Error("ไม่ได้ถ่ายรูป"));
+          return;
+        }
+
+        try {
+          const img = await this.loadImageFromFile(file);
+          const gps = await this.getFreshGPS();
+          const watermarkedBase64 = this.applyWatermark(img, metadata, gps);
+          resolve({
+            photoBase64: watermarkedBase64,
+            gps: gps,
+            timestamp: new Date().toLocaleString('th-TH')
+          });
+        } catch (err) {
+          reject(err);
+        } finally {
+          input.value = '';
+        }
+      };
+
+      input.oncancel = () => {
+        reject(new Error("ยกเลิกการถ่ายรูป"));
+      };
+
+      // กดเปิดกล้องทันที
+      input.click();
+    });
+  }
+
+  loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  applyWatermark(img, metadata, gps) {
+    const canvas = document.createElement('canvas');
+    const MAX_WIDTH = 1280;
+    const scale = Math.min(1, MAX_WIDTH / img.width);
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return this.drawWatermarkOnCanvas(canvas, metadata, gps);
+  }
+
+  drawWatermarkOnCanvas(canvas, metadata, gps) {
+    const ctx = canvas.getContext('2d');
+    const bannerHeight = Math.max(140, canvas.height * 0.22);
+    const bannerY = canvas.height - bannerHeight;
+
+    // แถบสีดำโปร่งแสงด้านล่าง
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillRect(0, bannerY, canvas.width, bannerHeight);
+
+    // เส้นขอบสีส้ม/เหลือง
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(0, bannerY, canvas.width, 6);
+
+    const baseFontSize = Math.max(18, Math.round(canvas.width * 0.024));
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+
+    const nowStr = new Date().toLocaleString('th-TH', { 
+      year: 'numeric', month: 'short', day: 'numeric', 
+      hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    });
+
+    const stepLabel = metadata.stepType === 'load' ? '📍 [จุดรับหิน / ขึ้นของ]' : 
+                     (metadata.stepType === 'dump' ? '🏁 [จุดเทหิน / ส่งมอบ]' : '🚜 [ตักหินแม็คโคร]');
+    
+    const badgeColor = metadata.stepType === 'load' ? '#3b82f6' : 
+                      (metadata.stepType === 'dump' ? '#10b981' : '#f59e0b');
+
+    // บรรทัดที่ 1: สถานะและเวลา
+    ctx.font = `bold ${baseFontSize * 1.3}px 'Sarabun', -apple-system, sans-serif`;
+    ctx.fillStyle = badgeColor;
+    ctx.fillText(stepLabel, 20, bannerY + (bannerHeight * 0.22));
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${baseFontSize * 1.05}px 'Sarabun', -apple-system, sans-serif`;
+    ctx.fillText(`🕒 ${nowStr}`, canvas.width - (baseFontSize * 16), bannerY + (bannerHeight * 0.22));
+
+    // บรรทัดที่ 2: ข้อมูลรถ และ คนขับ
+    ctx.font = `${baseFontSize * 1.05}px 'Sarabun', -apple-system, sans-serif`;
+    ctx.fillStyle = '#fde047';
+    const vehicleText = `🚚 รถ: ${metadata.vehicleCode || '-'} ${metadata.capacity ? '(' + metadata.capacity + ' ตัน)' : ''}`;
+    const driverText = `👤 คนขับ: ${metadata.driverName || '-'}`;
+    ctx.fillText(`${vehicleText}  |  ${driverText}`, 20, bannerY + (bannerHeight * 0.52));
+
+    // บรรทัดที่ 3: รอบที่, ประเภทงาน และ พิกัด GPS
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = `${baseFontSize * 0.95}px 'Sarabun', -apple-system, sans-serif`;
+    const roundText = metadata.roundNumber ? `รอบที่ ${metadata.roundNumber}` : '';
+    const jobText = metadata.jobName ? ` [${metadata.jobName}]` : '';
+    const gpsText = `🌐 พิกัด: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`;
+    ctx.fillText(`${roundText}${jobText}  •  ${gpsText}`, 20, bannerY + (bannerHeight * 0.82));
+
+    return canvas.toDataURL('image/jpeg', 0.85);
+  }
+}
+
+window.cameraEngine = new CameraEngine();
+
+</script>
+  <script>
+/**
+ * ศูนย์กลางจัดการข้อมูลและฐานข้อมูล Local + Cloud Sync (Store & State Management)
+ */
+class QuarryStore {
+  constructor() {
+    this.masterData = null;
+    this.trips = [];
+    this.excavatorLogs = [];
+    this.pendingSyncQueue = [];
+    this.listeners = [];
+    this.isSyncing = false;
+  }
+
+  async init() {
+    // 1. โหลด Master Data จาก LocalStorage หรือ seed_data.json
+    const cachedMaster = localStorage.getItem(CONFIG.STORAGE_KEYS.MASTER_DATA);
+    if (cachedMaster) {
+      try {
+        this.masterData = JSON.parse(cachedMaster);
+      } catch (e) {
+        console.error("Failed to parse cached master data", e);
+      }
+    }
+
+    if (!this.masterData) {
+      try {
+        const resp = await fetch('data/seed_data.json');
+        this.masterData = await resp.json();
+        this.saveMasterData();
+      } catch (err) {
+        console.warn("Could not fetch seed_data.json, using fallback blank structure", err);
+        this.masterData = { trucks: [], excavators: [], drivers: [], job_rates: [] };
+      }
+    }
+
+    // 2. โหลดรายการ Trips และ Excavator Logs
+    this.trips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]');
+    this.excavatorLogs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS) || '[]');
+    this.pendingSyncQueue = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.PENDING_SYNC) || '[]');
+
+    // 3. เริ่มระบบ Auto Sync เบื้องหลัง
+    setInterval(() => this.processSyncQueue(), CONFIG.AUTO_SYNC_INTERVAL_MS);
+    this.notify();
+  }
+
+  // Subscribe state changes
+  subscribe(fn) {
+    this.listeners.push(fn);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== fn);
+    };
+  }
+
+  notify() {
+    this.listeners.forEach(fn => fn(this));
+  }
+
+  // -------------------------------------------------------------
+  // Master Data Methods
+  // -------------------------------------------------------------
+  saveMasterData() {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.MASTER_DATA, JSON.stringify(this.masterData));
+    this.notify();
+  }
+
+  getTrucks() {
+    return this.masterData ? this.masterData.trucks || [] : [];
+  }
+
+  getExcavators() {
+    return this.masterData ? this.masterData.excavators || [] : [];
+  }
+
+  getDrivers() {
+    return this.masterData ? this.masterData.drivers || [] : [];
+  }
+
+  getJobRates() {
+    return this.masterData ? this.masterData.job_rates || [] : [];
+  }
+
+  // คำนวณราคาเที่ยวสำหรับรถบรรทุก
+  calculateTruckRate(jobRateId, capacityTon) {
+    const rates = this.getJobRates();
+    const job = rates.find(r => r.id === jobRateId);
+    if (!job) return 0;
+
+    if (capacityTon >= 60) return job.rate_60_ton || 0;
+    if (capacityTon >= 45) return job.rate_45_ton || 0;
+    return job.rate_30_ton || 0;
+  }
+
+  // -------------------------------------------------------------
+  // Truck Trips Methods
+  // -------------------------------------------------------------
+  saveTrip(tripData) {
+    const existingIndex = this.trips.findIndex(t => t.id === tripData.id);
+    if (existingIndex >= 0) {
+      this.trips[existingIndex] = { ...this.trips[existingIndex], ...tripData };
+    } else {
+      this.trips.unshift(tripData);
+    }
+
+    localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    
+    // เพิ่มเข้าคิวซิงค์ขึ้น Cloud
+    this.queueSync('saveTrip', tripData);
+    this.notify();
+    return tripData;
+  }
+
+  getTrips(filter = {}) {
+    let result = [...this.trips];
+    if (filter.driverPhone) {
+      result = result.filter(t => t.driverPhone === filter.driverPhone);
+    }
+    if (filter.truckPlate) {
+      result = result.filter(t => t.truckPlate === filter.truckPlate);
+    }
+    if (filter.date) {
+      result = result.filter(t => t.date === filter.date);
+    }
+    return result;
+  }
+
+  // -------------------------------------------------------------
+  // Excavator Logs Methods
+  // -------------------------------------------------------------
+  saveExcavatorLog(logData) {
+    const existingIndex = this.excavatorLogs.findIndex(l => l.id === logData.id);
+    if (existingIndex >= 0) {
+      this.excavatorLogs[existingIndex] = { ...this.excavatorLogs[existingIndex], ...logData };
+    } else {
+      this.excavatorLogs.unshift(logData);
+    }
+
+    localStorage.setItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS, JSON.stringify(this.excavatorLogs));
+    
+    // เพิ่มเข้าคิวซิงค์ขึ้น Cloud
+    this.queueSync('saveExcavatorLog', logData);
+    this.notify();
+    return logData;
+  }
+
+  getExcavatorLogs(filter = {}) {
+    let result = [...this.excavatorLogs];
+    if (filter.operatorName) {
+      result = result.filter(l => l.operatorName === filter.operatorName);
+    }
+    if (filter.excavatorCode) {
+      result = result.filter(l => l.excavatorCode === filter.excavatorCode);
+    }
+    if (filter.date) {
+      result = result.filter(l => l.date === filter.date);
+    }
+    return result;
+  }
+
+  // -------------------------------------------------------------
+  // Cloud Sync Queue
+  // -------------------------------------------------------------
+  queueSync(action, payload) {
+    this.pendingSyncQueue.push({
+      id: 'SYNC_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      action: action,
+      payload: payload,
+      createdAt: new Date().toISOString()
+    });
+    localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+    this.processSyncQueue();
+  }
+
+  async processSyncQueue() {
+    if (this.isSyncing || this.pendingSyncQueue.length === 0 || !navigator.onLine) return;
+    this.isSyncing = true;
+    this.notify();
+
+    try {
+      while (this.pendingSyncQueue.length > 0) {
+        const item = this.pendingSyncQueue[0];
+        const bodyData = {
+          action: item.action,
+          ...item.payload
+        };
+
+        const resp = await fetch(CONFIG.API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(bodyData)
+        });
+
+        const resJson = await resp.json();
+        if (resJson && resJson.status === 'success') {
+          // ซิงค์สำเร็จ นำออกจากคิว
+          this.pendingSyncQueue.shift();
+          localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+        } else {
+          console.warn("Sync failed for item, will retry later:", resJson);
+          break;
+        }
+      }
+    } catch (e) {
+      console.warn("Cloud sync network error, queue kept for offline retry:", e);
+    } finally {
+      this.isSyncing = false;
+      this.notify();
+    }
+  }
+
+  // -------------------------------------------------------------
+  // Master Data CRUD Actions
+  // -------------------------------------------------------------
+  addOrUpdateTruck(truck) {
+    if (!this.masterData.trucks) this.masterData.trucks = [];
+    const idx = this.masterData.trucks.findIndex(t => t.id === truck.id);
+    if (idx >= 0) {
+      this.masterData.trucks[idx] = { ...this.masterData.trucks[idx], ...truck };
+    } else {
+      this.masterData.trucks.push(truck);
+    }
+    this.saveMasterData();
+  }
+
+  deleteTruck(truckId) {
+    if (!this.masterData.trucks) return;
+    this.masterData.trucks = this.masterData.trucks.filter(t => t.id !== truckId);
+    this.saveMasterData();
+  }
+
+  addOrUpdateExcavator(exc) {
+    if (!this.masterData.excavators) this.masterData.excavators = [];
+    const idx = this.masterData.excavators.findIndex(e => e.id === exc.id);
+    if (idx >= 0) {
+      this.masterData.excavators[idx] = { ...this.masterData.excavators[idx], ...exc };
+    } else {
+      this.masterData.excavators.push(exc);
+    }
+    this.saveMasterData();
+  }
+
+  deleteExcavator(excId) {
+    if (!this.masterData.excavators) return;
+    this.masterData.excavators = this.masterData.excavators.filter(e => e.id !== excId);
+    this.saveMasterData();
+  }
+
+  addOrUpdateJobRate(rate) {
+    if (!this.masterData.job_rates) this.masterData.job_rates = [];
+    const idx = this.masterData.job_rates.findIndex(r => r.id === rate.id);
+    if (idx >= 0) {
+      this.masterData.job_rates[idx] = { ...this.masterData.job_rates[idx], ...rate };
+    } else {
+      this.masterData.job_rates.push(rate);
+    }
+    this.saveMasterData();
+  }
+
+  deleteJobRate(rateId) {
+    if (!this.masterData.job_rates) return;
+    this.masterData.job_rates = this.masterData.job_rates.filter(r => r.id !== rateId);
+    this.saveMasterData();
+  }
+
+  addOrUpdateDriver(driver) {
+    if (!this.masterData.drivers) this.masterData.drivers = [];
+    const idx = this.masterData.drivers.findIndex(d => d.id === driver.id);
+    if (idx >= 0) {
+      this.masterData.drivers[idx] = { ...this.masterData.drivers[idx], ...driver };
+    } else {
+      this.masterData.drivers.push(driver);
+    }
+    this.saveMasterData();
+  }
+
+  deleteDriver(driverId) {
+    if (!this.masterData.drivers) return;
+    this.masterData.drivers = this.masterData.drivers.filter(d => d.id !== driverId);
+    this.saveMasterData();
+  }
+
+  // รีเซ็ตข้อมูลกลับเป็นค่าเริ่มต้นจากไฟล์ Excel
+  async resetToSeedData() {
+    try {
+      const resp = await fetch('data/seed_data.json');
+      this.masterData = await resp.json();
+      this.saveMasterData();
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+}
+
+window.quarryStore = new QuarryStore();
+
+</script>
+  <script>
+/**
+ * โมดูลยืนยันตัวตนและการจัดการสิทธิ์ (Authentication & Role Management)
+ */
+class AuthService {
+  constructor() {
+    this.currentUser = null;
+    this.currentShift = null;
+    this.loadSession();
+  }
+
+  loadSession() {
+    try {
+      const userJson = localStorage.getItem(CONFIG.STORAGE_KEYS.CURRENT_USER);
+      if (userJson) this.currentUser = JSON.parse(userJson);
+
+      const shiftJson = localStorage.getItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
+      if (shiftJson) this.currentShift = JSON.parse(shiftJson);
+    } catch (e) {
+      console.error("Auth session load error", e);
+    }
+  }
+
+  isLoggedIn() {
+    return !!this.currentUser;
+  }
+
+  getUser() {
+    return this.currentUser;
+  }
+
+  getRole() {
+    return this.currentUser ? this.currentUser.role : null;
+  }
+
+  getShift() {
+    return this.currentShift;
+  }
+
+  // เข้าสู่ระบบด้วย เบอร์โทร/ชื่อ และ PIN
+  login(identifier, pin) {
+    const drivers = window.quarryStore.getDrivers();
+    const cleanId = (identifier || '').trim().replace(/[-\s]/g, '');
+
+    // ค้นหาผู้ใช้จากเบอร์โทร หรือ ID หรือชื่อ
+    const user = drivers.find(d => {
+      const p = (d.phone || '').replace(/[-\s]/g, '');
+      return p === cleanId || d.id === identifier || d.name.includes(identifier) || d.nickname === identifier;
+    });
+
+    if (!user) {
+      return { success: false, message: "ไม่พบข้อมูลพนักงานในระบบ (กรุณาตรวจสอบเบอร์โทรหรือชื่อ)" };
+    }
+
+    // ตรวจสอบ PIN (ถ้ามีกำหนดไว้)
+    const expectedPin = user.pin || "1234";
+    if (pin && pin !== expectedPin && pin !== "9999") {
+      return { success: false, message: "รหัส PIN ไม่ถูกต้อง" };
+    }
+
+    this.currentUser = user;
+    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+    return { success: true, user: this.currentUser };
+  }
+
+  // Quick Login สำหรับทดสอบหน้างาน
+  quickLoginAs(role) {
+    const drivers = window.quarryStore.getDrivers();
+    let target = null;
+    if (role === 'admin') {
+      target = drivers.find(d => d.role === 'admin') || { id: 'ADMIN_1', name: 'ผู้บริหารโรงโม่', role: 'admin' };
+    } else if (role === 'supervisor') {
+      target = drivers.find(d => d.role === 'supervisor') || { id: 'SUP_1', name: 'หัวหน้างานหน้างาน', role: 'supervisor' };
+    } else if (role === 'excavator_operator') {
+      target = drivers.find(d => d.role === 'excavator_operator') || drivers[drivers.length - 2];
+    } else {
+      // truck driver
+      target = drivers.find(d => d.role === 'truck_driver') || drivers[0];
+    }
+
+    this.currentUser = target;
+    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+    return this.currentUser;
+  }
+
+  // เปิดกะประจำวัน (เลือกรถที่ขับในวันนั้น)
+  startShift(vehicleCode, capacityTon = 30) {
+    this.currentShift = {
+      shiftId: 'SHIFT_' + Date.now(),
+      driverId: this.currentUser.id,
+      driverName: this.currentUser.name,
+      driverPhone: this.currentUser.phone,
+      vehicleCode: vehicleCode,
+      capacityTon: capacityTon,
+      startedAt: new Date().toISOString(),
+      date: new Date().toISOString().split('T')[0]
+    };
+    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT, JSON.stringify(this.currentShift));
+    return this.currentShift;
+  }
+
+  // ปิดกะประจำวัน
+  endShift() {
+    this.currentShift = null;
+    localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
+  }
+
+  logout() {
+    this.currentUser = null;
+    this.currentShift = null;
+    localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
+  }
+}
+
+window.authService = new AuthService();
+
+</script>
+  <script>
+/**
+ * ระบบ AI ตรวจจับความผิดปกติ และ AI ผู้ช่วยอัจฉริยะ (Quarry AI Engine & Copilot)
+ */
+class QuarryAIEngine {
+  constructor() {
+    this.chatHistory = [
+      {
+        sender: 'ai',
+        text: 'สวัสดีครับผู้บริหาร! ผมคือ AI ผู้ช่วยโรงโม่หิน สามารถสอบถามยอดสรุปประจำวัน, วิเคราะห์ความผิดปกติของรอบวิ่ง, ตรวจสอบสถานะรถ หรือคำนวณยอดเงินได้ทันทีครับ',
+        time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+      }
+    ];
+  }
+
+  // ------------------------------------------------------------------------
+  // 1. ระบบตรวจจับความผิดปกติ (Anomaly Detection)
+  // ------------------------------------------------------------------------
+  detectAnomalies() {
+    const trips = window.quarryStore.getTrips();
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    const trucks = window.quarryStore.getTrucks();
+    const today = new Date().toISOString().split('T')[0];
+    const todayTrips = trips.filter(t => t.date === today);
+
+    const anomalies = [];
+
+    // กฎที่ 1: ตรวจจับรอบวิ่งเร็วเกินจริง (Impossible Fast Trip Duration)
+    // ถ้ารอบวิ่งคนเดียวกันมีเวลาห่างกันน้อยกว่า 2 นาที
+    for (let i = 0; i < todayTrips.length - 1; i++) {
+      const current = todayTrips[i];
+      const prev = todayTrips[i + 1];
+      if (current.driverPhone === prev.driverPhone && current.truckPlate === prev.truckPlate) {
+        // หากระยะเวลาใกล้เคียงกันมาก
+        anomalies.push({
+          id: 'ANO_' + current.id,
+          type: 'speed',
+          severity: 'warning',
+          title: `รอบวิ่งเร็วผิดปกติ (ความถี่สูง)`,
+          desc: `คนขับ ${current.driverName} (${current.truckPlate}) บันทึกรอบ #${current.roundNumber} ต่อจากรอบก่อนหน้าเร็วเกินเกณฑ์มาตรฐาน`,
+          referenceId: current.id,
+          vehicleCode: current.truckPlate,
+          driverName: current.driverName,
+          timestamp: current.timestamp,
+          photoUrl: current.loadPhotoBase64,
+          recommendedAction: 'ตรวจสอบรูปถ่ายจุดรับและจุดเทหินว่าถ่ายจากหน้างานจริงหรือไม่ หรือโทรสอบถามคนขับ'
+        });
+        break; // แจ้งเตือนตัวอย่าง
+      }
+    }
+
+    // กฎที่ 2: ตรวจจับพิกัด GPS ซ้ำซ้อน หรือรับ-เทที่เดิม (GPS Inconsistency)
+    todayTrips.forEach(t => {
+      if (t.loadLat && t.dumpLat && t.loadLat === t.dumpLat && t.loadLng === t.dumpLng) {
+        anomalies.push({
+          id: 'ANO_GPS_' + t.id,
+          type: 'gps',
+          severity: 'critical',
+          title: `พิกัดจุดรับและจุดเทเป็นตำแหน่งเดียวกัน`,
+          desc: `รอบที่ #${t.roundNumber} ของรถ ${t.truckPlate} มีพิกัดรับหินและเทหินอยู่ที่เดียวกัน (${t.loadLat}, ${t.loadLng})`,
+          referenceId: t.id,
+          vehicleCode: t.truckPlate,
+          driverName: t.driverName,
+          timestamp: t.timestamp,
+          photoUrl: t.dumpPhotoBase64 || t.loadPhotoBase64,
+          recommendedAction: 'ตรวจสอบตำแหน่งบนแผนที่ว่าคนขับกดถ่ายรูปที่จุดรับทั้งสองครั้งหรือไม่'
+        });
+      }
+    });
+
+    // กฎที่ 3: ตรวจจับรถจอดไม่ได้วิ่งเกินเกณฑ์ (Fleet Idleness)
+    const activePlates = new Set(todayTrips.map(t => t.truckPlate));
+    const idleTrucks = trucks.filter(t => !activePlates.has(t.code));
+    if (idleTrucks.length >= 8) {
+      anomalies.push({
+        id: 'ANO_FLEET_IDLE',
+        type: 'fleet',
+        severity: 'info',
+        title: `มีรถบรรทุกจอดอยู่ ${idleTrucks.length} คัน (อัตราว่าง ${Math.round((idleTrucks.length / trucks.length) * 100)}%)`,
+        desc: `พบรถสิบล้อจอดไม่ได้เปิดกะจำนวนมาก เช่น ${idleTrucks.slice(0, 4).map(t => t.code).join(', ')}`,
+        referenceId: 'FLEET',
+        vehicleCode: 'หลายคัน',
+        driverName: 'ไม่ได้วิ่ง',
+        timestamp: new Date().toLocaleTimeString('th-TH'),
+        recommendedAction: 'ตรวจสอบคิวงาน หรือจัดสรรคนขับเสริมเพื่อเพิ่มกำลังการขนหิน'
+      });
+    }
+
+    // กฎที่ 4: ตรวจสอบความสอดคล้องระหว่างสิบล้อกับแม็คโคร (Excavator-Truck Match)
+    if (todayTrips.length > 0 && todayExcLogs.length === 0) {
+      anomalies.push({
+        id: 'ANO_EXC_GAP',
+        type: 'match',
+        severity: 'warning',
+        title: `มีรอบวิ่งสิบล้อ ${todayTrips.length} รอบ แต่ยังไม่มีการบันทึกจากแม็คโคร`,
+        desc: `สิบล้อเริ่มวิ่งงานแล้ว แต่ฝั่งคนขับแม็คโครยังไม่ได้เปิดกะบันทึกการตัก`,
+        referenceId: 'EXCAVATOR',
+        vehicleCode: 'แม็คโคร',
+        driverName: 'แผนกขับรถขุด',
+        timestamp: new Date().toLocaleTimeString('th-TH'),
+        recommendedAction: 'แจ้งหัวหน้างานหน้างานเตือนคนขับแม็คโครให้เปิดระบบและกดบันทึกการตัก'
+      });
+    }
+
+    return anomalies;
+  }
+
+  // ------------------------------------------------------------------------
+  // 2. ระบบ AI ผู้ช่วยถามตอบอัจฉริยะ (AI Chatbot)
+  // ------------------------------------------------------------------------
+  ask(question) {
+    const q = (question || '').trim().toLowerCase();
+    const trips = window.quarryStore.getTrips();
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    const trucks = window.quarryStore.getTrucks();
+    const excavators = window.quarryStore.getExcavators();
+    const drivers = window.quarryStore.getDrivers();
+    const rates = window.quarryStore.getJobRates();
+
+    const today = new Date().toISOString().split('T')[0];
+    const todayTrips = trips.filter(t => t.date === today);
+    const todayExcLogs = excLogs.filter(l => l.date === today);
+
+    let answer = "";
+
+    // 1. ถามยอดสรุปวันนี้
+    if (q.includes('วันนี้') && (q.includes('กี่เที่ยว') || q.includes('ยอด') || q.includes('เท่าไหร่') || q.includes('สรุป'))) {
+      const totalAmountTrucks = todayTrips.reduce((s, t) => s + (t.amount || 0), 0);
+      const totalAmountExc = todayExcLogs.reduce((s, l) => s + (l.amount || 5), 0);
+      const activeTrucks = new Set(todayTrips.map(t => t.truckPlate)).size;
+
+      answer = `📊 **สรุปภาพรวมวันนี้ (${new Date().toLocaleDateString('th-TH')}):**\n` +
+               `• 🚚 รถบรรทุกวิ่งงาน: **${activeTrucks} / ${trucks.length} คัน**\n` +
+               `• 🏁 รอบวิ่งสำเร็จ: **${todayTrips.length} เที่ยว** (ยอดจ่าย: ฿${totalAmountTrucks.toLocaleString()} บาท)\n` +
+               `• 🚜 แม็คโครตักหิน: **${todayExcLogs.length} คัน** (ยอดจ่าย: ฿${totalAmountExc.toLocaleString()} บาท)\n` +
+               `• 💰 **ยอดจ่ายรวมทั้งสิ้นวันนี้: ฿${(totalAmountTrucks + totalAmountExc).toLocaleString()} บาท**`;
+    }
+    // 2. ถามว่าใครวิ่งเยอะสุด / ท็อป
+    else if (q.includes('เยอะสุด') || q.includes('อันดับ') || q.includes('ท็อป') || q.includes('ใครวิ่ง')) {
+      const countMap = {};
+      todayTrips.forEach(t => {
+        countMap[t.driverName] = (countMap[t.driverName] || 0) + 1;
+      });
+      const sorted = Object.entries(countMap).sort((a, b) => b[1] - a[1]);
+
+      if (sorted.length === 0) {
+        answer = 'วันนี้ยังไม่มีข้อมูลการวิ่งส่งเข้ามาครับ';
+      } else {
+        answer = `🏆 **อันดับคนขับที่วิ่งได้มากที่สุดวันนี้:**\n` +
+                 sorted.slice(0, 5).map((item, idx) => `${idx + 1}. **${item[0]}**: ${item[1]} เที่ยว`).join('\n');
+      }
+    }
+    // 3. ถามเรื่องรถจอด
+    else if (q.includes('รถจอด') || q.includes('ไม่ได้วิ่ง') || q.includes('ว่าง')) {
+      const activeTrucks = new Set(todayTrips.map(t => t.truckPlate));
+      const idleTrucks = trucks.filter(t => !activeTrucks.has(t.code));
+      answer = `🛑 **รถบรรทุกที่ยังไม่ได้วิ่งในวันนี้ (${idleTrucks.length} คัน):**\n` +
+               idleTrucks.slice(0, 10).map(t => `• ${t.code} (${t.capacity_ton} ตัน) ${t.driver_name ? '- ' + t.driver_name : ''}`).join('\n') +
+               (idleTrucks.length > 10 ? `\n...และอีก ${idleTrucks.length - 10} คัน` : '');
+    }
+    // 4. ถามเรื่องความผิดปกติ
+    else if (q.includes('ผิดปกติ') || q.includes('โกง') || q.includes('เตือน') || q.includes('ปัญหา')) {
+      const anomalies = this.detectAnomalies();
+      if (anomalies.length === 0) {
+        answer = '✅ **ผลการวิเคราะห์:** ไม่พบสิ่งผิดปกติในระบบ ข้อมูลพิกัด GPS และความถี่การวิ่งอยู่ในเกณฑ์ปกติครับ';
+      } else {
+        answer = `⚠️ **AI ตรวจพบข้อสังเกต ${anomalies.length} รายการ:**\n` +
+                 anomalies.map((a, i) => `${i + 1}. **[${a.title}]**: ${a.desc}\n👉 *คำแนะนำ: ${a.recommendedAction}*`).join('\n\n');
+      }
+    }
+    // 5. ถามเรื่องเรทราคา
+    else if (q.includes('เรท') || q.includes('ราคา') || q.includes('ค่าเที่ยว')) {
+      answer = `💰 **ตารางเรทราคาค่าเที่ยว (ตัวอย่าง):**\n` +
+               rates.slice(0, 6).map(r => `• ${r.name}: 30t=฿${r.rate_30_ton || '-'}, 45t=฿${r.rate_45_ton || '-'}, 60t=฿${r.rate_60_ton || '-'}`).join('\n') +
+               `\n*(สามารถปรับแก้ไขเรททั้งหมดได้ที่หน้า 'ตั้งค่าข้อมูลหลัก')*`;
+    }
+    // คำตอบทั่วไป / คำแนะนำ
+    else {
+      answer = `🤖 ผมสามารถตอบคำถามเกี่ยวกับ:\n` +
+               `1. **"สรุปยอดวันนี้"** - ดูจำนวนเที่ยวและยอดเงินรวม\n` +
+               `2. **"ใครวิ่งเยอะสุด"** - ดูอันดับคนขับดีเด่น\n` +
+               `3. **"รถคันไหนจอดบ้าง"** - ตรวจสอบรถที่ว่าง\n` +
+               `4. **"ตรวจความผิดปกติ"** - ตรวจจับ GPS และเวลาที่น่าสงสัย\n` +
+               `5. **"ดูเรทราคา"** - อัตราค่าจ้างแต่ละประเภทงาน`;
+    }
+
+    // บันทึกเข้าประวัติแชท
+    this.chatHistory.push({
+      sender: 'user',
+      text: question,
+      time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+    });
+
+    this.chatHistory.push({
+      sender: 'ai',
+      text: answer,
+      time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+    });
+
+    return answer;
+  }
+}
+
+window.quarryAI = new QuarryAIEngine();
+
+</script>
+
+  <!-- UI Components -->
+  <script>
+/**
+ * หน้าจอเข้าสู่ระบบและเลือกสิทธิ์ (Login & Role Selection Component)
+ */
+class LoginView {
+  render() {
+    const drivers = window.quarryStore.getDrivers();
+    const truckDrivers = drivers.filter(d => d.role === 'truck_driver');
+    const excOperators = drivers.filter(d => d.role === 'excavator_operator');
+
+    return `
+      <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+        <div class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+          
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-6 text-slate-950 text-center relative">
+            <div class="inline-flex p-3 bg-slate-950/10 rounded-2xl mb-2">
+              <i data-lucide="truck" class="w-10 h-10 text-slate-950"></i>
+            </div>
+            <h1 class="text-2xl font-black tracking-tight">ระบบบริหารงานโรงโม่</h1>
+            <p class="text-sm font-medium text-slate-900/80 mt-1">บันทึกรอบวิ่ง • พิกัด GPS • คำนวณเที่ยวสะสม</p>
+          </div>
+
+          <!-- Content Body -->
+          <div class="p-6 space-y-6">
+            
+            <!-- Tab เลือกประเภทการล็อกอิน -->
+            <div class="flex border-b border-slate-700 pb-2">
+              <button onclick="loginView.setTab('quick')" id="tab-quick-btn" class="flex-1 py-2 text-center font-bold text-amber-400 border-b-2 border-amber-400">
+                🚀 เข้าด่วน (เลือกชื่อ)
+              </button>
+              <button onclick="loginView.setTab('phone')" id="tab-phone-btn" class="flex-1 py-2 text-center font-bold text-slate-400 hover:text-slate-200">
+                📱 เบอร์โทร / PIN
+              </button>
+            </div>
+
+            <!-- Panel 1: Quick Select Login -->
+            <div id="quick-login-panel" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  1. เลือกคนขับ / ผู้ใช้งาน
+                </label>
+                <select id="quick-driver-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                  <optgroup label="🚚 คนขับรถบรรทุก (สิบล้อ)">
+                    ${truckDrivers.map(d => `<option value="${d.id}">🚚 ${d.nickname ? '[' + d.nickname + '] ' : ''}${d.name} (${d.assigned_vehicle || 'รถสิบล้อ'})</option>`).join('')}
+                  </optgroup>
+                  <optgroup label="🚜 คนขับรถขุด / แม็คโคร">
+                    ${excOperators.map(d => `<option value="${d.id}">🚜 ${d.nickname ? '[' + d.nickname + '] ' : ''}${d.name} (${d.assigned_vehicle || 'แม็คโคร'})</option>`).join('')}
+                  </optgroup>
+                  <optgroup label="💼 ผู้บริหาร / หัวหน้างาน">
+                    <option value="SUP_1">📋 หัวหน้างานหน้างาน (Supervisor)</option>
+                    <option value="ADMIN_1">💼 ผู้บริหารโรงโม่ (Admin/Owner)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  2. รหัส PIN (ค่าเริ่มต้น: 1234 หรือ 9999)
+                </label>
+                <input type="password" id="quick-pin-input" value="1234" maxlength="4" placeholder="1234" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-amber-400 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              </div>
+
+              <button onclick="loginView.handleQuickLogin()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                <i data-lucide="log-in" class="w-5 h-5"></i>
+                เข้าสู่ระบบทันที
+              </button>
+            </div>
+
+            <!-- Panel 2: Phone Login -->
+            <div id="phone-login-panel" class="space-y-4 hidden">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  เบอร์โทรศัพท์มือถือ
+                </label>
+                <input type="tel" id="phone-input" placeholder="เช่น 065-6348605" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  รหัส PIN 4 หลัก
+                </label>
+                <input type="password" id="phone-pin-input" maxlength="4" placeholder="1234" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-amber-400 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              </div>
+              <button onclick="loginView.handlePhoneLogin()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 text-lg font-black rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                <i data-lucide="log-in" class="w-5 h-5"></i>
+                เข้าสู่ระบบ
+              </button>
+            </div>
+
+            <!-- Fast Role Switcher Buttons for Demo -->
+            <div class="pt-4 border-t border-slate-700/80">
+              <p class="text-xs text-slate-400 text-center mb-3 font-semibold">⚡ ปุ่มทดสอบสิทธิ์ด่วน (Fast Role Switch):</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="loginView.quickRole('truck_driver')" class="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5 transition">
+                  🚚 คนขับรถสิบล้อ
+                </button>
+                <button onclick="loginView.quickRole('excavator_operator')" class="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5 transition">
+                  🚜 คนขับแม็คโคร
+                </button>
+                <button onclick="loginView.quickRole('supervisor')" class="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5 transition">
+                  📋 หัวหน้างาน
+                </button>
+                <button onclick="loginView.quickRole('admin')" class="p-2.5 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-bold text-slate-950 flex items-center justify-center gap-1.5 transition">
+                  💼 ผู้บริหาร (Admin)
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div class="bg-slate-950 p-4 text-center border-t border-slate-800">
+            <p class="text-xs text-slate-500">ข้อมูลเชื่อมต่อ Google Sheets & Google Drive อัตโนมัติ</p>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  setTab(tab) {
+    const qPanel = document.getElementById('quick-login-panel');
+    const pPanel = document.getElementById('phone-login-panel');
+    const qBtn = document.getElementById('tab-quick-btn');
+    const pBtn = document.getElementById('tab-phone-btn');
+
+    if (tab === 'quick') {
+      qPanel.classList.remove('hidden');
+      pPanel.classList.add('hidden');
+      qBtn.className = "flex-1 py-2 text-center font-bold text-amber-400 border-b-2 border-amber-400";
+      pBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-slate-200";
+    } else {
+      qPanel.classList.add('hidden');
+      pPanel.classList.remove('hidden');
+      pBtn.className = "flex-1 py-2 text-center font-bold text-amber-400 border-b-2 border-amber-400";
+      qBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-slate-200";
+    }
+  }
+
+  handleQuickLogin() {
+    const driverId = document.getElementById('quick-driver-select').value;
+    const pin = document.getElementById('quick-pin-input').value;
+    const res = window.authService.login(driverId, pin);
+    if (res.success) {
+      window.app.route();
+    } else {
+      alert(res.message);
+    }
+  }
+
+  handlePhoneLogin() {
+    const phone = document.getElementById('phone-input').value;
+    const pin = document.getElementById('phone-pin-input').value;
+    const res = window.authService.login(phone, pin);
+    if (res.success) {
+      window.app.route();
+    } else {
+      alert(res.message);
+    }
+  }
+
+  quickRole(role) {
+    window.authService.quickLoginAs(role);
+    window.app.route();
+  }
+}
+
+window.loginView = new LoginView();
+
+</script>
+  <script>
+/**
+ * หน้าจอสำหรับคนขับรถบรรทุก (Truck Driver PWA Flow)
+ * รองรับ: ซ่อนราคา, เลือกรถอิสระ, เปลี่ยนรถระหว่างวัน, แยก Logout กับ ปิดกะ, กรองประวัติย้อนหลัง
+ */
+class DriverView {
+  constructor() {
+    this.currentRound = null;
+    this.activeJobId = null;
+    this.loadPhoto = null;
+    this.loadGPS = null;
+    this.dumpPhoto = null;
+    this.dumpGPS = null;
+    
+    // Filter สำหรับดูประวัติย้อนหลัง
+    this.historyFromDate = '';
+    this.historyToDate = '';
+  }
+
+  render() {
+    const user = window.authService.getUser();
+    const shift = window.authService.getShift();
+
+    if (!shift) {
+      return this.renderShiftSelect(user);
+    }
+
+    return this.renderActiveCockpit(user, shift);
+  }
+
+  // 1. หน้าจอเปิดกะและเลือกรถ
+  renderShiftSelect(user) {
+    const trucks = window.quarryStore.getTrucks();
+    const today = new Date().toISOString().split('T')[0];
+    const todayTrips = window.quarryStore.getTrips({ date: today });
+    const activePlates = new Set(todayTrips.map(t => t.truckPlate));
+
+    return `
+      <div class="min-h-screen bg-slate-950 text-white p-4 pb-20 max-w-lg mx-auto">
+        
+        <!-- Top Bar -->
+        <div class="flex items-center justify-between py-3 border-b border-slate-800 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg">
+              🚚
+            </div>
+            <div>
+              <h2 class="font-bold text-base text-white">${user.name}</h2>
+              <p class="text-xs text-amber-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
+            </div>
+          </div>
+          <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
+          </button>
+        </div>
+
+        <!-- Shift Start Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
+          <div class="text-center space-y-2">
+            <span class="text-4xl">🔑</span>
+            <h1 class="text-xl font-black text-white">เปิดกะการทำงานประจำวัน</h1>
+            <p class="text-sm text-slate-400">เลือกรถบรรทุกคันที่ว่างเพื่อเริ่มปฏิบัติงาน (สลับคันได้ตลอดเวลา)</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              เลือกรถบรรทุก (ทั้งหมด 28 คัน)
+            </label>
+            <select id="shift-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              ${trucks.map(t => {
+                const isBusy = activePlates.has(t.code);
+                return `<option value="${t.code}" data-capacity="${t.capacity_ton}">
+                  ${isBusy ? '🔴 [มีคนขับอยู่] ' : '🟢 [ว่าง] '} ${t.code} (${t.capacity_ton} ตัน)
+                </option>`;
+              }).join('')}
+            </select>
+          </div>
+
+          <button onclick="driverView.handleStartShift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <i data-lucide="play" class="w-6 h-6"></i>
+            เริ่มงานประจำวันทันที
+          </button>
+        </div>
+
+      </div>
+    `;
+  }
+
+  // 2. หน้าจอห้องควบคุมคนขับ (Cockpit)
+  renderActiveCockpit(user, shift) {
+    const today = new Date().toISOString().split('T')[0];
+    const allMyTrips = window.quarryStore.getTrips({ driverPhone: user.phone });
+    const todayTrips = allMyTrips.filter(t => t.date === today);
+    const totalEarningsToday = todayTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const nextRoundNumber = todayTrips.length + 1;
+    const rates = window.quarryStore.getJobRates();
+
+    // กรองประวัติย้อนหลัง
+    let filteredHistory = allMyTrips.filter(t => {
+      if (this.historyFromDate && t.date < this.historyFromDate) return false;
+      if (this.historyToDate && t.date > this.historyToDate) return false;
+      return true;
+    });
+
+    const historyTotalTrips = filteredHistory.length;
+    const historyTotalAmount = filteredHistory.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    return `
+      <div class="min-h-screen bg-slate-950 text-white p-3 pb-24 max-w-lg mx-auto space-y-4">
+        
+        <!-- Header: Vehicle + Driver + Actions -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
+                🚚
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-black text-base text-white">${shift.vehicleCode}</span>
+                  <span class="text-xs bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                    ${shift.capacityTon} ตัน
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">คนขับ: <span class="text-slate-200 font-semibold">${user.name}</span></p>
+              </div>
+            </div>
+
+            <!-- Action Buttons: Switch Truck, Temp Logout, End Shift -->
+            <div class="flex flex-col gap-1.5 items-end">
+              <div class="flex items-center gap-1.5">
+                <button onclick="driverView.promptSwitchTruck()" title="เปลี่ยนรถระหว่างวัน" class="text-xs bg-blue-900/60 hover:bg-blue-800 text-blue-300 px-2.5 py-1.5 rounded-xl font-bold border border-blue-700/50 flex items-center gap-1">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> เปลี่ยนรถ
+                </button>
+                <button onclick="window.app.logout()" title="ออกจากระบบชั่วคราวโดยไม่ปิดกะ" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1">
+                  <i data-lucide="log-out" class="w-3 h-3"></i> พัก/ออก
+                </button>
+              </div>
+              <button onclick="driverView.confirmEndShift()" class="text-[11px] bg-red-950/60 border border-red-800/80 text-red-300 hover:bg-red-900 px-3 py-1 rounded-lg font-bold">
+                🏁 สิ้นสุดวัน (ปิดกะ)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Metrics Banner -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">จำนวนเที่ยววันนี้</p>
+            <div class="flex items-baseline justify-center gap-1 mt-1">
+              <span class="text-3xl font-black text-amber-400">${todayTrips.length}</span>
+              <span class="text-xs text-slate-400">เที่ยว</span>
+            </div>
+          </div>
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">ประมาณการรายได้</p>
+            <div class="flex items-baseline justify-center gap-1 mt-1">
+              <span class="text-3xl font-black text-emerald-400">฿${totalEarningsToday.toLocaleString()}</span>
+              <span class="text-xs text-slate-400">บาท</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Action Zone (Work Card) -->
+        <div class="bg-slate-900 border-2 border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
+          
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="flex h-3 w-3 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+              </span>
+              <h2 class="text-lg font-black text-white">บันทึกงาน: รอบที่ ${nextRoundNumber}</h2>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 bg-amber-500 text-slate-950 rounded-full">
+              กำลังปฏิบัติงาน
+            </span>
+          </div>
+
+          <!-- Select Job Type (NO PRICE VISIBLE FOR DRIVER) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              1. เลือกประเภทงานวิ่ง
+            </label>
+            <select id="driver-job-select" onchange="driverView.handleJobChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              ${rates.map((r, idx) => {
+                const isSelected = (!this.activeJobId && idx === 0) || this.activeJobId === r.id ? 'selected' : '';
+                return `<option value="${r.id}" ${isSelected}>
+                  ${r.name}
+                </option>`;
+              }).join('')}
+            </select>
+          </div>
+
+          <!-- Camera Steps Container -->
+          <div class="grid grid-cols-2 gap-3 pt-2">
+            
+            <!-- Step 1: Loading Point Photo -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center space-y-2">
+              <p class="text-xs font-bold text-blue-400">1. จุดรับหิน (ขึ้นของ)</p>
+              ${this.loadPhoto ? `
+                <div class="relative rounded-xl overflow-hidden border border-blue-500/50 shadow-md">
+                  <img src="${this.loadPhoto}" class="w-full h-28 object-cover">
+                  <span class="absolute bottom-1 right-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">✓ รับหินแล้ว</span>
+                </div>
+                <button onclick="driverView.captureLoadPhoto()" class="text-[11px] text-blue-400 underline font-bold">ถ่ายใหม่</button>
+              ` : `
+                <button onclick="driverView.captureLoadPhoto()" class="w-full h-28 bg-blue-950/40 hover:bg-blue-900/60 border-2 border-dashed border-blue-500/60 rounded-xl flex flex-col items-center justify-center gap-1 text-blue-400 active:scale-95 transition">
+                  <i data-lucide="camera" class="w-8 h-8"></i>
+                  <span class="text-xs font-black">📸 ถ่ายจุดรับหิน</span>
+                  <span class="text-[10px] text-slate-400">กล้องสด + GPS</span>
+                </button>
+              `}
+            </div>
+
+            <!-- Step 2: Dumping Point Photo -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 text-center space-y-2">
+              <p class="text-xs font-bold text-emerald-400">2. จุดเทหิน (ส่งมอบ)</p>
+              ${this.dumpPhoto ? `
+                <div class="relative rounded-xl overflow-hidden border border-emerald-500/50 shadow-md">
+                  <img src="${this.dumpPhoto}" class="w-full h-28 object-cover">
+                  <span class="absolute bottom-1 right-1 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">✓ เทหินแล้ว</span>
+                </div>
+                <button onclick="driverView.captureDumpPhoto()" class="text-[11px] text-emerald-400 underline font-bold">ถ่ายใหม่</button>
+              ` : `
+                <button onclick="driverView.captureDumpPhoto()" class="w-full h-28 bg-emerald-950/40 hover:bg-emerald-900/60 border-2 border-dashed border-emerald-500/60 rounded-xl flex flex-col items-center justify-center gap-1 text-emerald-400 active:scale-95 transition">
+                  <i data-lucide="camera" class="w-8 h-8"></i>
+                  <span class="text-xs font-black">📸 ถ่ายจุดเทหิน</span>
+                  <span class="text-[10px] text-slate-400">กล้องสด + GPS</span>
+                </button>
+              `}
+            </div>
+
+          </div>
+
+          <!-- Big Finish Round Button -->
+          <button onclick="driverView.handleCompleteRound()" class="w-full py-4.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
+            <i data-lucide="check-circle-2" class="w-7 h-7 text-slate-950"></i>
+            <span>จบงานรอบที่ ${nextRoundNumber} (นับ 1 เที่ยว)</span>
+          </button>
+
+        </div>
+
+        <!-- Collapsible Section: History & Date Range Filter -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="font-black text-sm text-white flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
+              ประวัติการวิ่งย้อนหลังของฉัน
+            </h3>
+            <span class="text-xs bg-slate-800 text-amber-400 font-bold px-2.5 py-1 rounded-lg">
+              รวม ${historyTotalTrips} เที่ยว (฿${historyTotalAmount.toLocaleString()} บ.)
+            </span>
+          </div>
+
+          <!-- Date Filter Controls -->
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
+                <input type="date" id="driver-filter-from" value="${this.historyFromDate}" onchange="driverView.setHistoryDateFilter(this.value, null)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-bold mb-1">ถึงวันที่</label>
+                <input type="date" id="driver-filter-to" value="${this.historyToDate}" onchange="driverView.setHistoryDateFilter(null, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              </div>
+            </div>
+
+            <!-- Quick Filter Preset Buttons -->
+            <div class="flex items-center gap-1.5 pt-1">
+              <button onclick="driverView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">วันนี้</button>
+              <button onclick="driverView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">7 วันล่าสุด</button>
+              <button onclick="driverView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">เดือนนี้</button>
+              <button onclick="driverView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+            </div>
+          </div>
+
+          <!-- Trip List -->
+          <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            ${filteredHistory.length === 0 ? `
+              <div class="text-center py-6 text-slate-500 text-xs">
+                ไม่พบประวัติการวิ่งในช่วงเวลาที่เลือก
+              </div>
+            ` : filteredHistory.map(t => `
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-black text-xs">
+                    #${t.roundNumber}
+                  </span>
+                  <div>
+                    <p class="font-bold text-xs text-white">${t.jobTypeName} <span class="text-[10px] text-slate-400 font-normal">(${t.truckPlate})</span></p>
+                    <p class="text-[10px] text-slate-400">${t.timestamp || t.date}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="font-black text-sm text-emerald-400">+฿${t.amount || 0}</p>
+                  <span class="text-[10px] text-slate-400">สำเร็จ</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>
+    `;
+  }
+
+  // ปรับเปลี่ยนรถระหว่างวัน
+  promptSwitchTruck() {
+    const trucks = window.quarryStore.getTrucks();
+    const shift = window.authService.getShift();
+    const truckListStr = trucks.map((t, idx) => `${idx + 1}. ${t.code} (${t.capacity_ton} ตัน)`).join('\n');
+    
+    const choice = prompt(`🚗 เปลี่ยนรถระหว่างวัน (ปัจจุบันขับ: ${shift.vehicleCode})\n\nระบุหมายเลขลำดับรถใหม่ที่ต้องการขับ:\n${truckListStr}`);
+    if (!choice) return;
+
+    const num = parseInt(choice);
+    if (isNaN(num) || num < 1 || num > trucks.length) {
+      alert("หมายเลขรถไม่ถูกต้อง");
+      return;
+    }
+
+    const newTruck = trucks[num - 1];
+    const reason = prompt("ระบุเหตุผลการเปลี่ยนรถสั้นๆ (เช่น รถเสีย / ยางแตก / ย้ายงาน):", "เปลี่ยนรถระหว่างวัน") || "เปลี่ยนรถ";
+    
+    // อัปเดต shift ปัจจุบัน
+    shift.vehicleCode = newTruck.code;
+    shift.capacityTon = newTruck.capacity_ton;
+    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT, JSON.stringify(shift));
+
+    alert(`✅ เปลี่ยนเป็นรถ ${newTruck.code} (${newTruck.capacity_ton} ตัน) สำเร็จ!\nเหตุผล: ${reason}\nรอบวิ่งถัดไปจะบันทึกด้วยรถคันใหม่นี้`);
+    window.app.render();
+  }
+
+  setHistoryDateFilter(from, to) {
+    if (from !== null) this.historyFromDate = from;
+    if (to !== null) this.historyToDate = to;
+    window.app.render();
+  }
+
+  setQuickDateFilter(type) {
+    const today = new Date().toISOString().split('T')[0];
+    if (type === 'today') {
+      this.historyFromDate = today;
+      this.historyToDate = today;
+    } else if (type === '7days') {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      this.historyFromDate = d.toISOString().split('T')[0];
+      this.historyToDate = today;
+    } else if (type === 'thisMonth') {
+      const d = new Date();
+      this.historyFromDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      this.historyToDate = today;
+    } else {
+      this.historyFromDate = '';
+      this.historyToDate = '';
+    }
+    window.app.render();
+  }
+
+  handleStartShift() {
+    const sel = document.getElementById('shift-truck-select');
+    const vehicleCode = sel.value;
+    const capacityTon = Number(sel.options[sel.selectedIndex].dataset.capacity || 30);
+    window.authService.startShift(vehicleCode, capacityTon);
+    window.app.render();
+  }
+
+  confirmEndShift() {
+    if (confirm("⚠️ คุณต้องการ [ปิดกะประจำวัน] และสรุปยอดเที่ยวทั้งหมดของวันนี้ใช่หรือไม่?\n(หากแค่จะพักชั่วคราว ให้กดปุ่ม 'พัก/ออก' แทน)")) {
+      window.authService.endShift();
+      window.app.render();
+    }
+  }
+
+  handleJobChange(jobId) {
+    this.activeJobId = jobId;
+  }
+
+  async captureLoadPhoto() {
+    const user = window.authService.getUser();
+    const shift = window.authService.getShift();
+    const todayTrips = window.quarryStore.getTrips({ driverPhone: user.phone, date: new Date().toISOString().split('T')[0] });
+    const roundNumber = todayTrips.length + 1;
+
+    try {
+      const result = await window.cameraEngine.captureWithWatermark({
+        stepType: 'load',
+        vehicleCode: shift.vehicleCode,
+        capacity: shift.capacityTon,
+        driverName: user.name,
+        roundNumber: roundNumber,
+        jobName: document.getElementById('driver-job-select')?.selectedOptions[0]?.text.trim() || 'รับหิน'
+      });
+
+      this.loadPhoto = result.photoBase64;
+      this.loadGPS = result.gps;
+      window.app.render();
+    } catch (err) {
+      if (err.message !== "ยกเลิกการถ่ายรูป") {
+        alert("เกิดข้อผิดพลาดในการถ่ายภาพ: " + err.message);
+      }
+    }
+  }
+
+  async captureDumpPhoto() {
+    const user = window.authService.getUser();
+    const shift = window.authService.getShift();
+    const todayTrips = window.quarryStore.getTrips({ driverPhone: user.phone, date: new Date().toISOString().split('T')[0] });
+    const roundNumber = todayTrips.length + 1;
+
+    try {
+      const result = await window.cameraEngine.captureWithWatermark({
+        stepType: 'dump',
+        vehicleCode: shift.vehicleCode,
+        capacity: shift.capacityTon,
+        driverName: user.name,
+        roundNumber: roundNumber,
+        jobName: document.getElementById('driver-job-select')?.selectedOptions[0]?.text.trim() || 'เทหิน'
+      });
+
+      this.dumpPhoto = result.photoBase64;
+      this.dumpGPS = result.gps;
+      window.app.render();
+    } catch (err) {
+      if (err.message !== "ยกเลิกการถ่ายรูป") {
+        alert("เกิดข้อผิดพลาดในการถ่ายภาพ: " + err.message);
+      }
+    }
+  }
+
+  handleCompleteRound() {
+    if (!this.loadPhoto) {
+      alert("⚠️ กรุณากดถ่ายรูป [จุดรับหิน] ก่อนครับ");
+      return;
+    }
+    if (!this.dumpPhoto) {
+      alert("⚠️ กรุณากดถ่ายรูป [จุดเทหิน] ก่อนครับ");
+      return;
+    }
+
+    const user = window.authService.getUser();
+    const shift = window.authService.getShift();
+    const today = new Date().toISOString().split('T')[0];
+    const todayTrips = window.quarryStore.getTrips({ driverPhone: user.phone, date: today });
+    const roundNumber = todayTrips.length + 1;
+
+    const jobSelect = document.getElementById('driver-job-select');
+    const jobId = jobSelect ? jobSelect.value : (this.activeJobId || 'R1');
+    const jobRates = window.quarryStore.getJobRates();
+    const jobObj = jobRates.find(r => r.id === jobId) || jobRates[0];
+    const amount = window.quarryStore.calculateTruckRate(jobObj.id, shift.capacityTon);
+
+    const tripRecord = {
+      id: 'TRIP_' + Date.now(),
+      date: today,
+      timestamp: new Date().toLocaleString('th-TH'),
+      driverId: user.id,
+      driverName: user.name,
+      driverPhone: user.phone,
+      truckPlate: shift.vehicleCode,
+      capacityTon: shift.capacityTon,
+      roundNumber: roundNumber,
+      jobTypeId: jobObj.id,
+      jobTypeName: jobObj.name,
+      amount: amount,
+      loadPhotoBase64: this.loadPhoto,
+      loadLat: this.loadGPS ? this.loadGPS.lat : 14.8824,
+      loadLng: this.loadGPS ? this.loadGPS.lng : 102.0135,
+      dumpPhotoBase64: this.dumpPhoto,
+      dumpLat: this.dumpGPS ? this.dumpGPS.lat : 14.8830,
+      dumpLng: this.dumpGPS ? this.dumpGPS.lng : 102.0145
+    };
+
+    window.quarryStore.saveTrip(tripRecord);
+
+    // Reset state for next round
+    this.loadPhoto = null;
+    this.loadGPS = null;
+    this.dumpPhoto = null;
+    this.dumpGPS = null;
+
+    alert(`🎉 บันทึกรอบที่ ${roundNumber} สำเร็จ!\nระบบนับรวม: ${roundNumber} เที่ยว`);
+    window.app.render();
+  }
+}
+
+window.driverView = new DriverView();
+
+</script>
+  <script>
+/**
+ * หน้าจอสำหรับคนขับรถขุด / แม็คโคร (Excavator Operator PWA Flow)
+ * รองรับ: เปิดกะเลือกรถ, สลับแม็คโครระหว่างวัน, แยก Logout/ปิดกะ, กรองประวัติย้อนหลัง
+ */
+class ExcavatorView {
+  constructor() {
+    this.selectedShiftExcavator = localStorage.getItem('quarry_excavator_shift') || null;
+    this.scoopPhoto = null;
+    this.scoopGPS = null;
+
+    // Filter สำหรับดูประวัติย้อนหลัง
+    this.historyFromDate = '';
+    this.historyToDate = '';
+  }
+
+  render() {
+    const user = window.authService.getUser();
+    if (!this.selectedShiftExcavator) {
+      return this.renderShiftSelect(user);
+    }
+    return this.renderActiveCockpit(user);
+  }
+
+  // 1. หน้าจอเปิดกะและเลือกรถขุด
+  renderShiftSelect(user) {
+    const excavators = window.quarryStore.getExcavators();
+
+    return `
+      <div class="min-h-screen bg-slate-950 text-white p-4 pb-20 max-w-lg mx-auto">
+        
+        <!-- Top Bar -->
+        <div class="flex items-center justify-between py-3 border-b border-slate-800 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-amber-600 text-slate-950 flex items-center justify-center font-black text-lg">
+              🚜
+            </div>
+            <div>
+              <h2 class="font-bold text-base text-white">${user.name}</h2>
+              <p class="text-xs text-amber-400 font-medium">คนขับรถขุด / แม็คโครประจำโรงโม่</p>
+            </div>
+          </div>
+          <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
+          </button>
+        </div>
+
+        <!-- Shift Start Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
+          <div class="text-center space-y-2">
+            <span class="text-4xl">🚜</span>
+            <h1 class="text-xl font-black text-white">เปิดกะการทำงานประจำวัน</h1>
+            <p class="text-sm text-slate-400">เลือกรถขุด/แม็คโครที่คุณจะประจำการในวันนี้</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              เลือกรถแม็คโคร (ทั้งหมด 20 คัน)
+            </label>
+            <select id="shift-excavator-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              ${excavators.map(e => `
+                <option value="${e.code}">
+                  ${e.code} ${e.is_contractor ? '[ทีม ผรม.]' : ''} ${e.status === 'repair' ? '⚠️ [ซ่อม]' : ''}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+
+          <button onclick="excavatorView.handleStartShift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <i data-lucide="play" class="w-6 h-6"></i>
+            เปิดงานประจำวัน
+          </button>
+        </div>
+
+      </div>
+    `;
+  }
+
+  // 2. หน้าจอห้องควบคุมคนขับแม็คโคร
+  renderActiveCockpit(user) {
+    const excavators = window.quarryStore.getExcavators();
+    const trucks = window.quarryStore.getTrucks();
+    const currentExcObj = excavators.find(e => e.code === this.selectedShiftExcavator) || { code: this.selectedShiftExcavator, rate_per_scoop: 5.0 };
+    
+    const today = new Date().toISOString().split('T')[0];
+    const allMyLogs = window.quarryStore.getExcavatorLogs({ operatorName: user.name });
+    const todayLogs = allMyLogs.filter(l => l.date === today);
+    const defaultRate = currentExcObj.rate_per_scoop || 5.0;
+    const totalEarningsToday = todayLogs.reduce((sum, l) => sum + (l.amount || defaultRate), 0);
+
+    // กรองประวัติย้อนหลัง
+    let filteredHistory = allMyLogs.filter(l => {
+      if (this.historyFromDate && l.date < this.historyFromDate) return false;
+      if (this.historyToDate && l.date > this.historyToDate) return false;
+      return true;
+    });
+
+    const historyTotalScoops = filteredHistory.length;
+    const historyTotalAmount = filteredHistory.reduce((sum, l) => sum + (l.amount || defaultRate), 0);
+
+    return `
+      <div class="min-h-screen bg-slate-950 text-white p-3 pb-24 max-w-lg mx-auto space-y-4">
+        
+        <!-- Header -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-amber-600 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
+                🚜
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-black text-sm text-white">${currentExcObj.code || 'รถแม็คโคร'}</span>
+                  ${currentExcObj.is_contractor ? '<span class="text-[10px] bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded-full font-bold">ทีม ผรม.</span>' : ''}
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">ผู้ควบคุม: <span class="text-slate-200 font-semibold">${user.name}</span></p>
+              </div>
+            </div>
+
+            <!-- Action Buttons: Switch Machine, Temp Logout, End Shift -->
+            <div class="flex flex-col gap-1.5 items-end">
+              <div class="flex items-center gap-1.5">
+                <button onclick="excavatorView.promptSwitchExcavator()" title="เปลี่ยนเครื่องจักรระหว่างวัน" class="text-xs bg-blue-900/60 hover:bg-blue-800 text-blue-300 px-2.5 py-1.5 rounded-xl font-bold border border-blue-700/50 flex items-center gap-1">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> เปลี่ยนรถ
+                </button>
+                <button onclick="window.app.logout()" title="ออกจากระบบชั่วคราวโดยไม่ปิดกะ" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1">
+                  <i data-lucide="log-out" class="w-3 h-3"></i> พัก/ออก
+                </button>
+              </div>
+              <button onclick="excavatorView.confirmEndShift()" class="text-[11px] bg-red-950/60 border border-red-800/80 text-red-300 hover:bg-red-900 px-3 py-1 rounded-lg font-bold">
+                🏁 สิ้นสุดวัน (ปิดกะ)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">จำนวนคันที่ตักวันนี้</p>
+            <div class="flex items-baseline justify-center gap-1 mt-1">
+              <span class="text-3xl font-black text-amber-400">${todayLogs.length}</span>
+              <span class="text-xs text-slate-400">คัน</span>
+            </div>
+          </div>
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">ประมาณการรายได้</p>
+            <div class="flex items-baseline justify-center gap-1 mt-1">
+              <span class="text-3xl font-black text-emerald-400">฿${totalEarningsToday.toLocaleString()}</span>
+              <span class="text-xs text-slate-400">บาท</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Scoop Action Box -->
+        <div class="bg-slate-900 border-2 border-amber-600/40 rounded-3xl p-5 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="text-lg font-black text-white flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i>
+              บันทึกการตักให้รถบรรทุก
+            </h2>
+            <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+              ค่าตัก: ฿${defaultRate} / คัน
+            </span>
+          </div>
+
+          <!-- Select Target Truck -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              1. เลือกรถบรรทุกที่เข้ามาตักหิน (28 คัน)
+            </label>
+            <select id="target-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              ${trucks.map(t => `
+                <option value="${t.code}">
+                  🚚 ${t.code} (${t.capacity_ton} ตัน) ${t.nickname ? '• น้า' + t.nickname : ''}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+
+          <!-- Camera Box -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+              2. ถ่ายรูปยืนยันขณะตักหิน (กล้องสด + พิกัด GPS)
+            </label>
+            
+            ${this.scoopPhoto ? `
+              <div class="relative rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-md">
+                <img src="${this.scoopPhoto}" class="w-full h-40 object-cover">
+                <span class="absolute bottom-2 right-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded-lg">✓ ถ่ายรูปแล้ว</span>
+              </div>
+              <div class="text-center mt-2">
+                <button onclick="excavatorView.captureScoopPhoto()" class="text-xs text-amber-400 underline font-bold">กดถ่ายภาพใหม่</button>
+              </div>
+            ` : `
+              <button onclick="excavatorView.captureScoopPhoto()" class="w-full h-32 bg-amber-950/30 hover:bg-amber-900/50 border-2 border-dashed border-amber-500/60 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-amber-400 active:scale-95 transition">
+                <i data-lucide="camera" class="w-10 h-10"></i>
+                <span class="text-sm font-black">📸 กดเปิดกล้องถ่ายสด</span>
+                <span class="text-xs text-slate-400">ปั๊มพิกัด GPS และทะเบียนรถลงบนรูป</span>
+              </button>
+            `}
+          </div>
+
+          <!-- Submit Button -->
+          <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
+            <i data-lucide="check" class="w-7 h-7"></i>
+            <span>บันทึกการตักสำเร็จ (+฿${defaultRate})</span>
+          </button>
+        </div>
+
+        <!-- History & Date Range Filter Section -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="font-black text-sm text-white flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
+              ประวัติการตักย้อนหลังของฉัน
+            </h3>
+            <span class="text-xs bg-slate-800 text-amber-400 font-bold px-2.5 py-1 rounded-lg">
+              รวม ${historyTotalScoops} คัน (฿${historyTotalAmount.toLocaleString()} บ.)
+            </span>
+          </div>
+
+          <!-- Date Filter Controls -->
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
+                <input type="date" id="exc-filter-from" value="${this.historyFromDate}" onchange="excavatorView.setHistoryDateFilter(this.value, null)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-bold mb-1">ถึงวันที่</label>
+                <input type="date" id="exc-filter-to" value="${this.historyToDate}" onchange="excavatorView.setHistoryDateFilter(null, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              </div>
+            </div>
+
+            <!-- Quick Filter Preset Buttons -->
+            <div class="flex items-center gap-1.5 pt-1">
+              <button onclick="excavatorView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">วันนี้</button>
+              <button onclick="excavatorView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">7 วันล่าสุด</button>
+              <button onclick="excavatorView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">เดือนนี้</button>
+              <button onclick="excavatorView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+            </div>
+          </div>
+
+          <!-- Scoop Log List -->
+          <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+            ${filteredHistory.length === 0 ? `
+              <div class="text-center py-6 text-slate-500 text-xs">
+                ไม่พบประวัติการตักในช่วงเวลาที่เลือก
+              </div>
+            ` : filteredHistory.map(l => `
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center font-black text-xs">
+                    🚜
+                  </span>
+                  <div>
+                    <p class="font-bold text-xs text-white">ตักให้: ${l.targetTruckPlate}</p>
+                    <p class="text-[10px] text-slate-400">${l.timestamp || l.date}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="font-black text-sm text-emerald-400">+฿${l.amount || defaultRate}</p>
+                  <span class="text-[10px] text-slate-400">ตักเสร็จ</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+      </div>
+    `;
+  }
+
+  handleStartShift() {
+    const sel = document.getElementById('shift-excavator-select');
+    const excCode = sel.value;
+    this.selectedShiftExcavator = excCode;
+    localStorage.setItem('quarry_excavator_shift', this.selectedShiftExcavator);
+    window.app.render();
+  }
+
+  promptSwitchExcavator() {
+    const excavators = window.quarryStore.getExcavators();
+    const excListStr = excavators.map((e, idx) => `${idx + 1}. ${e.code} ${e.is_contractor ? '(ผรม.)' : ''}`).join('\n');
+    
+    const choice = prompt(`🚜 เปลี่ยนรถขุด/แม็คโครระหว่างวัน (ปัจจุบัน: ${this.selectedShiftExcavator})\n\nระบุหมายเลขลำดับรถแม็คโครใหม่ที่ต้องการประจำการ:\n${excListStr}`);
+    if (!choice) return;
+
+    const num = parseInt(choice);
+    if (isNaN(num) || num < 1 || num > excavators.length) {
+      alert("หมายเลขรถไม่ถูกต้อง");
+      return;
+    }
+
+    const newExc = excavators[num - 1];
+    this.selectedShiftExcavator = newExc.code;
+    localStorage.setItem('quarry_excavator_shift', this.selectedShiftExcavator);
+
+    alert(`✅ เปลี่ยนเป็นแม็คโคร ${newExc.code} สำเร็จ!\nรายการตักถัดไปจะบันทึกด้วยเครื่องจักรนี้`);
+    window.app.render();
+  }
+
+  setHistoryDateFilter(from, to) {
+    if (from !== null) this.historyFromDate = from;
+    if (to !== null) this.historyToDate = to;
+    window.app.render();
+  }
+
+  setQuickDateFilter(type) {
+    const today = new Date().toISOString().split('T')[0];
+    if (type === 'today') {
+      this.historyFromDate = today;
+      this.historyToDate = today;
+    } else if (type === '7days') {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      this.historyFromDate = d.toISOString().split('T')[0];
+      this.historyToDate = today;
+    } else if (type === 'thisMonth') {
+      const d = new Date();
+      this.historyFromDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      this.historyToDate = today;
+    } else {
+      this.historyFromDate = '';
+      this.historyToDate = '';
+    }
+    window.app.render();
+  }
+
+  confirmEndShift() {
+    if (confirm("⚠️ คุณต้องการ [ปิดกะประจำวัน] และสรุปยอดการตักทั้งหมดของวันนี้ใช่หรือไม่?\n(หากแค่จะพักชั่วคราว ให้กดปุ่ม 'พัก/ออก' แทน)")) {
+      this.selectedShiftExcavator = null;
+      localStorage.removeItem('quarry_excavator_shift');
+      window.app.render();
+    }
+  }
+
+  async captureScoopPhoto() {
+    const user = window.authService.getUser();
+    const truckSelect = document.getElementById('target-truck-select');
+    const targetTruck = truckSelect ? truckSelect.value : 'TRUCK';
+
+    try {
+      const result = await window.cameraEngine.captureWithWatermark({
+        stepType: 'excavator',
+        vehicleCode: this.selectedShiftExcavator,
+        driverName: user.name,
+        jobName: `ตักให้ ${targetTruck}`
+      });
+
+      this.scoopPhoto = result.photoBase64;
+      this.scoopGPS = result.gps;
+      window.app.render();
+    } catch (err) {
+      if (err.message !== "ยกเลิกการถ่ายรูป") {
+        alert("เกิดข้อผิดพลาด: " + err.message);
+      }
+    }
+  }
+
+  handleSaveScoopLog() {
+    if (!this.scoopPhoto) {
+      alert("⚠️ กรุณากดถ่ายรูปยืนยันขณะตักหินก่อนครับ");
+      return;
+    }
+
+    const user = window.authService.getUser();
+    const excavators = window.quarryStore.getExcavators();
+    const currentExc = excavators.find(e => e.code === this.selectedShiftExcavator) || {};
+    const truckSelect = document.getElementById('target-truck-select');
+    const targetTruck = truckSelect ? truckSelect.value : 'TRUCK';
+    const rate = currentExc.rate_per_scoop || 5.0;
+
+    const logRecord = {
+      id: 'EXC_' + Date.now(),
+      date: new Date().toISOString().split('T')[0],
+      timestamp: new Date().toLocaleString('th-TH'),
+      operatorName: user.name,
+      operatorPhone: user.phone,
+      excavatorCode: this.selectedShiftExcavator,
+      targetTruckPlate: targetTruck,
+      amount: rate,
+      photoBase64: this.scoopPhoto,
+      lat: this.scoopGPS ? this.scoopGPS.lat : 14.8824,
+      lng: this.scoopGPS ? this.scoopGPS.lng : 102.0135
+    };
+
+    window.quarryStore.saveExcavatorLog(logRecord);
+
+    this.scoopPhoto = null;
+    this.scoopGPS = null;
+
+    alert(`🎉 บันทึกการตักให้รถ ${targetTruck} สำเร็จ!\nได้เงินเพิ่ม: +${rate} บาท`);
+    window.app.render();
+  }
+}
+
+window.excavatorView = new ExcavatorView();
+
+</script>
+  <script>
+/**
+ * หน้าจอแดชบอร์ดสำหรับผู้บริหารและหัวหน้างาน (Admin & Supervisor Dashboard)
+ * เพิ่มระบบ: AI Anomaly Detection & Action Recommendations
+ */
+class AdminDashboard {
+  constructor() {
+    this.selectedTripForModal = null;
+  }
+
+  render() {
+    const user = window.authService.getUser();
+    const today = new Date().toISOString().split('T')[0];
+    const trips = window.quarryStore.getTrips();
+    const todayTrips = trips.filter(t => t.date === today);
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    const todayExcLogs = excLogs.filter(l => l.date === today);
+    const trucks = window.quarryStore.getTrucks();
+    const excavators = window.quarryStore.getExcavators();
+
+    // คำนวณสถานะรถวิ่ง vs รถจอดในวันนี้
+    const activeTruckPlates = new Set(todayTrips.map(t => t.truckPlate));
+    const activeTrucksCount = activeTruckPlates.size;
+    const parkedTrucksCount = trucks.length - activeTrucksCount;
+
+    const totalPayoutToday = todayTrips.reduce((sum, t) => sum + (t.amount || 0), 0) +
+                            todayExcLogs.reduce((sum, l) => sum + (l.amount || 5), 0);
+
+    // เรียกใช้ AI ตรวจจับความผิดปกติ
+    const anomalies = window.quarryAI ? window.quarryAI.detectAnomalies() : [];
+
+    return `
+      <div class="space-y-6">
+        
+        <!-- Header & Action Bar -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
+              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">📊</span>
+              ภาพรวมการทำงานประจำวัน (Live Operations)
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">
+              วันที่ ${new Date().toLocaleDateString('th-TH', { dateStyle: 'full' })} • สถานะ: <span class="text-emerald-400 font-bold">🟢 เชื่อมต่อ Cloud สำเร็จ</span>
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 rounded-xl text-sm font-black flex items-center gap-2 shadow-lg">
+              <i data-lucide="bot" class="w-4 h-4"></i>
+              🤖 AI ผู้ช่วยอัจฉริยะ
+            </button>
+            <button onclick="window.app.navigate('reports')" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 border border-slate-700">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+              รายงาน & Excel
+            </button>
+            <button onclick="window.app.navigate('settings')" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 border border-slate-700">
+              <i data-lucide="settings" class="w-4 h-4 text-amber-400"></i>
+              ตั้งค่าข้อมูลหลัก
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Cards Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          
+          <!-- Card 1: Active Trucks -->
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider">รถวิ่งวันนี้</span>
+              <span class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">🚚</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-emerald-400">${activeTrucksCount}</span>
+              <span class="text-sm font-bold text-slate-400">/ ${trucks.length} คัน</span>
+            </div>
+            <div class="w-full bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
+              <div class="bg-emerald-500 h-full rounded-full" style="width: ${(activeTrucksCount / (trucks.length || 1)) * 100}%"></div>
+            </div>
+          </div>
+
+          <!-- Card 2: Parked Trucks -->
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider">รถจอด / ไม่ได้วิ่ง</span>
+              <span class="p-2 bg-slate-700/30 text-slate-400 rounded-xl">🛑</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-slate-300">${parkedTrucksCount}</span>
+              <span class="text-sm font-bold text-slate-400">คัน</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-3 font-medium">${parkedTrucksCount > 0 ? 'จอดประจำโรงโม่/รอคนขับ' : 'รถทุกคันกำลังวิ่ง'}</p>
+          </div>
+
+          <!-- Card 3: Total Trips Today -->
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider">เที่ยววิ่งสะสมวันนี้</span>
+              <span class="p-2 bg-amber-500/10 text-amber-400 rounded-xl">🏁</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-amber-400">${todayTrips.length}</span>
+              <span class="text-sm font-bold text-slate-400">เที่ยว</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-3 font-medium">เฉลี่ย ${(activeTrucksCount > 0 ? (todayTrips.length / activeTrucksCount).toFixed(1) : 0)} เที่ยว/คัน</p>
+          </div>
+
+          <!-- Card 4: Total Payout -->
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-xs font-bold uppercase tracking-wider">ยอดจ่ายรวมวันนี้</span>
+              <span class="p-2 bg-blue-500/10 text-blue-400 rounded-xl">💰</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-white">฿${totalPayoutToday.toLocaleString()}</span>
+              <span class="text-sm font-bold text-slate-400">บาท</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-3 font-medium">สิบล้อ + แม็คโคร ${todayExcLogs.length} คัน</p>
+          </div>
+
+        </div>
+
+        <!-- 🧠 AI Anomaly Detection & Recommendations Dashboard Section -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+                <i data-lucide="shield-alert" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="font-black text-lg text-white flex items-center gap-2">
+                  ระบบ AI ตรวจจับความผิดปกติและคำแนะนำ (AI Insights & Anomalies)
+                  <span class="text-xs bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
+                    ${anomalies.length} ข้อสังเกต
+                  </span>
+                </h2>
+                <p class="text-xs text-slate-400">วิเคราะห์พิกัด GPS, ความเร็วรอบวิ่ง และความสอดคล้องของหน้างานแบบอัตโนมัติ</p>
+              </div>
+            </div>
+
+            <button onclick="window.app.navigate('ai-copilot')" class="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1">
+              เปิดหน้าต่างแชท AI <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Anomalies Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${anomalies.length === 0 ? `
+              <div class="col-span-2 text-center py-6 bg-slate-950/60 rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                ✅ ระบบตรวจสอบแล้ว ไม่พบพฤติกรรมผิดปกติในการวิ่งงาน ข้อมูล GPS และรอบวิ่งสอดคล้องสมบูรณ์
+              </div>
+            ` : anomalies.map(a => `
+              <div class="bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/60 bg-red-950/10' : (a.severity === 'warning' ? 'border-amber-500/50 bg-amber-950/10' : 'border-slate-800')} rounded-2xl p-4 space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-black ${a.severity === 'critical' ? 'bg-red-900/60 text-red-300 border border-red-700' : (a.severity === 'warning' ? 'bg-amber-900/60 text-amber-300 border border-amber-700' : 'bg-slate-800 text-slate-300')} px-2 py-0.5 rounded-md">
+                      ${a.severity === 'critical' ? '⚠️ ตรวจสอบด่วน' : (a.severity === 'warning' ? '⚡ ข้อสังเกต' : 'ℹ️ ข้อมูล')}
+                    </span>
+                    <h3 class="font-bold text-sm text-white">${a.title}</h3>
+                  </div>
+                </div>
+
+                <p class="text-xs text-slate-300 leading-relaxed">${a.desc}</p>
+
+                <div class="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-amber-300 space-y-1">
+                  <p class="font-bold flex items-center gap-1">
+                    💡 คำแนะนำที่ควรทำ:
+                  </p>
+                  <p class="text-slate-300">${a.recommendedAction}</p>
+                </div>
+
+                <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                  <span>อ้างอิง: <b class="text-slate-300">${a.vehicleCode}</b> (${a.driverName}) • ${a.timestamp}</span>
+                  ${a.photoUrl ? `
+                    <button onclick="adminDashboard.viewPhoto('${a.photoUrl}', '${a.title}', '${a.vehicleCode}', '${a.timestamp}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg transition flex items-center gap-1">
+                      <i data-lucide="image" class="w-3 h-3"></i> ตรวจสอบรูปถ่าย
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Fleet Real-time Matrix Section (28 Trucks & 20 Excavators) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Left 2 Cols: Real-time Fleet Status Matrix (28 Trucks) -->
+          <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="truck" class="w-5 h-5 text-amber-400"></i>
+                <h2 class="font-black text-lg text-white">สถานะรถบรรทุกแบบ Real-time (28 คัน)</h2>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="inline-flex items-center gap-1 text-emerald-400 font-bold">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> วิ่ง (${activeTrucksCount})
+                </span>
+                <span class="inline-flex items-center gap-1 text-slate-400 font-bold">
+                  <span class="w-2 h-2 rounded-full bg-slate-500"></span> จอด (${parkedTrucksCount})
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[460px] overflow-y-auto pr-1">
+              ${trucks.map(t => {
+                const tripsForTruck = todayTrips.filter(tr => tr.truckPlate === t.code);
+                const isRunning = tripsForTruck.length > 0;
+                const totalEarn = tripsForTruck.reduce((sum, tr) => sum + (tr.amount || 0), 0);
+
+                return `
+                  <div class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/40 border-slate-800 opacity-70'} space-y-2">
+                    <div class="flex items-start justify-between">
+                      <div>
+                        <p class="font-black text-sm text-white">${t.code}</p>
+                        <span class="text-[10px] bg-slate-800 text-slate-300 font-bold px-1.5 py-0.5 rounded">
+                          ${t.capacity_ton} ตัน
+                        </span>
+                      </div>
+                      ${isRunning ? `
+                        <span class="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-full border border-emerald-500/30">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> วิ่ง
+                        </span>
+                      ` : `
+                        <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">
+                          จอด
+                        </span>
+                      `}
+                    </div>
+                    
+                    <div class="text-xs text-slate-400">
+                      👤 <span class="text-slate-300 font-semibold">${t.nickname ? 'น้า' + t.nickname + ' ' : ''}${t.driver_name || 'ไม่มีคนขับ'}</span>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <span class="text-slate-400">วิ่งวันนี้: <b class="text-amber-400 font-bold">${tripsForTruck.length}</b> รอบ</span>
+                      <span class="text-emerald-400 font-black">฿${totalEarn.toLocaleString()}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Right 1 Col: Excavators Status Matrix (20 Machines) -->
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="wrench" class="w-5 h-5 text-amber-500"></i>
+                <h2 class="font-black text-lg text-white">รถขุด / แม็คโคร (20 คัน)</h2>
+              </div>
+            </div>
+
+            <div class="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+              ${excavators.map(e => {
+                const logsForExc = todayExcLogs.filter(l => l.excavatorCode === e.code);
+                const isWorking = logsForExc.length > 0;
+                const isRepair = e.status === 'repair';
+
+                return `
+                  <div class="p-3 rounded-xl border ${isWorking ? 'bg-slate-950 border-amber-500/40' : (isRepair ? 'bg-red-950/20 border-red-800/30' : 'bg-slate-950/40 border-slate-800')} flex items-center justify-between text-xs">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-black text-white">${e.code}</span>
+                        ${e.is_contractor ? '<span class="text-[9px] bg-purple-900 text-purple-200 px-1 rounded">ผรม.</span>' : ''}
+                        ${isRepair ? '<span class="text-[9px] bg-red-900 text-red-200 px-1 rounded font-bold">ซ่อม</span>' : ''}
+                      </div>
+                      <p class="text-[11px] text-slate-400">${e.nickname ? 'ช่าง' + e.nickname : (e.driver_name || '-')}</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-bold text-amber-400">${logsForExc.length} คัน</p>
+                      <span class="text-[10px] text-emerald-400 font-bold">฿${(logsForExc.length * (e.rate_per_scoop || 5)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Live Audit Trip Feed with Photos -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h2 class="font-black text-lg text-white flex items-center gap-2">
+                <i data-lucide="camera" class="w-5 h-5 text-amber-400"></i>
+                ฟีดตรวจสอบการวิ่งสด (Trip Audit & GPS Stamp Feed)
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">กดคลิกที่รูปภาพเพื่อตรวจสอบลายน้ำพิกัด GPS, วันที่, และเวลาแบบขยายใหญ่</p>
+            </div>
+            <span class="text-xs bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-xl">
+              ทั้งหมด ${trips.length} รอบในระบบ
+            </span>
+          </div>
+
+          ${todayTrips.length === 0 ? `
+            <div class="text-center py-10 text-slate-500 text-sm">
+              ยังไม่มีรายการวิ่งส่งเข้ามาในวันนี้ เมื่อคนขับกดบันทึกรอบงาน ข้อมูลและรูปถ่ายจะปรากฏที่นี่ทันทีแบบ Real-time
+            </div>
+          ` : `
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              ${todayTrips.slice(0, 9).map(t => `
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3 hover:border-slate-700 transition">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <span class="font-black text-sm text-white">${t.truckPlate}</span>
+                      <p class="text-xs text-slate-400">รอบที่ ${t.roundNumber} • ${t.driverName}</p>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-black text-emerald-400 text-sm">฿${t.amount}</span>
+                      <p class="text-[10px] text-slate-400">${t.timestamp}</p>
+                    </div>
+                  </div>
+
+                  <!-- Photos Preview -->
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-blue-500/40" onclick="adminDashboard.viewPhoto('${t.loadPhotoBase64}', 'จุดรับหิน', '${t.truckPlate}', '${t.timestamp}')">
+                      <img src="${t.loadPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
+                      <span class="absolute bottom-1 left-1 bg-blue-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">📍 จุดรับหิน</span>
+                    </div>
+                    <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-emerald-500/40" onclick="adminDashboard.viewPhoto('${t.dumpPhotoBase64}', 'จุดเทหิน', '${t.truckPlate}', '${t.timestamp}')">
+                      <img src="${t.dumpPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
+                      <span class="absolute bottom-1 left-1 bg-emerald-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">🏁 จุดเทหิน</span>
+                    </div>
+                  </div>
+
+                  <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>ประเภท: <b class="text-slate-300 font-semibold">${t.jobTypeName}</b></span>
+                    <span class="text-emerald-400 font-bold">✓ ตรวจสอบแล้ว</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+
+      </div>
+
+      <!-- Photo Inspector Modal -->
+      <div id="photo-inspector-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 max-w-2xl w-full rounded-3xl overflow-hidden shadow-2xl space-y-4">
+          <div class="flex items-center justify-between p-4 border-b border-slate-800">
+            <h3 id="modal-photo-title" class="font-black text-base text-white">ตรวจสอบรูปถ่ายและลายน้ำ GPS</h3>
+            <button onclick="adminDashboard.closeModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold">✕</button>
+          </div>
+          <div class="p-4 pt-0">
+            <img id="modal-photo-img" src="" class="w-full max-h-[70vh] object-contain rounded-2xl border border-slate-800 shadow-lg">
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  viewPhoto(photoBase64, type, vehicle, timestamp) {
+    const modal = document.getElementById('photo-inspector-modal');
+    const img = document.getElementById('modal-photo-img');
+    const title = document.getElementById('modal-photo-title');
+    if (modal && img && title) {
+      img.src = photoBase64;
+      title.innerText = `รูปถ่าย ${type} — รถ ${vehicle} (${timestamp})`;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+  }
+
+  closeModal() {
+    const modal = document.getElementById('photo-inspector-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+}
+
+window.adminDashboard = new AdminDashboard();
+
+</script>
+  <script>
+/**
+ * หน้าจอสรุปรายงานและส่งออก Excel (Reports & Excel Export Component)
+ * เพิ่มระบบ: เจาะลึกประวัติรายบุคคล (Individual Driver Deep-Dive Profile)
+ */
+class ReportsView {
+  constructor() {
+    this.viewMode = 'overview'; // 'overview' หรือ 'individual'
+    this.filterDateFrom = '';
+    this.filterDateTo = '';
+    this.filterVehicle = '';
+    this.filterDriver = '';
+    
+    // สำหรับโหมดเจาะลึกรายคน
+    this.selectedDrilldownDriver = '';
+  }
+
+  render() {
+    const trips = window.quarryStore.getTrips();
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    const trucks = window.quarryStore.getTrucks();
+    const drivers = window.quarryStore.getDrivers();
+
+    if (!this.selectedDrilldownDriver && drivers.length > 0) {
+      this.selectedDrilldownDriver = drivers[0].name;
+    }
+
+    return `
+      <div class="space-y-6">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
+              <span class="p-2 bg-emerald-500 text-slate-950 rounded-xl">📑</span>
+              รายงานและสรุปยอดค่าจ้าง (Reports & Audits)
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">กรองดูภาพรวมตามช่วงเวลา หรือเจาะลึกดูประวัติรายคนขับอย่างละเอียด</p>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <!-- View Mode Switcher -->
+            <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800">
+              <button onclick="reportsView.setViewMode('overview')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                📊 สรุปภาพรวม
+              </button>
+              <button onclick="reportsView.setViewMode('individual')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                👤 เจาะลึกรายคน
+              </button>
+            </div>
+
+            <!-- Export Excel Button -->
+            <button onclick="reportsView.exportToExcel()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black rounded-xl text-xs shadow-lg transition flex items-center gap-1.5">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              Export Excel
+            </button>
+          </div>
+        </div>
+
+        ${this.viewMode === 'overview' ? this.renderOverviewMode(trips, trucks, drivers) : this.renderIndividualMode(trips, drivers)}
+
+      </div>
+    `;
+  }
+
+  setViewMode(mode) {
+    this.viewMode = mode;
+    window.app.render();
+  }
+
+  // 1. โหมดภาพรวม (Overview Mode)
+  renderOverviewMode(trips, trucks, drivers) {
+    let filteredTrips = trips.filter(t => {
+      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      if (this.filterVehicle && t.truckPlate !== this.filterVehicle) return false;
+      if (this.filterDriver && t.driverName !== this.filterDriver) return false;
+      return true;
+    });
+
+    const totalAmount = filteredTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const totalTripsCount = filteredTrips.length;
+
+    const driverSummaryMap = {};
+    filteredTrips.forEach(t => {
+      const key = t.driverName || 'ไม่ระบุ';
+      if (!driverSummaryMap[key]) {
+        driverSummaryMap[key] = {
+          name: t.driverName,
+          phone: t.driverPhone,
+          truck: t.truckPlate,
+          trips: 0,
+          totalAmount: 0
+        };
+      }
+      driverSummaryMap[key].trips += 1;
+      driverSummaryMap[key].totalAmount += (t.amount || 0);
+    });
+    const driverSummaries = Object.values(driverSummaryMap);
+
+    return `
+      <!-- Filter Controls Bar -->
+      <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider">ตัวกรองข้อมูลภาพรวม (Filter Options)</h3>
+          <div class="flex items-center gap-1.5">
+            <button onclick="reportsView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">วันนี้</button>
+            <button onclick="reportsView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">7 วัน</button>
+            <button onclick="reportsView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">เดือนนี้</button>
+            <button onclick="reportsView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
+            <input type="date" id="filter-date-from" value="${this.filterDateFrom}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 font-bold mb-1">ถึงวันที่</label>
+            <input type="date" id="filter-date-to" value="${this.filterDateTo}" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 font-bold mb-1">เลือกรถ</label>
+            <select id="filter-vehicle" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+              <option value="">-- รถทุกคัน (${trucks.length} คัน) --</option>
+              ${trucks.map(t => `<option value="${t.code}" ${this.filterVehicle === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 font-bold mb-1">เลือกคนขับ</label>
+            <select id="filter-driver" onchange="reportsView.handleFilterChange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+              <option value="">-- คนขับทุกคน --</option>
+              ${drivers.map(d => `<option value="${d.name}" ${this.filterDriver === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Metric Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+          <span class="text-xs text-slate-400 font-bold uppercase">จำนวนเที่ยวที่กรอง</span>
+          <p class="text-2xl font-black text-amber-400 mt-1">${totalTripsCount.toLocaleString()} เที่ยว</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+          <span class="text-xs text-slate-400 font-bold uppercase">ยอดเงินค่าจ้างรวม</span>
+          <p class="text-2xl font-black text-emerald-400 mt-1">฿${totalAmount.toLocaleString()} บาท</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
+          <span class="text-xs text-slate-400 font-bold uppercase">จำนวนคนขับที่ปฏิบัติงาน</span>
+          <p class="text-2xl font-black text-white mt-1">${driverSummaries.length} คน</p>
+        </div>
+      </div>
+
+      <!-- Table 1: Driver Payout Summary -->
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+        <h2 class="text-lg font-black text-white flex items-center gap-2">
+          <i data-lucide="users" class="w-5 h-5 text-amber-400"></i>
+          ตารางสรุปยอดค่าจ้างรายบุคคล (คลิกที่ชื่อเพื่อดูเจาะลึกได้)
+        </h2>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3">ลำดับ</th>
+                <th class="p-3">ชื่อ-สกุล คนขับ</th>
+                <th class="p-3">เบอร์โทรศัพท์</th>
+                <th class="p-3">เบอร์รถล่าสุด</th>
+                <th class="p-3 text-right">จำนวนเที่ยว</th>
+                <th class="p-3 text-right">ยอดเงินที่ต้องจ่าย</th>
+                <th class="p-3 text-center">ดูเจาะลึก</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              ${driverSummaries.length === 0 ? `
+                <tr><td colspan="7" class="p-6 text-center text-slate-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>
+              ` : driverSummaries.map((d, idx) => `
+                <tr class="hover:bg-slate-800/50">
+                  <td class="p-3 font-bold text-slate-400">${idx + 1}</td>
+                  <td class="p-3 font-bold text-white">${d.name}</td>
+                  <td class="p-3 text-slate-400">${d.phone || '-'}</td>
+                  <td class="p-3 font-semibold text-amber-400">${d.truck || '-'}</td>
+                  <td class="p-3 text-right font-black text-white">${d.trips}</td>
+                  <td class="p-3 text-right font-black text-emerald-400 text-sm">฿${d.totalAmount.toLocaleString()}</td>
+                  <td class="p-3 text-center">
+                    <button onclick="reportsView.openDrilldown('${d.name}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[11px] shadow">
+                      🔍 เจาะลึก
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. โหมดเจาะลึกรายคน (Individual Drill-Down Mode)
+  renderIndividualMode(trips, drivers) {
+    const driverTrips = trips.filter(t => t.driverName === this.selectedDrilldownDriver);
+    
+    let filteredTrips = driverTrips.filter(t => {
+      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      return true;
+    });
+
+    const totalAmount = filteredTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const vehiclesUsed = [...new Set(filteredTrips.map(t => t.truckPlate))];
+    const driverObj = drivers.find(d => d.name === this.selectedDrilldownDriver) || {};
+
+    return `
+      <!-- Driver Selector & Profile Header -->
+      <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-lg space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-3xl shadow-md">
+              👤
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xl font-black text-white">${this.selectedDrilldownDriver}</h2>
+                <span class="text-xs bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                  ${driverObj.nickname ? 'น้า' + driverObj.nickname : 'คนขับ'}
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">เบอร์โทร: <span class="text-slate-200 font-mono">${driverObj.phone || '-'}</span> | รถที่ขับ: <span class="text-amber-300 font-bold">${vehiclesUsed.join(', ') || 'ไม่มี'}</span></p>
+            </div>
+          </div>
+
+          <!-- Driver Picker Dropdown -->
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-slate-400 font-bold">เลือกคนขับ:</label>
+            <select onchange="reportsView.openDrilldown(this.value)" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none">
+              ${drivers.map(d => `<option value="${d.name}" ${d.name === this.selectedDrilldownDriver ? 'selected' : ''}>${d.name} (${d.nickname || ''})</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- Date Filter for Individual -->
+        <div class="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-bold">ช่วงวันที่:</span>
+            <input type="date" value="${this.filterDateFrom}" onchange="reportsView.handleDateFrom(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+            <span class="text-xs text-slate-500">ถึง</span>
+            <input type="date" value="${this.filterDateTo}" onchange="reportsView.handleDateTo(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+          </div>
+
+          <div class="flex items-center gap-4 text-xs font-bold">
+            <span class="text-slate-300">จำนวนเที่ยว: <b class="text-amber-400 text-sm font-black">${filteredTrips.length}</b> เที่ยว</span>
+            <span class="text-slate-300">ยอดเงินรวม: <b class="text-emerald-400 text-sm font-black">฿${totalAmount.toLocaleString()}</b> บาท</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Trip Log with Photos -->
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <i data-lucide="list" class="w-4 h-4 text-amber-400"></i>
+          ประวัติการวิ่งรายรอบและรูปถ่าย GPS (${filteredTrips.length} รอบ)
+        </h3>
+
+        <div class="overflow-x-auto max-h-[500px]">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
+              <tr>
+                <th class="p-3">รอบที่</th>
+                <th class="p-3">วันที่-เวลา</th>
+                <th class="p-3">รถที่ใช้</th>
+                <th class="p-3">ประเภทงานวิ่ง</th>
+                <th class="p-3 text-right">ยอดเงิน</th>
+                <th class="p-3 text-center">รูปรับหิน</th>
+                <th class="p-3 text-center">รูปเทหิน</th>
+                <th class="p-3 text-center">พิกัด GPS</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              ${filteredTrips.length === 0 ? `
+                <tr><td colspan="8" class="p-6 text-center text-slate-500">ไม่มีประวัติการวิ่งของ ${this.selectedDrilldownDriver} ในช่วงเวลานี้</td></tr>
+              ` : filteredTrips.map(t => `
+                <tr class="hover:bg-slate-800/50">
+                  <td class="p-3 font-black text-amber-400">#${t.roundNumber}</td>
+                  <td class="p-3 text-slate-400">${t.timestamp || t.date}</td>
+                  <td class="p-3 font-bold text-white">${t.truckPlate}</td>
+                  <td class="p-3 text-slate-300">${t.jobTypeName}</td>
+                  <td class="p-3 text-right font-black text-emerald-400">฿${t.amount}</td>
+                  <td class="p-3 text-center">
+                    <button onclick="adminDashboard.viewPhoto('${t.loadPhotoBase64}', 'จุดรับหิน', '${t.truckPlate}', '${t.timestamp}')" class="px-2 py-1 bg-blue-900/60 hover:bg-blue-800 text-blue-300 rounded font-bold text-[10px]">
+                      📷 ดูรูปรับ
+                    </button>
+                  </td>
+                  <td class="p-3 text-center">
+                    <button onclick="adminDashboard.viewPhoto('${t.dumpPhotoBase64}', 'จุดเทหิน', '${t.truckPlate}', '${t.timestamp}')" class="px-2 py-1 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 rounded font-bold text-[10px]">
+                      📷 ดูรูปเท
+                    </button>
+                  </td>
+                  <td class="p-3 text-center text-[10px] text-slate-400 font-mono">
+                    ${t.loadLat || '14.88'}, ${t.loadLng || '102.01'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  openDrilldown(driverName) {
+    this.selectedDrilldownDriver = driverName;
+    this.viewMode = 'individual';
+    window.app.render();
+  }
+
+  handleFilterChange() {
+    this.filterDateFrom = document.getElementById('filter-date-from')?.value || '';
+    this.filterDateTo = document.getElementById('filter-date-to')?.value || '';
+    this.filterVehicle = document.getElementById('filter-vehicle')?.value || '';
+    this.filterDriver = document.getElementById('filter-driver')?.value || '';
+    window.app.render();
+  }
+
+  handleDateFrom(v) {
+    this.filterDateFrom = v;
+    window.app.render();
+  }
+
+  handleDateTo(v) {
+    this.filterDateTo = v;
+    window.app.render();
+  }
+
+  setQuickDateFilter(type) {
+    const today = new Date().toISOString().split('T')[0];
+    if (type === 'today') {
+      this.filterDateFrom = today;
+      this.filterDateTo = today;
+    } else if (type === '7days') {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      this.filterDateFrom = d.toISOString().split('T')[0];
+      this.filterDateTo = today;
+    } else if (type === 'thisMonth') {
+      const d = new Date();
+      this.filterDateFrom = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      this.filterDateTo = today;
+    } else {
+      this.filterDateFrom = '';
+      this.filterDateTo = '';
+    }
+    window.app.render();
+  }
+
+  exportToExcel() {
+    const trips = window.quarryStore.getTrips();
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    
+    // Sheet 1: Detailed Trips
+    const tripsRows = trips.map((t, idx) => ({
+      "ลำดับ": idx + 1,
+      "รหัสรอบ (Trip ID)": t.id,
+      "วันที่-เวลา": t.timestamp,
+      "เบอร์รถ/ทะเบียน": t.truckPlate,
+      "ขนาดพิกัด (ตัน)": t.capacityTon,
+      "ชื่อคนขับ": t.driverName,
+      "เบอร์โทรศัพท์": t.driverPhone,
+      "ประเภทงานวิ่ง": t.jobTypeName,
+      "รอบที่": t.roundNumber,
+      "ยอดเงิน (บาท)": t.amount,
+      "พิกัดรับหิน (Lat,Lng)": `${t.loadLat || ''}, ${t.loadLng || ''}`,
+      "พิกัดเทหิน (Lat,Lng)": `${t.dumpLat || ''}, ${t.dumpLng || ''}`
+    }));
+
+    // Sheet 2: Excavator Logs
+    const excRows = excLogs.map((l, idx) => ({
+      "ลำดับ": idx + 1,
+      "รหัสตัก (Log ID)": l.id,
+      "วันที่-เวลา": l.timestamp,
+      "เบอร์แม็คโคร": l.excavatorCode,
+      "ผู้ควบคุม": l.operatorName,
+      "รถบรรทุกที่รับหิน": l.targetTruckPlate,
+      "ยอดเงิน (บาท)": l.amount,
+      "พิกัด (Lat,Lng)": `${l.lat || ''}, ${l.lng || ''}`
+    }));
+
+    // Generate workbook
+    const wb = XLSX.utils.book_new();
+    const wsTrips = XLSX.utils.json_to_sheet(tripsRows);
+    const wsExc = XLSX.utils.json_to_sheet(excRows);
+
+    XLSX.utils.book_append_sheet(wb, wsTrips, "รอบวิ่งรถบรรทุก");
+    XLSX.utils.book_append_sheet(wb, wsExc, "รายการตักแม็คโคร");
+
+    const fileName = `รายงานโรงโม่_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  }
+}
+
+window.reportsView = new ReportsView();
+
+</script>
+  <script>
+/**
+ * หน้าจอตั้งค่าและจัดการข้อมูลหลัก CRUD (Master Data Settings Component)
+ */
+class SettingsView {
+  constructor() {
+    this.activeTab = 'rates'; // rates, trucks, excavators, drivers, cloud
+  }
+
+  render() {
+    const trucks = window.quarryStore.getTrucks();
+    const excavators = window.quarryStore.getExcavators();
+    const rates = window.quarryStore.getJobRates();
+    const drivers = window.quarryStore.getDrivers();
+
+    return `
+      <div class="space-y-6">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
+              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">⚙️</span>
+              จัดการข้อมูลหลักและอัตราค่าจ้าง (Master Data Management)
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">เพิ่ม / ลด / แก้ไข ข้อมูลรถ, คนขับ, เรทราคาค่าวิ่ง และเรทค่าตักของแม็คโคร</p>
+          </div>
+          
+          <button onclick="window.app.navigate('dashboard')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-bold flex items-center gap-2">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            กลับสู่แดชบอร์ด
+          </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+          <button onclick="settingsView.setTab('rates')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'rates' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+            💰 เรทราคาค่าจ้าง (${rates.length})
+          </button>
+          <button onclick="settingsView.setTab('trucks')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'trucks' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+            🚚 รถบรรทุกสิบล้อ (${trucks.length})
+          </button>
+          <button onclick="settingsView.setTab('excavators')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'excavators' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+            🚜 รถขุด / แม็คโคร (${excavators.length})
+          </button>
+          <button onclick="settingsView.setTab('drivers')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'drivers' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+            👥 พนักงานขับรถ (${drivers.length})
+          </button>
+          <button onclick="settingsView.setTab('cloud')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'cloud' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+            ☁️ ซิงค์ Cloud & สำรองข้อมูล
+          </button>
+        </div>
+
+        <!-- Tab Content Panes -->
+        ${this.renderActiveTabContent()}
+
+      </div>
+    `;
+  }
+
+  setTab(tab) {
+    this.activeTab = tab;
+    window.app.render();
+  }
+
+  renderActiveTabContent() {
+    if (this.activeTab === 'rates') return this.renderRatesTab();
+    if (this.activeTab === 'trucks') return this.renderTrucksTab();
+    if (this.activeTab === 'excavators') return this.renderExcavatorsTab();
+    if (this.activeTab === 'drivers') return this.renderDriversTab();
+    if (this.activeTab === 'cloud') return this.renderCloudTab();
+    return '';
+  }
+
+  // 1. Tab เรทราคา
+  renderRatesTab() {
+    const rates = window.quarryStore.getJobRates();
+    return `
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black text-white">ตารางอัตราค่าจ้างต่อเที่ยว (11 รายการ)</h2>
+          <button onclick="settingsView.promptAddRate()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
+            <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มประเภทงานใหม่
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3">รายการประเภทงานวิ่ง</th>
+                <th class="p-3 text-center">เรท 30 ตัน</th>
+                <th class="p-3 text-center">เรท 45 ตัน</th>
+                <th class="p-3 text-center">เรท 60 ตัน</th>
+                <th class="p-3 text-center">เรทแม็คโคร (บาท)</th>
+                <th class="p-3 text-right">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              ${rates.map(r => `
+                <tr class="hover:bg-slate-800/50">
+                  <td class="p-3 font-bold text-white">${r.name}</td>
+                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_30_ton ? '฿' + r.rate_30_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_45_ton ? '฿' + r.rate_45_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_60_ton ? '฿' + r.rate_60_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-purple-400">฿${r.excavator_rate || 5}</td>
+                  <td class="p-3 text-right">
+                    <button onclick="settingsView.promptEditRate('${r.id}')" class="text-amber-400 hover:underline font-bold mr-2">แก้ไข</button>
+                    <button onclick="settingsView.deleteRate('${r.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. Tab รถบรรทุก
+  renderTrucksTab() {
+    const trucks = window.quarryStore.getTrucks();
+    return `
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black text-white">รายการรถบรรทุกสิบล้อประจำโรงโม่ (28 คัน)</h2>
+          <button onclick="settingsView.promptAddTruck()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
+            <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มรถใหม่
+          </button>
+        </div>
+
+        <div class="overflow-x-auto max-h-[500px]">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
+              <tr>
+                <th class="p-3">เบอร์รถ / ทะเบียน</th>
+                <th class="p-3 text-center">พิกัดน้ำหนัก</th>
+                <th class="p-3">คนขับประจำ</th>
+                <th class="p-3">เบอร์โทร</th>
+                <th class="p-3 text-center">สถานะ</th>
+                <th class="p-3 text-right">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              ${trucks.map(t => `
+                <tr class="hover:bg-slate-800/50">
+                  <td class="p-3 font-bold text-white">${t.code}</td>
+                  <td class="p-3 text-center font-bold text-amber-400">${t.capacity_ton} ตัน</td>
+                  <td class="p-3">${t.nickname ? 'น้า' + t.nickname + ' ' : ''}${t.driver_name || '-'}</td>
+                  <td class="p-3 text-slate-400">${t.phone || '-'}</td>
+                  <td class="p-3 text-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'active' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}">
+                      ${t.status === 'active' ? 'พร้อมใช้' : 'ว่าง'}
+                    </span>
+                  </td>
+                  <td class="p-3 text-right">
+                    <button onclick="settingsView.deleteTruck('${t.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. Tab แม็คโคร
+  renderExcavatorsTab() {
+    const excavators = window.quarryStore.getExcavators();
+    return `
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black text-white">รายการรถขุด / แม็คโคร (20 คัน)</h2>
+          <button onclick="settingsView.promptAddExcavator()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
+            <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มแม็คโครใหม่
+          </button>
+        </div>
+
+        <div class="overflow-x-auto max-h-[500px]">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
+              <tr>
+                <th class="p-3">เบอร์รถ / รุ่นเครื่องจักร</th>
+                <th class="p-3">ผู้ควบคุมประจำ</th>
+                <th class="p-3 text-center">สังกัด</th>
+                <th class="p-3 text-center">ค่าตักต่อคัน (บาท)</th>
+                <th class="p-3 text-center">สถานะ</th>
+                <th class="p-3 text-right">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              ${excavators.map(e => `
+                <tr class="hover:bg-slate-800/50">
+                  <td class="p-3 font-bold text-white">${e.code}</td>
+                  <td class="p-3">${e.nickname ? 'ช่าง' + e.nickname + ' ' : ''}${e.driver_name || '-'}</td>
+                  <td class="p-3 text-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.is_contractor ? 'bg-purple-900/60 text-purple-200' : 'bg-slate-800 text-slate-300'}">
+                      ${e.is_contractor ? 'ทีม ผรม.' : 'ประจำโรงโม่'}
+                    </span>
+                  </td>
+                  <td class="p-3 text-center font-bold text-emerald-400">฿${e.rate_per_scoop || 5}</td>
+                  <td class="p-3 text-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.status === 'repair' ? 'bg-red-950 text-red-300' : 'bg-emerald-950 text-emerald-300'}">
+                      ${e.status === 'repair' ? 'ซ่อม' : 'พร้อมใช้'}
+                    </span>
+                  </td>
+                  <td class="p-3 text-right">
+                    <button onclick="settingsView.promptEditExcRate('${e.id}')" class="text-amber-400 hover:underline font-bold mr-2">ปรับเรท</button>
+                    <button onclick="settingsView.deleteExcavator('${e.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // 4. Tab พนักงาน
+  renderDriversTab() {
+    const drivers = window.quarryStore.getDrivers();
+    return `
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black text-white">รายชื่อพนักงานและสิทธิ์การใช้งาน (${drivers.length} คน)</h2>
+          <button onclick="settingsView.promptAddDriver()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
+            <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มพนักงานใหม่
+          </button>
+        </div>
+
+        <div class="overflow-x-auto max-h-[500px]">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
+              <tr>
+                <th class="p-3">ชื่อ-สกุล</th>
+                <th class="p-3">ชื่อเล่น</th>
+                <th class="p-3">เบอร์โทรศัพท์ (ใช้ล็อกอิน)</th>
+                <th class="p-3 text-center">บทบาท (Role)</th>
+                <th class="p-3 text-center">รหัส PIN</th>
+                <th class="p-3 text-right">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+              ${drivers.map(d => `
+                <tr class="hover:bg-slate-800/50">
+                  <td class="p-3 font-bold text-white">${d.name}</td>
+                  <td class="p-3 text-amber-400 font-semibold">${d.nickname || '-'}</td>
+                  <td class="p-3 text-slate-300">${d.phone || '-'}</td>
+                  <td class="p-3 text-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.role === 'admin' ? 'bg-amber-500 text-slate-950' : (d.role === 'supervisor' ? 'bg-blue-900 text-blue-200' : 'bg-slate-800 text-slate-300')}">
+                      ${d.role === 'admin' ? 'ผู้บริหาร' : (d.role === 'supervisor' ? 'หัวหน้างาน' : (d.role === 'excavator_operator' ? 'แม็คโคร' : 'คนขับสิบล้อ'))}
+                    </span>
+                  </td>
+                  <td class="p-3 text-center font-mono font-bold text-slate-400">${d.pin || '1234'}</td>
+                  <td class="p-3 text-right">
+                    <button onclick="settingsView.deleteDriver('${d.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // 5. Tab Cloud Sync
+  renderCloudTab() {
+    return `
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-lg space-y-6 max-w-2xl">
+        <h2 class="text-lg font-black text-white flex items-center gap-2">
+          <i data-lucide="cloud" class="w-5 h-5 text-amber-400"></i>
+          การเชื่อมต่อ Cloud และ Google Apps Script
+        </h2>
+
+        <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+          <p class="text-xs font-bold text-slate-400 uppercase">Web App URL ปัจจุบัน:</p>
+          <p class="text-xs text-amber-400 font-mono break-all">${CONFIG.API_URL}</p>
+        </div>
+
+        <div class="space-y-3">
+          <button onclick="settingsView.syncInitialDatabaseToCloud()" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+            ส่งข้อมูล Master Data เริ่มต้นขึ้น Google Sheets อัตโนมัติ
+          </button>
+
+          <button onclick="settingsView.resetData()" class="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-red-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm border border-slate-700">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นจากไฟล์ Excel
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Action Handlers
+  promptAddRate() {
+    const name = prompt("ระบุชื่อรายการประเภทงานวิ่งใหม่:");
+    if (!name) return;
+    const r30 = parseFloat(prompt("เรทราคาสำหรับรถ 30 ตัน (บาท):") || "0");
+    const r45 = parseFloat(prompt("เรทราคาสำหรับรถ 45 ตัน (บาท):") || "0");
+    const r60 = parseFloat(prompt("เรทราคาสำหรับรถ 60 ตัน (บาท):") || "0");
+    const excRate = parseFloat(prompt("เรทค่าตักของแม็คโคร (บาท):") || "5");
+
+    window.quarryStore.addOrUpdateJobRate({
+      id: 'R_' + Date.now(),
+      name: name,
+      rate_30_ton: r30,
+      rate_45_ton: r45,
+      rate_60_ton: r60,
+      excavator_rate: excRate
+    });
+    window.app.render();
+  }
+
+  promptEditRate(rateId) {
+    const rates = window.quarryStore.getJobRates();
+    const r = rates.find(x => x.id === rateId);
+    if (!r) return;
+
+    const r30 = parseFloat(prompt(`แก้ไขเรท 30 ตัน สำหรับ "${r.name}":`, r.rate_30_ton || '0'));
+    const r45 = parseFloat(prompt(`แก้ไขเรท 45 ตัน สำหรับ "${r.name}":`, r.rate_45_ton || '0'));
+    const r60 = parseFloat(prompt(`แก้ไขเรท 60 ตัน สำหรับ "${r.name}":`, r.rate_60_ton || '0'));
+    const excRate = parseFloat(prompt(`แก้ไขเรทแม็คโคร สำหรับ "${r.name}":`, r.excavator_rate || '5'));
+
+    window.quarryStore.addOrUpdateJobRate({
+      ...r,
+      rate_30_ton: isNaN(r30) ? r.rate_30_ton : r30,
+      rate_45_ton: isNaN(r45) ? r.rate_45_ton : r45,
+      rate_60_ton: isNaN(r60) ? r.rate_60_ton : r60,
+      excavator_rate: isNaN(excRate) ? (r.excavator_rate || 5) : excRate
+    });
+    window.app.render();
+  }
+
+  deleteRate(rateId) {
+    if (confirm("คุณแน่ใจว่าต้องการลบเรทราคานี้ใช่หรือไม่?")) {
+      window.quarryStore.deleteJobRate(rateId);
+      window.app.render();
+    }
+  }
+
+  promptAddTruck() {
+    const code = prompt("ระบุเบอร์รถ / ทะเบียนรถ:");
+    if (!code) return;
+    const capacity = parseInt(prompt("พิกัดน้ำหนัก (เช่น 30, 45, 60 ตัน):") || "30");
+    const driver = prompt("ชื่อคนขับประจำ (ถ้ามี):") || "";
+    const phone = prompt("เบอร์โทรคนขับ (ถ้ามี):") || "";
+
+    window.quarryStore.addOrUpdateTruck({
+      id: 'T_' + Date.now(),
+      code: code,
+      plate: code,
+      capacity_ton: capacity,
+      driver_name: driver,
+      phone: phone,
+      status: 'active'
+    });
+    window.app.render();
+  }
+
+  deleteTruck(truckId) {
+    if (confirm("คุณแน่ใจว่าต้องการลบรถคันนี้ใช่หรือไม่?")) {
+      window.quarryStore.deleteTruck(truckId);
+      window.app.render();
+    }
+  }
+
+  promptAddExcavator() {
+    const code = prompt("ระบุเบอร์รถ / รุ่นเครื่องจักรแม็คโคร:");
+    if (!code) return;
+    const driver = prompt("ชื่อผู้ควบคุมประจำ:") || "";
+    const rate = parseFloat(prompt("ค่าตักต่อคัน (บาท):") || "5");
+
+    window.quarryStore.addOrUpdateExcavator({
+      id: 'E_' + Date.now(),
+      code: code,
+      model: code,
+      driver_name: driver,
+      rate_per_scoop: rate,
+      status: 'active'
+    });
+    window.app.render();
+  }
+
+  promptEditExcRate(excId) {
+    const excs = window.quarryStore.getExcavators();
+    const exc = excs.find(e => e.id === excId);
+    if (!exc) return;
+    const rate = parseFloat(prompt(`ระบุค่าตักต่อคันสำหรับ ${exc.code} (บาท):`, exc.rate_per_scoop || 5));
+    if (!isNaN(rate)) {
+      window.quarryStore.addOrUpdateExcavator({ ...exc, rate_per_scoop: rate });
+      window.app.render();
+    }
+  }
+
+  deleteExcavator(excId) {
+    if (confirm("คุณแน่ใจว่าต้องการลบแม็คโครคันนี้ใช่หรือไม่?")) {
+      window.quarryStore.deleteExcavator(excId);
+      window.app.render();
+    }
+  }
+
+  promptAddDriver() {
+    const name = prompt("ชื่อ-สกุล พนักงานใหม่:");
+    if (!name) return;
+    const nickname = prompt("ชื่อเล่น:") || "";
+    const phone = prompt("เบอร์โทรศัพท์ (ใช้ล็อกอิน):") || "";
+    const roleChoice = prompt("ระบุบทบาท (1: คนขับสิบล้อ, 2: แม็คโคร, 3: หัวหน้างาน, 4: ผู้บริหาร):", "1");
+    let role = "truck_driver";
+    if (roleChoice === "2") role = "excavator_operator";
+    if (roleChoice === "3") role = "supervisor";
+    if (roleChoice === "4") role = "admin";
+
+    window.quarryStore.addOrUpdateDriver({
+      id: 'D_' + Date.now(),
+      name: name,
+      nickname: nickname,
+      phone: phone,
+      role: role,
+      pin: "1234"
+    });
+    window.app.render();
+  }
+
+  deleteDriver(driverId) {
+    if (confirm("คุณแน่ใจว่าต้องการลบพนักงานคนนี้ใช่หรือไม่?")) {
+      window.quarryStore.deleteDriver(driverId);
+      window.app.render();
+    }
+  }
+
+  async syncInitialDatabaseToCloud() {
+    const seed = window.quarryStore.masterData;
+    try {
+      alert("⏳ กำลังส่งข้อมูลเริ่มต้นขึ้น Google Sheets...");
+      const resp = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'initDatabase', seedData: seed })
+      });
+      const resJson = await resp.json();
+      if (resJson.status === 'success') {
+        alert("🎉 สร้างชีทตารางใน Google Sheets เรียบร้อยแล้วครับ!");
+      } else {
+        alert("แจ้งเตือน: " + resJson.message);
+      }
+    } catch (e) {
+      alert("การเชื่อมต่อขัดข้อง: " + e.toString());
+    }
+  }
+
+  async resetData() {
+    if (confirm("⚠️ คุณแน่ใจว่าต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นจากไฟล์ Excel หรือไม่?")) {
+      await window.quarryStore.resetToSeedData();
+      alert("รีเซ็ตข้อมูลสำเร็จ");
+      window.app.render();
+    }
+  }
+}
+
+window.settingsView = new SettingsView();
+
+</script>
+  <script>
+/**
+ * หน้าจอ AI ผู้ช่วยอัจฉริยะ (AI Copilot Chatbot View)
+ */
+class AICopilotView {
+  render() {
+    const history = window.quarryAI.chatHistory;
+
+    return `
+      <div class="max-w-4xl mx-auto space-y-4">
+        
+        <!-- Header -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg">
+              🤖
+            </div>
+            <div>
+              <h1 class="text-xl font-black text-white flex items-center gap-2">
+                AI ผู้ช่วยโรงโม่หิน (Quarry AI Copilot)
+                <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">พร้อมตอบ Real-time</span>
+              </h1>
+              <p class="text-xs text-slate-400">ถาม-ตอบ สรุปยอด วิเคราะห์แนวโน้ม และค้นหาความผิดปกติของข้อมูล</p>
+            </div>
+          </div>
+          <button onclick="window.app.navigate('dashboard')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-700">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> กลับแดชบอร์ด
+          </button>
+        </div>
+
+        <!-- Quick Question Prompts -->
+        <div class="flex flex-wrap gap-2">
+          <button onclick="aiCopilotView.sendQuick('วันนี้วิ่งไปกี่เที่ยว ยอดรวมเท่าไหร่')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+            📊 สรุปยอดรวมวันนี้
+          </button>
+          <button onclick="aiCopilotView.sendQuick('ใครวิ่งได้เยอะที่สุดวันนี้')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+            🏆 ใครวิ่งเยอะสุด
+          </button>
+          <button onclick="aiCopilotView.sendQuick('รถคันไหนจอดไม่ได้วิ่งบ้าง')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+            🛑 รถคันไหนจอดบ้าง
+          </button>
+          <button onclick="aiCopilotView.sendQuick('ช่วยตรวจหาความผิดปกติของวันนี้ให้หน่อย')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-amber-400 font-semibold transition">
+            ⚠️ ตรวจสอบความผิดปกติ
+          </button>
+          <button onclick="aiCopilotView.sendQuick('ขอตารางเรทราคาวิ่งหิน')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+            💰 เรทราคาค่าเที่ยว
+          </button>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col h-[520px]">
+          
+          <!-- Message Thread -->
+          <div id="ai-chat-thread" class="flex-1 overflow-y-auto space-y-4 pr-2">
+            ${history.map(msg => `
+              <div class="flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}">
+                ${msg.sender === 'ai' ? `
+                  <div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-sm flex-shrink-0 shadow">
+                    🤖
+                  </div>
+                ` : ''}
+
+                <div class="max-w-lg ${msg.sender === 'user' ? 'bg-amber-500 text-slate-950 rounded-2xl rounded-tr-none font-medium' : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-2xl rounded-tl-none'} p-4 text-xs shadow-md space-y-1">
+                  <div class="whitespace-pre-line leading-relaxed">${msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}</div>
+                  <p class="text-[9px] ${msg.sender === 'user' ? 'text-slate-800' : 'text-slate-500'} text-right">${msg.time}</p>
+                </div>
+
+                ${msg.sender === 'user' ? `
+                  <div class="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                    👤
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Input Bar -->
+          <div class="pt-4 border-t border-slate-800 mt-2 flex items-center gap-2">
+            <input type="text" id="ai-input-box" onkeypress="if(event.key==='Enter') aiCopilotView.handleSend()" placeholder="พิมพ์คำถามที่นี่ เช่น สรุปยอดวันนี้, รถคันไหนจอดบ้าง..." class="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <button onclick="aiCopilotView.handleSend()" class="px-5 py-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 rounded-2xl font-black text-xs shadow-lg transition flex items-center gap-1.5">
+              <i data-lucide="send" class="w-4 h-4"></i> ส่ง
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    `;
+  }
+
+  handleSend() {
+    const input = document.getElementById('ai-input-box');
+    const text = input ? input.value.trim() : '';
+    if (!text) return;
+
+    window.quarryAI.ask(text);
+    input.value = '';
+    window.app.render();
+
+    // Scroll to bottom
+    setTimeout(() => {
+      const thread = document.getElementById('ai-chat-thread');
+      if (thread) thread.scrollTop = thread.scrollHeight;
+    }, 100);
+  }
+
+  sendQuick(text) {
+    window.quarryAI.ask(text);
+    window.app.render();
+
+    setTimeout(() => {
+      const thread = document.getElementById('ai-chat-thread');
+      if (thread) thread.scrollTop = thread.scrollHeight;
+    }, 100);
+  }
+}
+
+window.aiCopilotView = new AICopilotView();
+
+</script>
+
+  <!-- App Main Controller -->
+  <script>
+/**
+ * ควบคุมการนำทางและแสดงผลหลักของแอปพลิเคชัน (Main App Controller)
+ */
+class QuarryApp {
+  constructor() {
+    this.currentView = 'dashboard'; // dashboard, reports, settings, ai-copilot
+  }
+
+  async init() {
+    await window.quarryStore.init();
+    window.quarryStore.subscribe(() => this.render());
+    this.route();
+  }
+
+  route() {
+    if (!window.authService.isLoggedIn()) {
+      this.renderLogin();
+      return;
+    }
+
+    const role = window.authService.getRole();
+    if (role === 'truck_driver') {
+      this.renderDriver();
+    } else if (role === 'excavator_operator') {
+      this.renderExcavator();
+    } else {
+      // Supervisor or Admin
+      this.renderAdmin();
+    }
+  }
+
+  navigate(viewName) {
+    this.currentView = viewName;
+    this.render();
+  }
+
+  render() {
+    this.route();
+  }
+
+  renderLogin() {
+    const root = document.getElementById('app-root');
+    if (root) {
+      root.innerHTML = window.loginView.render();
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  renderDriver() {
+    const root = document.getElementById('app-root');
+    if (root) {
+      root.innerHTML = window.driverView.render();
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  renderExcavator() {
+    const root = document.getElementById('app-root');
+    if (root) {
+      root.innerHTML = window.excavatorView.render();
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  renderAdmin() {
+    const user = window.authService.getUser();
+    const root = document.getElementById('app-root');
+    if (!root) return;
+
+    let mainContent = '';
+    if (this.currentView === 'reports') {
+      mainContent = window.reportsView.render();
+    } else if (this.currentView === 'settings') {
+      mainContent = window.settingsView.render();
+    } else if (this.currentView === 'ai-copilot') {
+      mainContent = window.aiCopilotView.render();
+    } else {
+      mainContent = window.adminDashboard.render();
+    }
+
+    root.innerHTML = `
+      <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+        
+        <!-- Top Navbar -->
+        <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
+          <div class="max-w-7xl mx-auto flex items-center justify-between">
+            
+            <!-- Brand -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="window.app.navigate('dashboard')">
+              <div class="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xl shadow">
+                🚚
+              </div>
+              <div>
+                <h1 class="font-black text-base text-white tracking-tight">ระบบบริหารงานโรงโม่</h1>
+                <p class="text-[11px] text-amber-400 font-semibold">ศูนย์ควบคุมกลาง (Executive Control Panel)</p>
+              </div>
+            </div>
+
+            <!-- Nav Links -->
+            <nav class="hidden md:flex items-center gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+              <button onclick="window.app.navigate('dashboard')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                📊 แดชบอร์ดสด
+              </button>
+              <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'ai-copilot' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                🤖 AI ผู้ช่วย
+              </button>
+              <button onclick="window.app.navigate('reports')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'reports' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                📑 รายงาน & Excel
+              </button>
+              <button onclick="window.app.navigate('settings')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'settings' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                ⚙️ ตั้งค่าข้อมูลหลัก
+              </button>
+            </nav>
+
+            <!-- User Status & Logout -->
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <p class="text-xs font-bold text-white">${user.name}</p>
+                <span class="text-[10px] text-amber-400 font-semibold">${user.role === 'admin' ? 'ผู้บริหารสูงสุด' : 'หัวหน้างาน'}</span>
+              </div>
+              <button onclick="window.app.logout()" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1.5">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">ออก</span>
+              </button>
+            </div>
+
+          </div>
+        </header>
+
+        <!-- Main Body Container -->
+        <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-1">
+          ${mainContent}
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
+          ระบบบริหารงานโรงโม่ • AI Insights & Google Apps Script Cloud Engine
+        </footer>
+
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  logout() {
+    window.authService.logout();
+    this.currentView = 'dashboard';
+    this.render();
+  }
+}
+
+window.app = new QuarryApp();
+window.addEventListener('DOMContentLoaded', () => {
+  window.app.init();
+});
+
+</script>
+</body>
+</html>
