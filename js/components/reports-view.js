@@ -40,10 +40,10 @@ class ReportsView {
           <div class="flex items-center gap-2">
             <!-- View Mode Switcher -->
             <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800">
-              <button onclick="reportsView.setViewMode('overview')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('overview')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 สรุปภาพรวม
               </button>
-              <button onclick="reportsView.setViewMode('individual')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('individual')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 👤 เจาะลึกรายคน
               </button>
             </div>
@@ -106,7 +106,7 @@ class ReportsView {
             <button onclick="reportsView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">วันนี้</button>
             <button onclick="reportsView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">7 วัน</button>
             <button onclick="reportsView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">เดือนนี้</button>
-            <button onclick="reportsView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+            <button onclick="reportsView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-blue-400">ทั้งหมด</button>
           </div>
         </div>
         
@@ -140,7 +140,7 @@ class ReportsView {
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
           <span class="text-xs text-slate-400 font-bold uppercase">จำนวนเที่ยวที่กรอง</span>
-          <p class="text-2xl font-black text-amber-400 mt-1">${totalTripsCount.toLocaleString()} เที่ยว</p>
+          <p class="text-2xl font-black text-blue-400 mt-1">${totalTripsCount.toLocaleString()} เที่ยว</p>
         </div>
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
           <span class="text-xs text-slate-400 font-bold uppercase">ยอดเงินค่าจ้างรวม</span>
@@ -155,7 +155,7 @@ class ReportsView {
       <!-- Table 1: Driver Payout Summary -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
         <h2 class="text-lg font-black text-white flex items-center gap-2">
-          <i data-lucide="users" class="w-5 h-5 text-amber-400"></i>
+          <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
           ตารางสรุปยอดค่าจ้างรายบุคคล (คลิกที่ชื่อเพื่อดูเจาะลึกได้)
         </h2>
 
@@ -180,11 +180,11 @@ class ReportsView {
                   <td class="p-3 font-bold text-slate-400">${idx + 1}</td>
                   <td class="p-3 font-bold text-white">${d.name}</td>
                   <td class="p-3 text-slate-400">${d.phone || '-'}</td>
-                  <td class="p-3 font-semibold text-amber-400">${d.truck || '-'}</td>
+                  <td class="p-3 font-semibold text-blue-400">${d.truck || '-'}</td>
                   <td class="p-3 text-right font-black text-white">${d.trips}</td>
                   <td class="p-3 text-right font-black text-emerald-400 text-sm">฿${d.totalAmount.toLocaleString()}</td>
                   <td class="p-3 text-center">
-                    <button onclick="reportsView.openDrilldown('${d.name}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[11px] shadow">
+                    <button onclick="reportsView.openDrilldown('${d.name}')" class="px-2.5 py-1 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold rounded-lg text-[11px] shadow">
                       🔍 เจาะลึก
                     </button>
                   </td>
@@ -216,17 +216,17 @@ class ReportsView {
       <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-lg space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-14 h-14 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-3xl shadow-md">
+            <div class="w-14 h-14 rounded-2xl bg-blue-500 text-slate-950 flex items-center justify-center font-black text-3xl shadow-md">
               👤
             </div>
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-xl font-black text-white">${this.selectedDrilldownDriver}</h2>
-                <span class="text-xs bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                <span class="text-xs bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/30">
                   ${driverObj.nickname ? 'น้า' + driverObj.nickname : 'คนขับ'}
                 </span>
               </div>
-              <p class="text-xs text-slate-400 mt-1">เบอร์โทร: <span class="text-slate-200 font-mono">${driverObj.phone || '-'}</span> | รถที่ขับ: <span class="text-amber-300 font-bold">${vehiclesUsed.join(', ') || 'ไม่มี'}</span></p>
+              <p class="text-xs text-slate-400 mt-1">เบอร์โทร: <span class="text-slate-200 font-mono">${driverObj.phone || '-'}</span> | รถที่ขับ: <span class="text-blue-300 font-bold">${vehiclesUsed.join(', ') || 'ไม่มี'}</span></p>
             </div>
           </div>
 
@@ -249,7 +249,7 @@ class ReportsView {
           </div>
 
           <div class="flex items-center gap-4 text-xs font-bold">
-            <span class="text-slate-300">จำนวนเที่ยว: <b class="text-amber-400 text-sm font-black">${filteredTrips.length}</b> เที่ยว</span>
+            <span class="text-slate-300">จำนวนเที่ยว: <b class="text-blue-400 text-sm font-black">${filteredTrips.length}</b> เที่ยว</span>
             <span class="text-slate-300">ยอดเงินรวม: <b class="text-emerald-400 text-sm font-black">฿${totalAmount.toLocaleString()}</b> บาท</span>
           </div>
         </div>
@@ -258,7 +258,7 @@ class ReportsView {
       <!-- Detailed Trip Log with Photos -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
         <h3 class="text-base font-black text-white flex items-center gap-2">
-          <i data-lucide="list" class="w-4 h-4 text-amber-400"></i>
+          <i data-lucide="list" class="w-4 h-4 text-blue-400"></i>
           ประวัติการวิ่งรายรอบและรูปถ่าย GPS (${filteredTrips.length} รอบ)
         </h3>
 
@@ -281,7 +281,7 @@ class ReportsView {
                 <tr><td colspan="8" class="p-6 text-center text-slate-500">ไม่มีประวัติการวิ่งของ ${this.selectedDrilldownDriver} ในช่วงเวลานี้</td></tr>
               ` : filteredTrips.map(t => `
                 <tr class="hover:bg-slate-800/50">
-                  <td class="p-3 font-black text-amber-400">#${t.roundNumber}</td>
+                  <td class="p-3 font-black text-blue-400">#${t.roundNumber}</td>
                   <td class="p-3 text-slate-400">${t.timestamp || t.date}</td>
                   <td class="p-3 font-bold text-white">${t.truckPlate}</td>
                   <td class="p-3 text-slate-300">${t.jobTypeName}</td>

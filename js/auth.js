@@ -5,6 +5,7 @@ class AuthService {
   constructor() {
     this.currentUser = null;
     this.currentShift = null;
+    this.workMode = localStorage.getItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE) || null;
     this.loadSession();
   }
 
@@ -37,29 +38,34 @@ class AuthService {
   }
 
   // เข้าสู่ระบบด้วย เบอร์โทร/ชื่อ และ PIN
-  login(identifier, pin) {
-    const drivers = window.quarryStore.getDrivers();
-    const cleanId = (identifier || '').trim().replace(/[-\s]/g, '');
-
-    // ค้นหาผู้ใช้จากเบอร์โทร หรือ ID หรือชื่อ
-    const user = drivers.find(d => {
-      const p = (d.phone || '').replace(/[-\s]/g, '');
-      return p === cleanId || d.id === identifier || d.name.includes(identifier) || d.nickname === identifier;
-    });
-
-    if (!user) {
-      return { success: false, message: "ไม่พบข้อมูลพนักงานในระบบ (กรุณาตรวจสอบเบอร์โทรหรือชื่อ)" };
+  async login(identifier, pin, selectedRole = 'driver') {
+    try {
+      const result = await window.quarryStore.apiRequest({ action: 'login', identifier, pin }, 30000);
+      this.currentUser = result.user;
+      const actualRole = this.currentUser.role;
+      const roleMatches = selectedRole === 'driver'
+        ? ['truck_driver', 'excavator_operator'].includes(actualRole)
+        : actualRole === selectedRole;
+      if (!roleMatches) {
+        this.currentUser = null;
+        return { success: false, message: 'บัญชีนี้ไม่ตรงกับประเภทผู้ใช้งานที่เลือก' };
+      }
+      this.workMode = selectedRole === 'driver' ? null : actualRole;
+      localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE);
+      localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+      return { success: true, user: this.currentUser };
+    } catch (error) {
+      return { success: false, message: error.message || 'เข้าสู่ระบบไม่สำเร็จ' };
     }
+  }
 
-    // ตรวจสอบ PIN (ถ้ามีกำหนดไว้)
-    const expectedPin = user.pin || "1234";
-    if (pin && pin !== expectedPin && pin !== "9999") {
-      return { success: false, message: "รหัส PIN ไม่ถูกต้อง" };
-    }
+  getWorkMode() { return this.workMode; }
 
-    this.currentUser = user;
-    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
-    return { success: true, user: this.currentUser };
+  selectWorkMode(mode) {
+    if (!['truck_driver', 'excavator_operator'].includes(mode)) return false;
+    this.workMode = mode;
+    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE, mode);
+    return true;
   }
 
   // Quick Login สำหรับทดสอบหน้างาน
@@ -95,11 +101,26 @@ class AuthService {
       date: new Date().toISOString().split('T')[0]
     };
     localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT, JSON.stringify(this.currentShift));
+    window.quarryStore.queueSync('startShift', {
+      ...this.currentShift,
+      userId: this.currentUser.id,
+      userName: this.currentUser.name,
+      role: this.currentUser.role,
+      appVersion: CONFIG.VERSION
+    });
     return this.currentShift;
   }
 
   // ปิดกะประจำวัน
   endShift() {
+    if (this.currentShift) {
+      window.quarryStore.queueSync('endShift', {
+        shiftId: this.currentShift.shiftId,
+        driverName: this.currentUser ? this.currentUser.name : this.currentShift.driverName,
+        endedAt: new Date().toISOString(),
+        appVersion: CONFIG.VERSION
+      });
+    }
     this.currentShift = null;
     localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
   }
@@ -107,8 +128,10 @@ class AuthService {
   logout() {
     this.currentUser = null;
     this.currentShift = null;
+    this.workMode = null;
     localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_USER);
     localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
+    localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE);
   }
 }
 

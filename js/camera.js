@@ -8,31 +8,13 @@ class CameraEngine {
   constructor() {
     this.currentPosition = null;
     this.mediaStream = null;
-    this.initGPS();
   }
 
-  // เริ่มติดตามพิกัด GPS
-  initGPS() {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        pos => { this.currentPosition = pos.coords; },
-        err => { console.warn("GPS Warning:", err.message); },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-      );
-
-      navigator.geolocation.watchPosition(
-        pos => { this.currentPosition = pos.coords; },
-        err => { console.warn("GPS Watch Warning:", err.message); },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
-      );
-    }
-  }
-
-  // ดึงพิกัดล่าสุด
+  // ขอพิกัดจากโทรศัพท์เฉพาะตอนถ่ายรูป ไม่มีการติดตามตำแหน่งต่อเนื่อง
   async getFreshGPS() {
     return new Promise((resolve) => {
       if (!("geolocation" in navigator)) {
-        resolve({ lat: 14.8824, lng: 102.0135, accuracy: 5, isMock: true });
+        resolve({ lat: null, lng: null, accuracy: null, isAvailable: false });
         return;
       }
 
@@ -44,30 +26,14 @@ class CameraEngine {
             lng: Number(pos.coords.longitude.toFixed(6)),
             accuracy: Math.round(pos.coords.accuracy || 5),
             timestamp: new Date().toISOString(),
-            isMock: false
+            isAvailable: true
           });
         },
         err => {
           console.warn("GPS fallback used:", err.message);
-          if (this.currentPosition) {
-            resolve({
-              lat: Number(this.currentPosition.latitude.toFixed(6)),
-              lng: Number(this.currentPosition.longitude.toFixed(6)),
-              accuracy: Math.round(this.currentPosition.accuracy || 10),
-              timestamp: new Date().toISOString(),
-              isMock: false
-            });
-          } else {
-            resolve({
-              lat: 14.882400,
-              lng: 102.013500,
-              accuracy: 10,
-              timestamp: new Date().toISOString(),
-              isMock: true
-            });
-          }
+          resolve({ lat: null, lng: null, accuracy: null, timestamp: new Date().toISOString(), isAvailable: false });
         },
-        { enableHighAccuracy: true, timeout: 4000, maximumAge: 10000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
   }
@@ -108,7 +74,7 @@ class CameraEngine {
         <!-- Top Bar -->
         <div class="p-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between z-10">
           <div>
-            <span class="text-xs font-black text-amber-400 uppercase tracking-wider">
+            <span class="text-xs font-black text-blue-400 uppercase tracking-wider">
               ${metadata.stepType === 'load' ? '📍 จุดรับหิน' : (metadata.stepType === 'dump' ? '🏁 จุดเทหิน' : '🚜 ตักหิน')}
             </span>
             <p class="text-xs text-slate-300 font-bold">${metadata.vehicleCode || ''} • ${metadata.driverName || ''}</p>
@@ -122,7 +88,7 @@ class CameraEngine {
           
           <!-- Live Watermark Overlay Tag -->
           <div class="absolute bottom-4 left-4 right-4 bg-slate-950/80 backdrop-blur-sm border border-slate-700/80 rounded-2xl p-3 text-xs space-y-1">
-            <div class="flex items-center justify-between text-amber-400 font-bold">
+            <div class="flex items-center justify-between text-blue-400 font-bold">
               <span>🕒 กำลังจับเวลาสด...</span>
               <span id="cam-gps-live" class="text-emerald-400 font-mono">📍 GPS กำลังจับสัญญาณ...</span>
             </div>
@@ -137,8 +103,8 @@ class CameraEngine {
           </button>
           
           <!-- Big Shutter Button -->
-          <button id="cam-shutter-btn" class="w-20 h-20 rounded-full bg-white border-4 border-amber-500 shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
-            <div class="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center">
+          <button id="cam-shutter-btn" class="w-20 h-20 rounded-full bg-white border-4 border-blue-500 shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
+            <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
               <span class="text-2xl">📸</span>
             </div>
           </button>
@@ -178,7 +144,7 @@ class CameraEngine {
       // ดึง GPS คู่ขนาน
       let liveGps = await this.getFreshGPS();
       const gpsLabel = document.getElementById('cam-gps-live');
-      if (gpsLabel) gpsLabel.innerText = `📍 ${liveGps.lat}, ${liveGps.lng}`;
+      if (gpsLabel) gpsLabel.innerText = liveGps.isAvailable ? `📍 ${liveGps.lat}, ${liveGps.lng}` : '📍 กรุณาอนุญาตตำแหน่ง';
 
       // ปุ่มปิด
       document.getElementById('close-cam-btn').onclick = () => {
@@ -296,7 +262,7 @@ class CameraEngine {
 
   applyWatermark(img, metadata, gps) {
     const canvas = document.createElement('canvas');
-    const MAX_WIDTH = 1280;
+    const MAX_WIDTH = 960;
     const scale = Math.min(1, MAX_WIDTH / img.width);
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
@@ -316,7 +282,7 @@ class CameraEngine {
     ctx.fillRect(0, bannerY, canvas.width, bannerHeight);
 
     // เส้นขอบสีส้ม/เหลือง
-    ctx.fillStyle = '#f59e0b';
+    ctx.fillStyle = '#2563eb';
     ctx.fillRect(0, bannerY, canvas.width, 6);
 
     const baseFontSize = Math.max(18, Math.round(canvas.width * 0.024));
@@ -332,7 +298,7 @@ class CameraEngine {
                      (metadata.stepType === 'dump' ? '🏁 [จุดเทหิน / ส่งมอบ]' : '🚜 [ตักหินแม็คโคร]');
     
     const badgeColor = metadata.stepType === 'load' ? '#3b82f6' : 
-                      (metadata.stepType === 'dump' ? '#10b981' : '#f59e0b');
+                      (metadata.stepType === 'dump' ? '#10b981' : '#2563eb');
 
     // บรรทัดที่ 1: สถานะและเวลา
     ctx.font = `bold ${baseFontSize * 1.3}px 'Sarabun', -apple-system, sans-serif`;
@@ -355,10 +321,12 @@ class CameraEngine {
     ctx.font = `${baseFontSize * 0.95}px 'Sarabun', -apple-system, sans-serif`;
     const roundText = metadata.roundNumber ? `รอบที่ ${metadata.roundNumber}` : '';
     const jobText = metadata.jobName ? ` [${metadata.jobName}]` : '';
-    const gpsText = `🌐 พิกัด: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`;
+    const gpsText = gps && gps.isAvailable
+      ? `🌐 พิกัดโทรศัพท์: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`
+      : '🌐 พิกัดโทรศัพท์: ไม่ได้รับอนุญาต/ไม่พบสัญญาณ';
     ctx.fillText(`${roundText}${jobText}  •  ${gpsText}`, 20, bannerY + (bannerHeight * 0.82));
 
-    return canvas.toDataURL('image/jpeg', 0.85);
+    return canvas.toDataURL('image/jpeg', 0.72);
   }
 }
 

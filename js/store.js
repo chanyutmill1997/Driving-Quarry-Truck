@@ -9,6 +9,9 @@ class QuarryStore {
     this.pendingSyncQueue = [];
     this.listeners = [];
     this.isSyncing = false;
+    this.cloudStatus = 'unknown';
+    this.lastSyncAt = null;
+    this.lastSyncError = null;
   }
 
   async init() {
@@ -20,6 +23,11 @@ class QuarryStore {
       } catch (e) {
         console.error("Failed to parse cached master data", e);
       }
+    }
+
+    if (!this.masterData && window.EMBEDDED_SEED_DATA) {
+      this.masterData = window.EMBEDDED_SEED_DATA;
+      this.saveMasterData();
     }
 
     if (!this.masterData) {
@@ -34,13 +42,93 @@ class QuarryStore {
     }
 
     // 2. โหลดรายการ Trips และ Excavator Logs
-    this.trips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]');
+    this.trips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]').map(trip => {
+      const { loadPhotoBase64, dumpPhotoBase64, ...cleanTrip } = trip;
+      return cleanTrip;
+    });
+    // ปรับยอดเดิมในเครื่องให้เป็นเรทต่อตัน × พิกัดรถ
+    this.trips = this.trips.map(trip => ({
+      ...trip,
+      amount: this.calculateTruckRate(trip.jobTypeId, Number(trip.capacityTon) || 0)
+    }));
+    // ล้างเฉพาะรูปเต็มที่เวอร์ชันเก่าเคยเก็บซ้ำในประวัติ ไม่ลบข้อมูลเที่ยว
+    try { localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips)); } catch (e) { console.warn('Trip history cleanup deferred:', e.message); }
     this.excavatorLogs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS) || '[]');
     this.pendingSyncQueue = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.PENDING_SYNC) || '[]');
 
+    // แสดงหน้าจอจาก cache ทันที แล้วค่อยอัปเดตข้อมูล Cloud เบื้องหลัง
+    this.refreshMasterDataFromCloud().then(() => this.notify());
+
     // 3. เริ่มระบบ Auto Sync เบื้องหลัง
     setInterval(() => this.processSyncQueue(), CONFIG.AUTO_SYNC_INTERVAL_MS);
+    window.addEventListener('online', () => {
+      this.cloudStatus = 'connecting';
+      this.processSyncQueue();
+    });
+    window.addEventListener('offline', () => {
+      this.cloudStatus = 'offline';
+      this.notify();
+    });
+    // เริ่มซิงก์ในรอบถัดไป เพื่อไม่ให้การแจ้งสถานะของ Cloud แทรกระหว่าง
+    // การรีเซ็ตหน้าจอคนขับหลังปิดงานรอบหนึ่ง
+    setTimeout(() => this.processSyncQueue(), 0);
     this.notify();
+  }
+
+  async apiRequest(payload, timeoutMs = CONFIG.API_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ ...payload, appVersion: CONFIG.VERSION }),
+        signal: controller.signal,
+        redirect: 'follow'
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (!result || result.status !== 'success') {
+        throw new Error(result && result.message ? result.message : 'Cloud API error');
+      }
+      this.cloudStatus = 'online';
+      this.lastSyncError = null;
+      return result;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async refreshMasterDataFromCloud() {
+    if (!navigator.onLine || !CONFIG.API_URL) {
+      this.cloudStatus = 'offline';
+      return false;
+    }
+    try {
+      this.cloudStatus = 'connecting';
+      const result = await this.apiRequest({ action: 'getMasterData' });
+      if (result.data && Array.isArray(result.data.trucks) && result.data.trucks.length) {
+        const cached = this.masterData || {};
+        const validTrucks = result.data.trucks.filter(x => x.id && x.code && Number(x.capacity_ton) > 0);
+        const validExcavators = result.data.excavators.filter(x => x.id && x.code);
+        const validDrivers = result.data.drivers.filter(x => x.id && x.name && x.role);
+        const validRates = result.data.job_rates.filter(x => x.id && x.name);
+        this.masterData = {
+          trucks: validTrucks.length ? validTrucks : (cached.trucks || []),
+          excavators: validExcavators.length ? validExcavators : (cached.excavators || []),
+          drivers: validDrivers.length ? validDrivers : (cached.drivers || []),
+          job_rates: validRates.length ? validRates : (cached.job_rates || [])
+        };
+        localStorage.setItem(CONFIG.STORAGE_KEYS.MASTER_DATA, JSON.stringify(this.masterData));
+      }
+      this.lastSyncAt = new Date().toISOString();
+      return true;
+    } catch (error) {
+      this.cloudStatus = navigator.onLine ? 'error' : 'offline';
+      this.lastSyncError = error.name === 'AbortError' ? 'หมดเวลารอระบบกลาง' : error.message;
+      console.warn('Using cached master data:', this.lastSyncError);
+      return false;
+    }
   }
 
   // Subscribe state changes
@@ -85,23 +173,32 @@ class QuarryStore {
     const job = rates.find(r => r.id === jobRateId);
     if (!job) return 0;
 
-    if (capacityTon >= 60) return job.rate_60_ton || 0;
-    if (capacityTon >= 45) return job.rate_45_ton || 0;
-    return job.rate_30_ton || 0;
+    const ratePerTon = capacityTon >= 60
+      ? (job.rate_60_ton || 0)
+      : (capacityTon >= 45 ? (job.rate_45_ton || 0) : (job.rate_30_ton || 0));
+    return ratePerTon * capacityTon;
   }
 
   // -------------------------------------------------------------
   // Truck Trips Methods
   // -------------------------------------------------------------
   saveTrip(tripData) {
-    const existingIndex = this.trips.findIndex(t => t.id === tripData.id);
+    // รูปเต็มเก็บเฉพาะในคิวส่ง Cloud ไม่เก็บซ้ำในประวัติ LocalStorage
+    const { loadPhotoBase64, dumpPhotoBase64, ...localTrip } = tripData;
+    const existingIndex = this.trips.findIndex(t => t.id === localTrip.id);
     if (existingIndex >= 0) {
-      this.trips[existingIndex] = { ...this.trips[existingIndex], ...tripData };
+      this.trips[existingIndex] = { ...this.trips[existingIndex], ...localTrip };
     } else {
-      this.trips.unshift(tripData);
+      this.trips.unshift(localTrip);
     }
 
-    localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    } catch (err) {
+      // เก็บประวัติล่าสุดก่อน หากเครื่องมีข้อมูลเก่าจนพื้นที่เต็ม
+      this.trips = this.trips.slice(0, 200);
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    }
     
     // เพิ่มเข้าคิวซิงค์ขึ้น Cloud
     this.queueSync('saveTrip', tripData);
@@ -164,9 +261,16 @@ class QuarryStore {
       id: 'SYNC_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
       action: action,
       payload: payload,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      attempts: 0,
+      lastError: null
     });
-    localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+    } catch (err) {
+      // รูปยังอยู่ในหน่วยความจำและจะส่งทันทีเมื่อออนไลน์ แม้พื้นที่ถาวรของเบราว์เซอร์เต็ม
+      console.warn('Pending photo queue kept in memory:', err.message);
+    }
     this.processSyncQueue();
   }
 
@@ -182,29 +286,46 @@ class QuarryStore {
           action: item.action,
           ...item.payload
         };
-
-        const resp = await fetch(CONFIG.API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(bodyData)
-        });
-
-        const resJson = await resp.json();
-        if (resJson && resJson.status === 'success') {
-          // ซิงค์สำเร็จ นำออกจากคิว
-          this.pendingSyncQueue.shift();
-          localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
-        } else {
-          console.warn("Sync failed for item, will retry later:", resJson);
-          break;
+        item.attempts = (item.attempts || 0) + 1;
+        const resJson = await this.apiRequest(bodyData);
+        // Backend คำนวณยอดใหม่เสมอ จึงอัปเดต local record ให้ตรงกับ Cloud
+        if (item.action === 'saveTrip' && typeof resJson.amount === 'number') {
+          const trip = this.trips.find(t => t.id === item.payload.id);
+          if (trip) trip.amount = resJson.amount;
+          localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
         }
+        if (item.action === 'saveExcavatorLog' && typeof resJson.amount === 'number') {
+          const log = this.excavatorLogs.find(l => l.id === item.payload.id);
+          if (log) log.amount = resJson.amount;
+          localStorage.setItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS, JSON.stringify(this.excavatorLogs));
+        }
+        this.pendingSyncQueue.shift();
+        this.lastSyncAt = new Date().toISOString();
+        localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
       }
     } catch (e) {
-      console.warn("Cloud sync network error, queue kept for offline retry:", e);
+      const item = this.pendingSyncQueue[0];
+      if (item) {
+        item.lastError = e.name === 'AbortError' ? 'หมดเวลารอระบบกลาง' : e.message;
+        localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+      }
+      this.cloudStatus = navigator.onLine ? 'error' : 'offline';
+      this.lastSyncError = item ? item.lastError : e.message;
+      console.warn("Cloud sync error; queue retained:", this.lastSyncError);
     } finally {
       this.isSyncing = false;
       this.notify();
     }
+  }
+
+  getSyncStatus() {
+    return {
+      status: this.cloudStatus,
+      pending: this.pendingSyncQueue.length,
+      lastSyncAt: this.lastSyncAt,
+      lastError: this.lastSyncError,
+      needsAttention: this.pendingSyncQueue.some(x => (x.attempts || 0) >= CONFIG.MAX_SYNC_ATTEMPTS_BEFORE_WARNING)
+    };
   }
 
   // -------------------------------------------------------------

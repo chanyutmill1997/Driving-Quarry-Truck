@@ -31,12 +31,12 @@ class ExcavatorView {
         <!-- Top Bar -->
         <div class="flex items-center justify-between py-3 border-b border-slate-800 mb-6">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-amber-600 text-slate-950 flex items-center justify-center font-black text-lg">
+            <div class="w-10 h-10 rounded-full bg-blue-600 text-slate-950 flex items-center justify-center font-black text-lg">
               🚜
             </div>
             <div>
               <h2 class="font-bold text-base text-white">${user.name}</h2>
-              <p class="text-xs text-amber-400 font-medium">คนขับรถขุด / แม็คโครประจำโรงโม่</p>
+              <p class="text-xs text-blue-400 font-medium">คนขับรถขุด / แม็คโครประจำโรงโม่</p>
             </div>
           </div>
           <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
@@ -56,7 +56,7 @@ class ExcavatorView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               เลือกรถแม็คโคร (ทั้งหมด 20 คัน)
             </label>
-            <select id="shift-excavator-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="shift-excavator-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${excavators.map(e => `
                 <option value="${e.code}">
                   ${e.code} ${e.is_contractor ? '[ทีม ผรม.]' : ''} ${e.status === 'repair' ? '⚠️ [ซ่อม]' : ''}
@@ -65,7 +65,7 @@ class ExcavatorView {
             </select>
           </div>
 
-          <button onclick="excavatorView.handleStartShift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <button onclick="excavatorView.handleStartShift()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
             <i data-lucide="play" class="w-6 h-6"></i>
             เปิดงานประจำวัน
           </button>
@@ -104,7 +104,7 @@ class ExcavatorView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl bg-amber-600 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
+              <div class="w-12 h-12 rounded-2xl bg-blue-600 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
                 🚜
               </div>
               <div>
@@ -138,7 +138,7 @@ class ExcavatorView {
           <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
             <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">จำนวนคันที่ตักวันนี้</p>
             <div class="flex items-baseline justify-center gap-1 mt-1">
-              <span class="text-3xl font-black text-amber-400">${todayLogs.length}</span>
+              <span class="text-3xl font-black text-blue-400">${todayLogs.length}</span>
               <span class="text-xs text-slate-400">คัน</span>
             </div>
           </div>
@@ -152,13 +152,13 @@ class ExcavatorView {
         </div>
 
         <!-- Main Scoop Action Box -->
-        <div class="bg-slate-900 border-2 border-amber-600/40 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div class="bg-slate-900 border-2 border-blue-600/40 rounded-3xl p-5 shadow-2xl space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h2 class="text-lg font-black text-white flex items-center gap-2">
-              <i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i>
+              <i data-lucide="plus-circle" class="w-5 h-5 text-blue-500"></i>
               บันทึกการตักให้รถบรรทุก
             </h2>
-            <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+            <span class="text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
               ค่าตัก: ฿${defaultRate} / คัน
             </span>
           </div>
@@ -168,7 +168,7 @@ class ExcavatorView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               1. เลือกรถบรรทุกที่เข้ามาตักหิน (28 คัน)
             </label>
-            <select id="target-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="target-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${trucks.map(t => `
                 <option value="${t.code}">
                   🚚 ${t.code} (${t.capacity_ton} ตัน) ${t.nickname ? '• น้า' + t.nickname : ''}
@@ -189,10 +189,10 @@ class ExcavatorView {
                 <span class="absolute bottom-2 right-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded-lg">✓ ถ่ายรูปแล้ว</span>
               </div>
               <div class="text-center mt-2">
-                <button onclick="excavatorView.captureScoopPhoto()" class="text-xs text-amber-400 underline font-bold">กดถ่ายภาพใหม่</button>
+                <button onclick="excavatorView.captureScoopPhoto()" class="text-xs text-blue-400 underline font-bold">กดถ่ายภาพใหม่</button>
               </div>
             ` : `
-              <button onclick="excavatorView.captureScoopPhoto()" class="w-full h-32 bg-amber-950/30 hover:bg-amber-900/50 border-2 border-dashed border-amber-500/60 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-amber-400 active:scale-95 transition">
+              <button onclick="excavatorView.captureScoopPhoto()" class="w-full h-32 bg-blue-950/30 hover:bg-blue-900/50 border-2 border-dashed border-blue-500/60 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-blue-400 active:scale-95 transition">
                 <i data-lucide="camera" class="w-10 h-10"></i>
                 <span class="text-sm font-black">📸 กดเปิดกล้องถ่ายสด</span>
                 <span class="text-xs text-slate-400">ปั๊มพิกัด GPS และทะเบียนรถลงบนรูป</span>
@@ -201,7 +201,7 @@ class ExcavatorView {
           </div>
 
           <!-- Submit Button -->
-          <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
+          <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
             <i data-lucide="check" class="w-7 h-7"></i>
             <span>บันทึกการตักสำเร็จ (+฿${defaultRate})</span>
           </button>
@@ -211,10 +211,10 @@ class ExcavatorView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 class="font-black text-sm text-white flex items-center gap-1.5">
-              <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
+              <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i>
               ประวัติการตักย้อนหลังของฉัน
             </h3>
-            <span class="text-xs bg-slate-800 text-amber-400 font-bold px-2.5 py-1 rounded-lg">
+            <span class="text-xs bg-slate-800 text-blue-400 font-bold px-2.5 py-1 rounded-lg">
               รวม ${historyTotalScoops} คัน (฿${historyTotalAmount.toLocaleString()} บ.)
             </span>
           </div>
@@ -237,7 +237,7 @@ class ExcavatorView {
               <button onclick="excavatorView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">วันนี้</button>
               <button onclick="excavatorView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">7 วันล่าสุด</button>
               <button onclick="excavatorView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">เดือนนี้</button>
-              <button onclick="excavatorView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+              <button onclick="excavatorView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-blue-400">ทั้งหมด</button>
             </div>
           </div>
 
@@ -250,7 +250,7 @@ class ExcavatorView {
             ` : filteredHistory.map(l => `
               <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                  <span class="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center font-black text-xs">
+                  <span class="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-black text-xs">
                     🚜
                   </span>
                   <div>

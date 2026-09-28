@@ -6,7 +6,7 @@
   <title>ระบบบริหารงานโรงโม่ (Quarry Fleet Management & AI Insights)</title>
   
   <!-- PWA & Mobile Web Meta -->
-  <meta name="theme-color" content="#f59e0b">
+  <meta name="theme-color" content="#2563eb">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="โรงโม่">
@@ -21,7 +21,7 @@
         extend: {
           colors: {
             quarry: {
-              amber: '#f59e0b',
+              blue: '#2563eb',
               dark: '#0f172a',
               card: '#1e293b'
             }
@@ -42,7 +42,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  --primary-amber: #f59e0b;
+  --primary-blue: #2563eb;
   --primary-dark: #0f172a;
 }
 
@@ -98,7 +98,7 @@ button:active {
     <!-- App Views will render here -->
     <div class="min-h-screen flex items-center justify-center">
       <div class="text-center space-y-3">
-        <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
         <p class="text-sm text-slate-400 font-bold">กำลังโหลดระบบโรงโม่และ AI Insights...</p>
       </div>
     </div>
@@ -111,20 +111,23 @@ button:active {
  */
 const CONFIG = {
   APP_NAME: "ระบบบริหารงานโรงโม่",
-  VERSION: "1.0.0",
+  VERSION: "2.0.0",
   // Google Apps Script Web App Deployment URL (Updated)
   API_URL: "https://script.google.com/macros/s/AKfycby_mPElgoCrroadGQyzwzWXABnjGtaOFrWhI2Jemujwiz6uyasIgEO71sbZLO5H9g64IA/exec",
   STORAGE_KEYS: {
     MASTER_DATA: "quarry_master_data_v1",
     CURRENT_USER: "quarry_current_user",
     CURRENT_SHIFT: "quarry_current_shift",
+    CURRENT_WORK_MODE: "quarry_current_work_mode",
     TRIPS: "quarry_trips_data",
     EXCAVATOR_LOGS: "quarry_excavator_logs",
     PENDING_SYNC: "quarry_pending_sync_queue",
     SETTINGS: "quarry_system_settings"
   },
   DEFAULT_MAP_CENTER: [14.8824, 102.0135],
-  AUTO_SYNC_INTERVAL_MS: 30000
+  AUTO_SYNC_INTERVAL_MS: 30000,
+  API_TIMEOUT_MS: 12000,
+  MAX_SYNC_ATTEMPTS_BEFORE_WARNING: 5
 };
 
 window.CONFIG = CONFIG;
@@ -141,31 +144,13 @@ class CameraEngine {
   constructor() {
     this.currentPosition = null;
     this.mediaStream = null;
-    this.initGPS();
   }
 
-  // เริ่มติดตามพิกัด GPS
-  initGPS() {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        pos => { this.currentPosition = pos.coords; },
-        err => { console.warn("GPS Warning:", err.message); },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-      );
-
-      navigator.geolocation.watchPosition(
-        pos => { this.currentPosition = pos.coords; },
-        err => { console.warn("GPS Watch Warning:", err.message); },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
-      );
-    }
-  }
-
-  // ดึงพิกัดล่าสุด
+  // ขอพิกัดจากโทรศัพท์เฉพาะตอนถ่ายรูป ไม่มีการติดตามตำแหน่งต่อเนื่อง
   async getFreshGPS() {
     return new Promise((resolve) => {
       if (!("geolocation" in navigator)) {
-        resolve({ lat: 14.8824, lng: 102.0135, accuracy: 5, isMock: true });
+        resolve({ lat: null, lng: null, accuracy: null, isAvailable: false });
         return;
       }
 
@@ -177,30 +162,14 @@ class CameraEngine {
             lng: Number(pos.coords.longitude.toFixed(6)),
             accuracy: Math.round(pos.coords.accuracy || 5),
             timestamp: new Date().toISOString(),
-            isMock: false
+            isAvailable: true
           });
         },
         err => {
           console.warn("GPS fallback used:", err.message);
-          if (this.currentPosition) {
-            resolve({
-              lat: Number(this.currentPosition.latitude.toFixed(6)),
-              lng: Number(this.currentPosition.longitude.toFixed(6)),
-              accuracy: Math.round(this.currentPosition.accuracy || 10),
-              timestamp: new Date().toISOString(),
-              isMock: false
-            });
-          } else {
-            resolve({
-              lat: 14.882400,
-              lng: 102.013500,
-              accuracy: 10,
-              timestamp: new Date().toISOString(),
-              isMock: true
-            });
-          }
+          resolve({ lat: null, lng: null, accuracy: null, timestamp: new Date().toISOString(), isAvailable: false });
         },
-        { enableHighAccuracy: true, timeout: 4000, maximumAge: 10000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
   }
@@ -241,7 +210,7 @@ class CameraEngine {
         <!-- Top Bar -->
         <div class="p-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between z-10">
           <div>
-            <span class="text-xs font-black text-amber-400 uppercase tracking-wider">
+            <span class="text-xs font-black text-blue-400 uppercase tracking-wider">
               ${metadata.stepType === 'load' ? '📍 จุดรับหิน' : (metadata.stepType === 'dump' ? '🏁 จุดเทหิน' : '🚜 ตักหิน')}
             </span>
             <p class="text-xs text-slate-300 font-bold">${metadata.vehicleCode || ''} • ${metadata.driverName || ''}</p>
@@ -255,7 +224,7 @@ class CameraEngine {
           
           <!-- Live Watermark Overlay Tag -->
           <div class="absolute bottom-4 left-4 right-4 bg-slate-950/80 backdrop-blur-sm border border-slate-700/80 rounded-2xl p-3 text-xs space-y-1">
-            <div class="flex items-center justify-between text-amber-400 font-bold">
+            <div class="flex items-center justify-between text-blue-400 font-bold">
               <span>🕒 กำลังจับเวลาสด...</span>
               <span id="cam-gps-live" class="text-emerald-400 font-mono">📍 GPS กำลังจับสัญญาณ...</span>
             </div>
@@ -270,8 +239,8 @@ class CameraEngine {
           </button>
           
           <!-- Big Shutter Button -->
-          <button id="cam-shutter-btn" class="w-20 h-20 rounded-full bg-white border-4 border-amber-500 shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
-            <div class="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center">
+          <button id="cam-shutter-btn" class="w-20 h-20 rounded-full bg-white border-4 border-blue-500 shadow-2xl flex items-center justify-center active:scale-90 transition-transform">
+            <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
               <span class="text-2xl">📸</span>
             </div>
           </button>
@@ -311,7 +280,7 @@ class CameraEngine {
       // ดึง GPS คู่ขนาน
       let liveGps = await this.getFreshGPS();
       const gpsLabel = document.getElementById('cam-gps-live');
-      if (gpsLabel) gpsLabel.innerText = `📍 ${liveGps.lat}, ${liveGps.lng}`;
+      if (gpsLabel) gpsLabel.innerText = liveGps.isAvailable ? `📍 ${liveGps.lat}, ${liveGps.lng}` : '📍 กรุณาอนุญาตตำแหน่ง';
 
       // ปุ่มปิด
       document.getElementById('close-cam-btn').onclick = () => {
@@ -429,7 +398,7 @@ class CameraEngine {
 
   applyWatermark(img, metadata, gps) {
     const canvas = document.createElement('canvas');
-    const MAX_WIDTH = 1280;
+    const MAX_WIDTH = 960;
     const scale = Math.min(1, MAX_WIDTH / img.width);
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
@@ -449,7 +418,7 @@ class CameraEngine {
     ctx.fillRect(0, bannerY, canvas.width, bannerHeight);
 
     // เส้นขอบสีส้ม/เหลือง
-    ctx.fillStyle = '#f59e0b';
+    ctx.fillStyle = '#2563eb';
     ctx.fillRect(0, bannerY, canvas.width, 6);
 
     const baseFontSize = Math.max(18, Math.round(canvas.width * 0.024));
@@ -465,7 +434,7 @@ class CameraEngine {
                      (metadata.stepType === 'dump' ? '🏁 [จุดเทหิน / ส่งมอบ]' : '🚜 [ตักหินแม็คโคร]');
     
     const badgeColor = metadata.stepType === 'load' ? '#3b82f6' : 
-                      (metadata.stepType === 'dump' ? '#10b981' : '#f59e0b');
+                      (metadata.stepType === 'dump' ? '#10b981' : '#2563eb');
 
     // บรรทัดที่ 1: สถานะและเวลา
     ctx.font = `bold ${baseFontSize * 1.3}px 'Sarabun', -apple-system, sans-serif`;
@@ -488,10 +457,12 @@ class CameraEngine {
     ctx.font = `${baseFontSize * 0.95}px 'Sarabun', -apple-system, sans-serif`;
     const roundText = metadata.roundNumber ? `รอบที่ ${metadata.roundNumber}` : '';
     const jobText = metadata.jobName ? ` [${metadata.jobName}]` : '';
-    const gpsText = `🌐 พิกัด: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`;
+    const gpsText = gps && gps.isAvailable
+      ? `🌐 พิกัดโทรศัพท์: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`
+      : '🌐 พิกัดโทรศัพท์: ไม่ได้รับอนุญาต/ไม่พบสัญญาณ';
     ctx.fillText(`${roundText}${jobText}  •  ${gpsText}`, 20, bannerY + (bannerHeight * 0.82));
 
-    return canvas.toDataURL('image/jpeg', 0.85);
+    return canvas.toDataURL('image/jpeg', 0.72);
   }
 }
 
@@ -510,6 +481,9 @@ class QuarryStore {
     this.pendingSyncQueue = [];
     this.listeners = [];
     this.isSyncing = false;
+    this.cloudStatus = 'unknown';
+    this.lastSyncAt = null;
+    this.lastSyncError = null;
   }
 
   async init() {
@@ -521,6 +495,11 @@ class QuarryStore {
       } catch (e) {
         console.error("Failed to parse cached master data", e);
       }
+    }
+
+    if (!this.masterData && window.EMBEDDED_SEED_DATA) {
+      this.masterData = window.EMBEDDED_SEED_DATA;
+      this.saveMasterData();
     }
 
     if (!this.masterData) {
@@ -535,13 +514,93 @@ class QuarryStore {
     }
 
     // 2. โหลดรายการ Trips และ Excavator Logs
-    this.trips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]');
+    this.trips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]').map(trip => {
+      const { loadPhotoBase64, dumpPhotoBase64, ...cleanTrip } = trip;
+      return cleanTrip;
+    });
+    // ปรับยอดเดิมในเครื่องให้เป็นเรทต่อตัน × พิกัดรถ
+    this.trips = this.trips.map(trip => ({
+      ...trip,
+      amount: this.calculateTruckRate(trip.jobTypeId, Number(trip.capacityTon) || 0)
+    }));
+    // ล้างเฉพาะรูปเต็มที่เวอร์ชันเก่าเคยเก็บซ้ำในประวัติ ไม่ลบข้อมูลเที่ยว
+    try { localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips)); } catch (e) { console.warn('Trip history cleanup deferred:', e.message); }
     this.excavatorLogs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS) || '[]');
     this.pendingSyncQueue = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.PENDING_SYNC) || '[]');
 
+    // แสดงหน้าจอจาก cache ทันที แล้วค่อยอัปเดตข้อมูล Cloud เบื้องหลัง
+    this.refreshMasterDataFromCloud().then(() => this.notify());
+
     // 3. เริ่มระบบ Auto Sync เบื้องหลัง
     setInterval(() => this.processSyncQueue(), CONFIG.AUTO_SYNC_INTERVAL_MS);
+    window.addEventListener('online', () => {
+      this.cloudStatus = 'connecting';
+      this.processSyncQueue();
+    });
+    window.addEventListener('offline', () => {
+      this.cloudStatus = 'offline';
+      this.notify();
+    });
+    // เริ่มซิงก์ในรอบถัดไป เพื่อไม่ให้การแจ้งสถานะของ Cloud แทรกระหว่าง
+    // การรีเซ็ตหน้าจอคนขับหลังปิดงานรอบหนึ่ง
+    setTimeout(() => this.processSyncQueue(), 0);
     this.notify();
+  }
+
+  async apiRequest(payload, timeoutMs = CONFIG.API_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ ...payload, appVersion: CONFIG.VERSION }),
+        signal: controller.signal,
+        redirect: 'follow'
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (!result || result.status !== 'success') {
+        throw new Error(result && result.message ? result.message : 'Cloud API error');
+      }
+      this.cloudStatus = 'online';
+      this.lastSyncError = null;
+      return result;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async refreshMasterDataFromCloud() {
+    if (!navigator.onLine || !CONFIG.API_URL) {
+      this.cloudStatus = 'offline';
+      return false;
+    }
+    try {
+      this.cloudStatus = 'connecting';
+      const result = await this.apiRequest({ action: 'getMasterData' });
+      if (result.data && Array.isArray(result.data.trucks) && result.data.trucks.length) {
+        const cached = this.masterData || {};
+        const validTrucks = result.data.trucks.filter(x => x.id && x.code && Number(x.capacity_ton) > 0);
+        const validExcavators = result.data.excavators.filter(x => x.id && x.code);
+        const validDrivers = result.data.drivers.filter(x => x.id && x.name && x.role);
+        const validRates = result.data.job_rates.filter(x => x.id && x.name);
+        this.masterData = {
+          trucks: validTrucks.length ? validTrucks : (cached.trucks || []),
+          excavators: validExcavators.length ? validExcavators : (cached.excavators || []),
+          drivers: validDrivers.length ? validDrivers : (cached.drivers || []),
+          job_rates: validRates.length ? validRates : (cached.job_rates || [])
+        };
+        localStorage.setItem(CONFIG.STORAGE_KEYS.MASTER_DATA, JSON.stringify(this.masterData));
+      }
+      this.lastSyncAt = new Date().toISOString();
+      return true;
+    } catch (error) {
+      this.cloudStatus = navigator.onLine ? 'error' : 'offline';
+      this.lastSyncError = error.name === 'AbortError' ? 'หมดเวลารอระบบกลาง' : error.message;
+      console.warn('Using cached master data:', this.lastSyncError);
+      return false;
+    }
   }
 
   // Subscribe state changes
@@ -586,23 +645,32 @@ class QuarryStore {
     const job = rates.find(r => r.id === jobRateId);
     if (!job) return 0;
 
-    if (capacityTon >= 60) return job.rate_60_ton || 0;
-    if (capacityTon >= 45) return job.rate_45_ton || 0;
-    return job.rate_30_ton || 0;
+    const ratePerTon = capacityTon >= 60
+      ? (job.rate_60_ton || 0)
+      : (capacityTon >= 45 ? (job.rate_45_ton || 0) : (job.rate_30_ton || 0));
+    return ratePerTon * capacityTon;
   }
 
   // -------------------------------------------------------------
   // Truck Trips Methods
   // -------------------------------------------------------------
   saveTrip(tripData) {
-    const existingIndex = this.trips.findIndex(t => t.id === tripData.id);
+    // รูปเต็มเก็บเฉพาะในคิวส่ง Cloud ไม่เก็บซ้ำในประวัติ LocalStorage
+    const { loadPhotoBase64, dumpPhotoBase64, ...localTrip } = tripData;
+    const existingIndex = this.trips.findIndex(t => t.id === localTrip.id);
     if (existingIndex >= 0) {
-      this.trips[existingIndex] = { ...this.trips[existingIndex], ...tripData };
+      this.trips[existingIndex] = { ...this.trips[existingIndex], ...localTrip };
     } else {
-      this.trips.unshift(tripData);
+      this.trips.unshift(localTrip);
     }
 
-    localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    } catch (err) {
+      // เก็บประวัติล่าสุดก่อน หากเครื่องมีข้อมูลเก่าจนพื้นที่เต็ม
+      this.trips = this.trips.slice(0, 200);
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
+    }
     
     // เพิ่มเข้าคิวซิงค์ขึ้น Cloud
     this.queueSync('saveTrip', tripData);
@@ -665,9 +733,16 @@ class QuarryStore {
       id: 'SYNC_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
       action: action,
       payload: payload,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      attempts: 0,
+      lastError: null
     });
-    localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+    } catch (err) {
+      // รูปยังอยู่ในหน่วยความจำและจะส่งทันทีเมื่อออนไลน์ แม้พื้นที่ถาวรของเบราว์เซอร์เต็ม
+      console.warn('Pending photo queue kept in memory:', err.message);
+    }
     this.processSyncQueue();
   }
 
@@ -683,29 +758,46 @@ class QuarryStore {
           action: item.action,
           ...item.payload
         };
-
-        const resp = await fetch(CONFIG.API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(bodyData)
-        });
-
-        const resJson = await resp.json();
-        if (resJson && resJson.status === 'success') {
-          // ซิงค์สำเร็จ นำออกจากคิว
-          this.pendingSyncQueue.shift();
-          localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
-        } else {
-          console.warn("Sync failed for item, will retry later:", resJson);
-          break;
+        item.attempts = (item.attempts || 0) + 1;
+        const resJson = await this.apiRequest(bodyData);
+        // Backend คำนวณยอดใหม่เสมอ จึงอัปเดต local record ให้ตรงกับ Cloud
+        if (item.action === 'saveTrip' && typeof resJson.amount === 'number') {
+          const trip = this.trips.find(t => t.id === item.payload.id);
+          if (trip) trip.amount = resJson.amount;
+          localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips));
         }
+        if (item.action === 'saveExcavatorLog' && typeof resJson.amount === 'number') {
+          const log = this.excavatorLogs.find(l => l.id === item.payload.id);
+          if (log) log.amount = resJson.amount;
+          localStorage.setItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS, JSON.stringify(this.excavatorLogs));
+        }
+        this.pendingSyncQueue.shift();
+        this.lastSyncAt = new Date().toISOString();
+        localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
       }
     } catch (e) {
-      console.warn("Cloud sync network error, queue kept for offline retry:", e);
+      const item = this.pendingSyncQueue[0];
+      if (item) {
+        item.lastError = e.name === 'AbortError' ? 'หมดเวลารอระบบกลาง' : e.message;
+        localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, JSON.stringify(this.pendingSyncQueue));
+      }
+      this.cloudStatus = navigator.onLine ? 'error' : 'offline';
+      this.lastSyncError = item ? item.lastError : e.message;
+      console.warn("Cloud sync error; queue retained:", this.lastSyncError);
     } finally {
       this.isSyncing = false;
       this.notify();
     }
+  }
+
+  getSyncStatus() {
+    return {
+      status: this.cloudStatus,
+      pending: this.pendingSyncQueue.length,
+      lastSyncAt: this.lastSyncAt,
+      lastError: this.lastSyncError,
+      needsAttention: this.pendingSyncQueue.some(x => (x.attempts || 0) >= CONFIG.MAX_SYNC_ATTEMPTS_BEFORE_WARNING)
+    };
   }
 
   // -------------------------------------------------------------
@@ -804,6 +896,7 @@ class AuthService {
   constructor() {
     this.currentUser = null;
     this.currentShift = null;
+    this.workMode = localStorage.getItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE) || null;
     this.loadSession();
   }
 
@@ -836,29 +929,34 @@ class AuthService {
   }
 
   // เข้าสู่ระบบด้วย เบอร์โทร/ชื่อ และ PIN
-  login(identifier, pin) {
-    const drivers = window.quarryStore.getDrivers();
-    const cleanId = (identifier || '').trim().replace(/[-\s]/g, '');
-
-    // ค้นหาผู้ใช้จากเบอร์โทร หรือ ID หรือชื่อ
-    const user = drivers.find(d => {
-      const p = (d.phone || '').replace(/[-\s]/g, '');
-      return p === cleanId || d.id === identifier || d.name.includes(identifier) || d.nickname === identifier;
-    });
-
-    if (!user) {
-      return { success: false, message: "ไม่พบข้อมูลพนักงานในระบบ (กรุณาตรวจสอบเบอร์โทรหรือชื่อ)" };
+  async login(identifier, pin, selectedRole = 'driver') {
+    try {
+      const result = await window.quarryStore.apiRequest({ action: 'login', identifier, pin }, 30000);
+      this.currentUser = result.user;
+      const actualRole = this.currentUser.role;
+      const roleMatches = selectedRole === 'driver'
+        ? ['truck_driver', 'excavator_operator'].includes(actualRole)
+        : actualRole === selectedRole;
+      if (!roleMatches) {
+        this.currentUser = null;
+        return { success: false, message: 'บัญชีนี้ไม่ตรงกับประเภทผู้ใช้งานที่เลือก' };
+      }
+      this.workMode = selectedRole === 'driver' ? null : actualRole;
+      localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE);
+      localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
+      return { success: true, user: this.currentUser };
+    } catch (error) {
+      return { success: false, message: error.message || 'เข้าสู่ระบบไม่สำเร็จ' };
     }
+  }
 
-    // ตรวจสอบ PIN (ถ้ามีกำหนดไว้)
-    const expectedPin = user.pin || "1234";
-    if (pin && pin !== expectedPin && pin !== "9999") {
-      return { success: false, message: "รหัส PIN ไม่ถูกต้อง" };
-    }
+  getWorkMode() { return this.workMode; }
 
-    this.currentUser = user;
-    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
-    return { success: true, user: this.currentUser };
+  selectWorkMode(mode) {
+    if (!['truck_driver', 'excavator_operator'].includes(mode)) return false;
+    this.workMode = mode;
+    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE, mode);
+    return true;
   }
 
   // Quick Login สำหรับทดสอบหน้างาน
@@ -894,11 +992,26 @@ class AuthService {
       date: new Date().toISOString().split('T')[0]
     };
     localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT, JSON.stringify(this.currentShift));
+    window.quarryStore.queueSync('startShift', {
+      ...this.currentShift,
+      userId: this.currentUser.id,
+      userName: this.currentUser.name,
+      role: this.currentUser.role,
+      appVersion: CONFIG.VERSION
+    });
     return this.currentShift;
   }
 
   // ปิดกะประจำวัน
   endShift() {
+    if (this.currentShift) {
+      window.quarryStore.queueSync('endShift', {
+        shiftId: this.currentShift.shiftId,
+        driverName: this.currentUser ? this.currentUser.name : this.currentShift.driverName,
+        endedAt: new Date().toISOString(),
+        appVersion: CONFIG.VERSION
+      });
+    }
     this.currentShift = null;
     localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
   }
@@ -906,8 +1019,10 @@ class AuthService {
   logout() {
     this.currentUser = null;
     this.currentShift = null;
+    this.workMode = null;
     localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_USER);
     localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
+    localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_WORK_MODE);
   }
 }
 
@@ -1123,169 +1238,109 @@ window.quarryAI = new QuarryAIEngine();
 
   <!-- UI Components -->
   <script>
-/**
- * หน้าจอเข้าสู่ระบบและเลือกสิทธิ์ (Login & Role Selection Component)
- */
+/** หน้าเข้าสู่ระบบ: เลือกบทบาท แล้วใช้บัญชีส่วนตัว */
 class LoginView {
-  render() {
-    const drivers = window.quarryStore.getDrivers();
-    const truckDrivers = drivers.filter(d => d.role === 'truck_driver');
-    const excOperators = drivers.filter(d => d.role === 'excavator_operator');
+  constructor() {
+    this.selectedRole = 'driver';
+  }
 
+  render() {
     return `
       <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
         <div class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-          
-          <!-- Header -->
-          <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-6 text-slate-950 text-center relative">
-            <div class="inline-flex p-3 bg-slate-950/10 rounded-2xl mb-2">
-              <i data-lucide="truck" class="w-10 h-10 text-slate-950"></i>
-            </div>
-            <h1 class="text-2xl font-black tracking-tight">ระบบบริหารงานโรงโม่</h1>
-            <p class="text-sm font-medium text-slate-900/80 mt-1">บันทึกรอบวิ่ง • พิกัด GPS • คำนวณเที่ยวสะสม</p>
+          <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-slate-950 text-center">
+            <div class="inline-flex p-3 bg-slate-950/10 rounded-2xl mb-2"><i data-lucide="truck" class="w-10 h-10"></i></div>
+            <h1 class="text-2xl font-black">ระบบบริหารงานโรงโม่</h1>
+            <p class="text-sm font-medium text-slate-900/80 mt-1">เข้าสู่ระบบด้วยบัญชีของตนเอง</p>
           </div>
 
-          <!-- Content Body -->
-          <div class="p-6 space-y-6">
-            
-            <!-- Tab เลือกประเภทการล็อกอิน -->
-            <div class="flex border-b border-slate-700 pb-2">
-              <button onclick="loginView.setTab('quick')" id="tab-quick-btn" class="flex-1 py-2 text-center font-bold text-amber-400 border-b-2 border-amber-400">
-                🚀 เข้าด่วน (เลือกชื่อ)
-              </button>
-              <button onclick="loginView.setTab('phone')" id="tab-phone-btn" class="flex-1 py-2 text-center font-bold text-slate-400 hover:text-slate-200">
-                📱 เบอร์โทร / PIN
-              </button>
-            </div>
-
-            <!-- Panel 1: Quick Select Login -->
-            <div id="quick-login-panel" class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  1. เลือกคนขับ / ผู้ใช้งาน
-                </label>
-                <select id="quick-driver-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                  <optgroup label="🚚 คนขับรถบรรทุก (สิบล้อ)">
-                    ${truckDrivers.map(d => `<option value="${d.id}">🚚 ${d.nickname ? '[' + d.nickname + '] ' : ''}${d.name} (${d.assigned_vehicle || 'รถสิบล้อ'})</option>`).join('')}
-                  </optgroup>
-                  <optgroup label="🚜 คนขับรถขุด / แม็คโคร">
-                    ${excOperators.map(d => `<option value="${d.id}">🚜 ${d.nickname ? '[' + d.nickname + '] ' : ''}${d.name} (${d.assigned_vehicle || 'แม็คโคร'})</option>`).join('')}
-                  </optgroup>
-                  <optgroup label="💼 ผู้บริหาร / หัวหน้างาน">
-                    <option value="SUP_1">📋 หัวหน้างานหน้างาน (Supervisor)</option>
-                    <option value="ADMIN_1">💼 ผู้บริหารโรงโม่ (Admin/Owner)</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  2. รหัส PIN (ค่าเริ่มต้น: 1234 หรือ 9999)
-                </label>
-                <input type="password" id="quick-pin-input" value="1234" maxlength="4" placeholder="1234" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-amber-400 focus:ring-2 focus:ring-amber-500 focus:outline-none">
-              </div>
-
-              <button onclick="loginView.handleQuickLogin()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
-                <i data-lucide="log-in" class="w-5 h-5"></i>
-                เข้าสู่ระบบทันที
-              </button>
-            </div>
-
-            <!-- Panel 2: Phone Login -->
-            <div id="phone-login-panel" class="space-y-4 hidden">
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  เบอร์โทรศัพท์มือถือ
-                </label>
-                <input type="tel" id="phone-input" placeholder="เช่น 065-6348605" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  รหัส PIN 4 หลัก
-                </label>
-                <input type="password" id="phone-pin-input" maxlength="4" placeholder="1234" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-amber-400 focus:ring-2 focus:ring-amber-500 focus:outline-none">
-              </div>
-              <button onclick="loginView.handlePhoneLogin()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-slate-950 text-lg font-black rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
-                <i data-lucide="log-in" class="w-5 h-5"></i>
-                เข้าสู่ระบบ
-              </button>
-            </div>
-
-            <!-- Fast Role Switcher Buttons for Demo -->
-            <div class="pt-4 border-t border-slate-700/80">
-              <p class="text-xs text-slate-400 text-center mb-3 font-semibold">⚡ ปุ่มทดสอบสิทธิ์ด่วน (Fast Role Switch):</p>
-              <div class="grid grid-cols-2 gap-2">
-                <button onclick="loginView.quickRole('truck_driver')" class="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5 transition">
-                  🚚 คนขับรถสิบล้อ
-                </button>
-                <button onclick="loginView.quickRole('excavator_operator')" class="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5 transition">
-                  🚜 คนขับแม็คโคร
-                </button>
-                <button onclick="loginView.quickRole('supervisor')" class="p-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5 transition">
-                  📋 หัวหน้างาน
-                </button>
-                <button onclick="loginView.quickRole('admin')" class="p-2.5 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-bold text-slate-950 flex items-center justify-center gap-1.5 transition">
-                  💼 ผู้บริหาร (Admin)
-                </button>
+          <div class="p-6 space-y-5">
+            <div>
+              <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">1. เลือกประเภทผู้ใช้งาน</p>
+              <div class="grid grid-cols-3 gap-2" id="role-buttons">
+                ${this.roleButton('driver', '🚚', 'พนักงานขับรถ')}
+                ${this.roleButton('supervisor', '📋', 'หัวหน้างาน')}
+                ${this.roleButton('admin', '💼', 'ผู้บริหาร')}
               </div>
             </div>
 
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">2. เบอร์โทรหรือรหัสพนักงาน</label>
+              <input type="text" id="login-identifier" autocomplete="username" placeholder="เช่น 0656348605" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <p id="login-account-hint" class="mt-2 text-xs text-blue-300">ใช้เบอร์โทร 10 หลักหรือรหัสพนักงานของตนเอง</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">3. รหัส PIN</label>
+              <input type="password" id="login-pin" maxlength="4" inputmode="numeric" autocomplete="current-password" placeholder="••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-bold tracking-widest text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" onkeydown="if(event.key==='Enter') loginView.handleLogin()">
+            </div>
+
+            <button id="login-button" onclick="loginView.handleLogin()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 text-slate-950 text-lg font-black rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+              <i data-lucide="log-in" class="w-5 h-5"></i> เข้าสู่ระบบ
+            </button>
+            <p id="login-error" class="hidden text-sm text-red-300 bg-red-950/40 border border-red-900 rounded-xl p-3"></p>
           </div>
 
-          <!-- Footer -->
           <div class="bg-slate-950 p-4 text-center border-t border-slate-800">
-            <p class="text-xs text-slate-500">ข้อมูลเชื่อมต่อ Google Sheets & Google Drive อัตโนมัติ</p>
+            <p class="text-xs text-slate-500">หลังเข้าสู่ระบบ พนักงานขับรถจึงเลือกประเภทรถและหมายเลขรถ</p>
           </div>
-
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
-  setTab(tab) {
-    const qPanel = document.getElementById('quick-login-panel');
-    const pPanel = document.getElementById('phone-login-panel');
-    const qBtn = document.getElementById('tab-quick-btn');
-    const pBtn = document.getElementById('tab-phone-btn');
+  roleButton(role, icon, label) {
+    const active = this.selectedRole === role;
+    return `<button data-role="${role}" onclick="loginView.selectRole('${role}')" class="role-button min-h-20 p-2 rounded-xl border text-xs font-bold transition ${active ? 'bg-blue-500 border-blue-400 text-slate-950' : 'bg-slate-900 border-slate-700 text-slate-300'}"><span class="block text-2xl mb-1">${icon}</span>${label}</button>`;
+  }
 
-    if (tab === 'quick') {
-      qPanel.classList.remove('hidden');
-      pPanel.classList.add('hidden');
-      qBtn.className = "flex-1 py-2 text-center font-bold text-amber-400 border-b-2 border-amber-400";
-      pBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-slate-200";
+  selectRole(role) {
+    this.selectedRole = role;
+    document.querySelectorAll('.role-button').forEach(button => {
+      const active = button.dataset.role === role;
+      button.className = `role-button min-h-20 p-2 rounded-xl border text-xs font-bold transition ${active ? 'bg-blue-500 border-blue-400 text-slate-950' : 'bg-slate-900 border-slate-700 text-slate-300'}`;
+    });
+    document.getElementById('login-error')?.classList.add('hidden');
+    const identifier = document.getElementById('login-identifier');
+    const hint = document.getElementById('login-account-hint');
+    if (role === 'supervisor') {
+      identifier.value = 'SUP_1';
+      hint.textContent = 'บัญชีหัวหน้างาน: SUP_1';
+    } else if (role === 'admin') {
+      identifier.value = 'ADMIN_1';
+      hint.textContent = 'บัญชีผู้บริหาร: ADMIN_1';
     } else {
-      qPanel.classList.add('hidden');
-      pPanel.classList.remove('hidden');
-      pBtn.className = "flex-1 py-2 text-center font-bold text-amber-400 border-b-2 border-amber-400";
-      qBtn.className = "flex-1 py-2 text-center font-bold text-slate-400 hover:text-slate-200";
+      if (identifier.value === 'SUP_1' || identifier.value === 'ADMIN_1') identifier.value = '';
+      hint.textContent = 'ใช้เบอร์โทร 10 หลักหรือรหัสพนักงานของตนเอง';
     }
   }
 
-  handleQuickLogin() {
-    const driverId = document.getElementById('quick-driver-select').value;
-    const pin = document.getElementById('quick-pin-input').value;
-    const res = window.authService.login(driverId, pin);
-    if (res.success) {
-      window.app.route();
-    } else {
-      alert(res.message);
-    }
-  }
-
-  handlePhoneLogin() {
-    const phone = document.getElementById('phone-input').value;
-    const pin = document.getElementById('phone-pin-input').value;
-    const res = window.authService.login(phone, pin);
-    if (res.success) {
-      window.app.route();
-    } else {
-      alert(res.message);
-    }
-  }
-
-  quickRole(role) {
-    window.authService.quickLoginAs(role);
+  async handleLogin() {
+    const typedIdentifier = document.getElementById('login-identifier').value.trim();
+    // มือถือบางรุ่นไม่คงค่าที่เติมด้วยสคริปต์ จึงกำหนดบัญชีตามบทบาทซ้ำตอนกดเข้าสู่ระบบ
+    const identifier = typedIdentifier || (this.selectedRole === 'supervisor' ? 'SUP_1' : (this.selectedRole === 'admin' ? 'ADMIN_1' : ''));
+    const pin = document.getElementById('login-pin').value;
+    const errorBox = document.getElementById('login-error');
+    if (!identifier || !pin) return this.showError('กรุณากรอกเบอร์โทรหรือรหัสพนักงาน และ PIN');
+    this.setBusy(true);
+    const result = await window.authService.login(identifier, pin, this.selectedRole);
+    this.setBusy(false);
+    if (!result.success) return this.showError(result.message);
+    errorBox.classList.add('hidden');
     window.app.route();
+  }
+
+  showError(message) {
+    const box = document.getElementById('login-error');
+    box.textContent = message;
+    box.classList.remove('hidden');
+  }
+
+  setBusy(busy) {
+    const button = document.getElementById('login-button');
+    button.disabled = busy;
+    button.classList.toggle('opacity-60', busy);
+    button.innerHTML = busy ? '<span class="inline-block w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span> กำลังตรวจสอบ...' : '<i data-lucide="log-in" class="w-5 h-5"></i> เข้าสู่ระบบ';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -1309,6 +1364,7 @@ class DriverView {
     // Filter สำหรับดูประวัติย้อนหลัง
     this.historyFromDate = '';
     this.historyToDate = '';
+    this.isCompletingRound = false;
   }
 
   render() {
@@ -1335,12 +1391,12 @@ class DriverView {
         <!-- Top Bar -->
         <div class="flex items-center justify-between py-3 border-b border-slate-800 mb-6">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg">
+            <div class="w-10 h-10 rounded-full bg-blue-500 text-slate-950 flex items-center justify-center font-black text-lg">
               🚚
             </div>
             <div>
               <h2 class="font-bold text-base text-white">${user.name}</h2>
-              <p class="text-xs text-amber-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
+              <p class="text-xs text-blue-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
             </div>
           </div>
           <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
@@ -1360,7 +1416,7 @@ class DriverView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               เลือกรถบรรทุก (ทั้งหมด 28 คัน)
             </label>
-            <select id="shift-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="shift-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${trucks.map(t => {
                 const isBusy = activePlates.has(t.code);
                 return `<option value="${t.code}" data-capacity="${t.capacity_ton}">
@@ -1370,7 +1426,7 @@ class DriverView {
             </select>
           </div>
 
-          <button onclick="driverView.handleStartShift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <button onclick="driverView.handleStartShift()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
             <i data-lucide="play" class="w-6 h-6"></i>
             เริ่มงานประจำวันทันที
           </button>
@@ -1406,13 +1462,13 @@ class DriverView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
+              <div class="w-12 h-12 rounded-2xl bg-blue-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
                 🚚
               </div>
               <div>
                 <div class="flex items-center gap-2">
                   <span class="font-black text-base text-white">${shift.vehicleCode}</span>
-                  <span class="text-xs bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                  <span class="text-xs bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/30">
                     ${shift.capacityTon} ตัน
                   </span>
                 </div>
@@ -1442,7 +1498,7 @@ class DriverView {
           <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
             <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">จำนวนเที่ยววันนี้</p>
             <div class="flex items-baseline justify-center gap-1 mt-1">
-              <span class="text-3xl font-black text-amber-400">${todayTrips.length}</span>
+              <span class="text-3xl font-black text-blue-400">${todayTrips.length}</span>
               <span class="text-xs text-slate-400">เที่ยว</span>
             </div>
           </div>
@@ -1456,17 +1512,17 @@ class DriverView {
         </div>
 
         <!-- Main Action Zone (Work Card) -->
-        <div class="bg-slate-900 border-2 border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
+        <div class="bg-slate-900 border-2 border-blue-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
           
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <div class="flex items-center gap-2">
               <span class="flex h-3 w-3 relative">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
               </span>
               <h2 class="text-lg font-black text-white">บันทึกงาน: รอบที่ ${nextRoundNumber}</h2>
             </div>
-            <span class="text-xs font-bold px-2.5 py-1 bg-amber-500 text-slate-950 rounded-full">
+            <span class="text-xs font-bold px-2.5 py-1 bg-blue-500 text-slate-950 rounded-full">
               กำลังปฏิบัติงาน
             </span>
           </div>
@@ -1476,7 +1532,7 @@ class DriverView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               1. เลือกประเภทงานวิ่ง
             </label>
-            <select id="driver-job-select" onchange="driverView.handleJobChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="driver-job-select" onchange="driverView.handleJobChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${rates.map((r, idx) => {
                 const isSelected = (!this.activeJobId && idx === 0) || this.activeJobId === r.id ? 'selected' : '';
                 return `<option value="${r.id}" ${isSelected}>
@@ -1528,9 +1584,9 @@ class DriverView {
           </div>
 
           <!-- Big Finish Round Button -->
-          <button onclick="driverView.handleCompleteRound()" class="w-full py-4.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
+          <button onclick="driverView.handleCompleteRound()" ${this.isCompletingRound ? 'disabled' : ''} class="w-full py-4.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:scale-98 disabled:opacity-60 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
             <i data-lucide="check-circle-2" class="w-7 h-7 text-slate-950"></i>
-            <span>จบงานรอบที่ ${nextRoundNumber} (นับ 1 เที่ยว)</span>
+            <span>${this.isCompletingRound ? 'กำลังบันทึกงาน...' : `จบงานรอบที่ ${nextRoundNumber} (นับ 1 เที่ยว)`}</span>
           </button>
 
         </div>
@@ -1539,10 +1595,10 @@ class DriverView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 class="font-black text-sm text-white flex items-center gap-1.5">
-              <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
+              <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i>
               ประวัติการวิ่งย้อนหลังของฉัน
             </h3>
-            <span class="text-xs bg-slate-800 text-amber-400 font-bold px-2.5 py-1 rounded-lg">
+            <span class="text-xs bg-slate-800 text-blue-400 font-bold px-2.5 py-1 rounded-lg">
               รวม ${historyTotalTrips} เที่ยว (฿${historyTotalAmount.toLocaleString()} บ.)
             </span>
           </div>
@@ -1565,7 +1621,7 @@ class DriverView {
               <button onclick="driverView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">วันนี้</button>
               <button onclick="driverView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">7 วันล่าสุด</button>
               <button onclick="driverView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">เดือนนี้</button>
-              <button onclick="driverView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+              <button onclick="driverView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-blue-400">ทั้งหมด</button>
             </div>
           </div>
 
@@ -1578,7 +1634,7 @@ class DriverView {
             ` : filteredHistory.map(t => `
               <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                  <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-black text-xs">
+                  <span class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-black text-xs">
                     #${t.roundNumber}
                   </span>
                   <div>
@@ -1725,6 +1781,7 @@ class DriverView {
   }
 
   handleCompleteRound() {
+    if (this.isCompletingRound) return;
     if (!this.loadPhoto) {
       alert("⚠️ กรุณากดถ่ายรูป [จุดรับหิน] ก่อนครับ");
       return;
@@ -1744,6 +1801,11 @@ class DriverView {
     const jobId = jobSelect ? jobSelect.value : (this.activeJobId || 'R1');
     const jobRates = window.quarryStore.getJobRates();
     const jobObj = jobRates.find(r => r.id === jobId) || jobRates[0];
+    if (!jobObj) {
+      alert('ยังไม่พบประเภทงานวิ่ง กรุณารีเฟรชระบบแล้วลองใหม่');
+      return;
+    }
+    this.isCompletingRound = true;
     const amount = window.quarryStore.calculateTruckRate(jobObj.id, shift.capacityTon);
 
     const tripRecord = {
@@ -1760,23 +1822,30 @@ class DriverView {
       jobTypeName: jobObj.name,
       amount: amount,
       loadPhotoBase64: this.loadPhoto,
-      loadLat: this.loadGPS ? this.loadGPS.lat : 14.8824,
-      loadLng: this.loadGPS ? this.loadGPS.lng : 102.0135,
+      loadLat: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lat : '',
+      loadLng: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lng : '',
       dumpPhotoBase64: this.dumpPhoto,
-      dumpLat: this.dumpGPS ? this.dumpGPS.lat : 14.8830,
-      dumpLng: this.dumpGPS ? this.dumpGPS.lng : 102.0145
+      dumpLat: this.dumpGPS && this.dumpGPS.isAvailable ? this.dumpGPS.lat : '',
+      dumpLng: this.dumpGPS && this.dumpGPS.isAvailable ? this.dumpGPS.lng : ''
     };
 
-    window.quarryStore.saveTrip(tripRecord);
-
-    // Reset state for next round
+    // รีเซ็ตก่อนแจ้งซิงก์ เพื่อให้หน้าจอพร้อมสำหรับรอบถัดไปเสมอ
     this.loadPhoto = null;
     this.loadGPS = null;
     this.dumpPhoto = null;
     this.dumpGPS = null;
+    this.activeJobId = null;
 
-    alert(`🎉 บันทึกรอบที่ ${roundNumber} สำเร็จ!\nระบบนับรวม: ${roundNumber} เที่ยว`);
-    window.app.render();
+    try {
+      window.quarryStore.saveTrip(tripRecord);
+      this.isCompletingRound = false;
+      window.app.render();
+      alert(`🎉 บันทึกรอบที่ ${roundNumber} สำเร็จ!\nพร้อมเริ่มรอบที่ ${roundNumber + 1} ได้ทันที`);
+    } catch (err) {
+      this.isCompletingRound = false;
+      window.app.render();
+      alert('บันทึกรอบไม่สำเร็จ: ' + (err.message || err));
+    }
   }
 }
 
@@ -1817,12 +1886,12 @@ class ExcavatorView {
         <!-- Top Bar -->
         <div class="flex items-center justify-between py-3 border-b border-slate-800 mb-6">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-amber-600 text-slate-950 flex items-center justify-center font-black text-lg">
+            <div class="w-10 h-10 rounded-full bg-blue-600 text-slate-950 flex items-center justify-center font-black text-lg">
               🚜
             </div>
             <div>
               <h2 class="font-bold text-base text-white">${user.name}</h2>
-              <p class="text-xs text-amber-400 font-medium">คนขับรถขุด / แม็คโครประจำโรงโม่</p>
+              <p class="text-xs text-blue-400 font-medium">คนขับรถขุด / แม็คโครประจำโรงโม่</p>
             </div>
           </div>
           <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
@@ -1842,7 +1911,7 @@ class ExcavatorView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               เลือกรถแม็คโคร (ทั้งหมด 20 คัน)
             </label>
-            <select id="shift-excavator-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="shift-excavator-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${excavators.map(e => `
                 <option value="${e.code}">
                   ${e.code} ${e.is_contractor ? '[ทีม ผรม.]' : ''} ${e.status === 'repair' ? '⚠️ [ซ่อม]' : ''}
@@ -1851,7 +1920,7 @@ class ExcavatorView {
             </select>
           </div>
 
-          <button onclick="excavatorView.handleStartShift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <button onclick="excavatorView.handleStartShift()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
             <i data-lucide="play" class="w-6 h-6"></i>
             เปิดงานประจำวัน
           </button>
@@ -1890,7 +1959,7 @@ class ExcavatorView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl bg-amber-600 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
+              <div class="w-12 h-12 rounded-2xl bg-blue-600 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
                 🚜
               </div>
               <div>
@@ -1924,7 +1993,7 @@ class ExcavatorView {
           <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
             <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">จำนวนคันที่ตักวันนี้</p>
             <div class="flex items-baseline justify-center gap-1 mt-1">
-              <span class="text-3xl font-black text-amber-400">${todayLogs.length}</span>
+              <span class="text-3xl font-black text-blue-400">${todayLogs.length}</span>
               <span class="text-xs text-slate-400">คัน</span>
             </div>
           </div>
@@ -1938,13 +2007,13 @@ class ExcavatorView {
         </div>
 
         <!-- Main Scoop Action Box -->
-        <div class="bg-slate-900 border-2 border-amber-600/40 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div class="bg-slate-900 border-2 border-blue-600/40 rounded-3xl p-5 shadow-2xl space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h2 class="text-lg font-black text-white flex items-center gap-2">
-              <i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i>
+              <i data-lucide="plus-circle" class="w-5 h-5 text-blue-500"></i>
               บันทึกการตักให้รถบรรทุก
             </h2>
-            <span class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+            <span class="text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
               ค่าตัก: ฿${defaultRate} / คัน
             </span>
           </div>
@@ -1954,7 +2023,7 @@ class ExcavatorView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               1. เลือกรถบรรทุกที่เข้ามาตักหิน (28 คัน)
             </label>
-            <select id="target-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="target-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${trucks.map(t => `
                 <option value="${t.code}">
                   🚚 ${t.code} (${t.capacity_ton} ตัน) ${t.nickname ? '• น้า' + t.nickname : ''}
@@ -1975,10 +2044,10 @@ class ExcavatorView {
                 <span class="absolute bottom-2 right-2 bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded-lg">✓ ถ่ายรูปแล้ว</span>
               </div>
               <div class="text-center mt-2">
-                <button onclick="excavatorView.captureScoopPhoto()" class="text-xs text-amber-400 underline font-bold">กดถ่ายภาพใหม่</button>
+                <button onclick="excavatorView.captureScoopPhoto()" class="text-xs text-blue-400 underline font-bold">กดถ่ายภาพใหม่</button>
               </div>
             ` : `
-              <button onclick="excavatorView.captureScoopPhoto()" class="w-full h-32 bg-amber-950/30 hover:bg-amber-900/50 border-2 border-dashed border-amber-500/60 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-amber-400 active:scale-95 transition">
+              <button onclick="excavatorView.captureScoopPhoto()" class="w-full h-32 bg-blue-950/30 hover:bg-blue-900/50 border-2 border-dashed border-blue-500/60 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-blue-400 active:scale-95 transition">
                 <i data-lucide="camera" class="w-10 h-10"></i>
                 <span class="text-sm font-black">📸 กดเปิดกล้องถ่ายสด</span>
                 <span class="text-xs text-slate-400">ปั๊มพิกัด GPS และทะเบียนรถลงบนรูป</span>
@@ -1987,7 +2056,7 @@ class ExcavatorView {
           </div>
 
           <!-- Submit Button -->
-          <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
+          <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
             <i data-lucide="check" class="w-7 h-7"></i>
             <span>บันทึกการตักสำเร็จ (+฿${defaultRate})</span>
           </button>
@@ -1997,10 +2066,10 @@ class ExcavatorView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 class="font-black text-sm text-white flex items-center gap-1.5">
-              <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
+              <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i>
               ประวัติการตักย้อนหลังของฉัน
             </h3>
-            <span class="text-xs bg-slate-800 text-amber-400 font-bold px-2.5 py-1 rounded-lg">
+            <span class="text-xs bg-slate-800 text-blue-400 font-bold px-2.5 py-1 rounded-lg">
               รวม ${historyTotalScoops} คัน (฿${historyTotalAmount.toLocaleString()} บ.)
             </span>
           </div>
@@ -2023,7 +2092,7 @@ class ExcavatorView {
               <button onclick="excavatorView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">วันนี้</button>
               <button onclick="excavatorView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">7 วันล่าสุด</button>
               <button onclick="excavatorView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">เดือนนี้</button>
-              <button onclick="excavatorView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+              <button onclick="excavatorView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-blue-400">ทั้งหมด</button>
             </div>
           </div>
 
@@ -2036,7 +2105,7 @@ class ExcavatorView {
             ` : filteredHistory.map(l => `
               <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                  <span class="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center font-black text-xs">
+                  <span class="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-black text-xs">
                     🚜
                   </span>
                   <div>
@@ -2222,7 +2291,7 @@ class AdminDashboard {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
           <div>
             <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
-              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">📊</span>
+              <span class="p-2 bg-blue-500 text-slate-950 rounded-xl">📊</span>
               ภาพรวมการทำงานประจำวัน (Live Operations)
             </h1>
             <p class="text-sm text-slate-400 mt-1">
@@ -2230,7 +2299,7 @@ class AdminDashboard {
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 rounded-xl text-sm font-black flex items-center gap-2 shadow-lg">
+            <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 text-slate-950 rounded-xl text-sm font-black flex items-center gap-2 shadow-lg">
               <i data-lucide="bot" class="w-4 h-4"></i>
               🤖 AI ผู้ช่วยอัจฉริยะ
             </button>
@@ -2239,7 +2308,7 @@ class AdminDashboard {
               รายงาน & Excel
             </button>
             <button onclick="window.app.navigate('settings')" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 border border-slate-700">
-              <i data-lucide="settings" class="w-4 h-4 text-amber-400"></i>
+              <i data-lucide="settings" class="w-4 h-4 text-blue-400"></i>
               ตั้งค่าข้อมูลหลัก
             </button>
           </div>
@@ -2280,10 +2349,10 @@ class AdminDashboard {
           <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
             <div class="flex items-center justify-between text-slate-400 mb-2">
               <span class="text-xs font-bold uppercase tracking-wider">เที่ยววิ่งสะสมวันนี้</span>
-              <span class="p-2 bg-amber-500/10 text-amber-400 rounded-xl">🏁</span>
+              <span class="p-2 bg-blue-500/10 text-blue-400 rounded-xl">🏁</span>
             </div>
             <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-black text-amber-400">${todayTrips.length}</span>
+              <span class="text-3xl font-black text-blue-400">${todayTrips.length}</span>
               <span class="text-sm font-bold text-slate-400">เที่ยว</span>
             </div>
             <p class="text-xs text-slate-400 mt-3 font-medium">เฉลี่ย ${(activeTrucksCount > 0 ? (todayTrips.length / activeTrucksCount).toFixed(1) : 0)} เที่ยว/คัน</p>
@@ -2305,16 +2374,16 @@ class AdminDashboard {
         </div>
 
         <!-- 🧠 AI Anomaly Detection & Recommendations Dashboard Section -->
-        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-blue-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div class="flex items-center gap-2.5">
-              <div class="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+              <div class="p-2 bg-blue-500/20 text-blue-400 rounded-xl border border-blue-500/30">
                 <i data-lucide="shield-alert" class="w-5 h-5"></i>
               </div>
               <div>
                 <h2 class="font-black text-lg text-white flex items-center gap-2">
                   ระบบ AI ตรวจจับความผิดปกติและคำแนะนำ (AI Insights & Anomalies)
-                  <span class="text-xs bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
+                  <span class="text-xs bg-blue-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
                     ${anomalies.length} ข้อสังเกต
                   </span>
                 </h2>
@@ -2322,7 +2391,7 @@ class AdminDashboard {
               </div>
             </div>
 
-            <button onclick="window.app.navigate('ai-copilot')" class="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1">
+            <button onclick="window.app.navigate('ai-copilot')" class="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
               เปิดหน้าต่างแชท AI <i data-lucide="chevron-right" class="w-4 h-4"></i>
             </button>
           </div>
@@ -2334,10 +2403,10 @@ class AdminDashboard {
                 ✅ ระบบตรวจสอบแล้ว ไม่พบพฤติกรรมผิดปกติในการวิ่งงาน ข้อมูล GPS และรอบวิ่งสอดคล้องสมบูรณ์
               </div>
             ` : anomalies.map(a => `
-              <div class="bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/60 bg-red-950/10' : (a.severity === 'warning' ? 'border-amber-500/50 bg-amber-950/10' : 'border-slate-800')} rounded-2xl p-4 space-y-2.5">
+              <div class="bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/60 bg-red-950/10' : (a.severity === 'warning' ? 'border-blue-500/50 bg-blue-950/10' : 'border-slate-800')} rounded-2xl p-4 space-y-2.5">
                 <div class="flex items-start justify-between">
                   <div class="flex items-center gap-2">
-                    <span class="text-xs font-black ${a.severity === 'critical' ? 'bg-red-900/60 text-red-300 border border-red-700' : (a.severity === 'warning' ? 'bg-amber-900/60 text-amber-300 border border-amber-700' : 'bg-slate-800 text-slate-300')} px-2 py-0.5 rounded-md">
+                    <span class="text-xs font-black ${a.severity === 'critical' ? 'bg-red-900/60 text-red-300 border border-red-700' : (a.severity === 'warning' ? 'bg-blue-900/60 text-blue-300 border border-blue-700' : 'bg-slate-800 text-slate-300')} px-2 py-0.5 rounded-md">
                       ${a.severity === 'critical' ? '⚠️ ตรวจสอบด่วน' : (a.severity === 'warning' ? '⚡ ข้อสังเกต' : 'ℹ️ ข้อมูล')}
                     </span>
                     <h3 class="font-bold text-sm text-white">${a.title}</h3>
@@ -2346,7 +2415,7 @@ class AdminDashboard {
 
                 <p class="text-xs text-slate-300 leading-relaxed">${a.desc}</p>
 
-                <div class="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-amber-300 space-y-1">
+                <div class="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-blue-300 space-y-1">
                   <p class="font-bold flex items-center gap-1">
                     💡 คำแนะนำที่ควรทำ:
                   </p>
@@ -2356,7 +2425,7 @@ class AdminDashboard {
                 <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
                   <span>อ้างอิง: <b class="text-slate-300">${a.vehicleCode}</b> (${a.driverName}) • ${a.timestamp}</span>
                   ${a.photoUrl ? `
-                    <button onclick="adminDashboard.viewPhoto('${a.photoUrl}', '${a.title}', '${a.vehicleCode}', '${a.timestamp}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg transition flex items-center gap-1">
+                    <button onclick="adminDashboard.viewPhoto('${a.photoUrl}', '${a.title}', '${a.vehicleCode}', '${a.timestamp}')" class="px-2.5 py-1 bg-blue-500 hover:bg-blue-400 text-slate-950 font-black rounded-lg transition flex items-center gap-1">
                       <i data-lucide="image" class="w-3 h-3"></i> ตรวจสอบรูปถ่าย
                     </button>
                   ` : ''}
@@ -2373,7 +2442,7 @@ class AdminDashboard {
           <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
               <div class="flex items-center gap-2">
-                <i data-lucide="truck" class="w-5 h-5 text-amber-400"></i>
+                <i data-lucide="truck" class="w-5 h-5 text-blue-400"></i>
                 <h2 class="font-black text-lg text-white">สถานะรถบรรทุกแบบ Real-time (28 คัน)</h2>
               </div>
               <div class="flex items-center gap-2 text-xs">
@@ -2393,7 +2462,7 @@ class AdminDashboard {
                 const totalEarn = tripsForTruck.reduce((sum, tr) => sum + (tr.amount || 0), 0);
 
                 return `
-                  <div class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/40 border-slate-800 opacity-70'} space-y-2">
+                  <div role="button" tabindex="0" onclick="adminDashboard.openTruckDetail('${t.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openTruckDetail('${t.code}')" class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/60 border-slate-800'} space-y-2 cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
                     <div class="flex items-start justify-between">
                       <div>
                         <p class="font-black text-sm text-white">${t.code}</p>
@@ -2417,9 +2486,10 @@ class AdminDashboard {
                     </div>
 
                     <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                      <span class="text-slate-400">วิ่งวันนี้: <b class="text-amber-400 font-bold">${tripsForTruck.length}</b> รอบ</span>
+                      <span class="text-slate-400">วิ่งวันนี้: <b class="text-blue-400 font-bold">${tripsForTruck.length}</b> รอบ</span>
                       <span class="text-emerald-400 font-black">฿${totalEarn.toLocaleString()}</span>
                     </div>
+                    <p class="text-[10px] text-blue-300 font-bold text-right">กดดูรายละเอียดงาน →</p>
                   </div>
                 `;
               }).join('')}
@@ -2430,7 +2500,7 @@ class AdminDashboard {
           <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
               <div class="flex items-center gap-2">
-                <i data-lucide="wrench" class="w-5 h-5 text-amber-500"></i>
+                <i data-lucide="wrench" class="w-5 h-5 text-blue-500"></i>
                 <h2 class="font-black text-lg text-white">รถขุด / แม็คโคร (20 คัน)</h2>
               </div>
             </div>
@@ -2442,7 +2512,7 @@ class AdminDashboard {
                 const isRepair = e.status === 'repair';
 
                 return `
-                  <div class="p-3 rounded-xl border ${isWorking ? 'bg-slate-950 border-amber-500/40' : (isRepair ? 'bg-red-950/20 border-red-800/30' : 'bg-slate-950/40 border-slate-800')} flex items-center justify-between text-xs">
+                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="p-3 rounded-xl border ${isWorking ? 'bg-slate-950 border-blue-500/40' : (isRepair ? 'bg-red-950/20 border-red-800/30' : 'bg-slate-950/60 border-slate-800')} flex items-center justify-between text-xs cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 transition-all">
                     <div>
                       <div class="flex items-center gap-1.5">
                         <span class="font-black text-white">${e.code}</span>
@@ -2452,8 +2522,9 @@ class AdminDashboard {
                       <p class="text-[11px] text-slate-400">${e.nickname ? 'ช่าง' + e.nickname : (e.driver_name || '-')}</p>
                     </div>
                     <div class="text-right">
-                      <p class="font-bold text-amber-400">${logsForExc.length} คัน</p>
+                      <p class="font-bold text-blue-400">${logsForExc.length} คัน</p>
                       <span class="text-[10px] text-emerald-400 font-bold">฿${(logsForExc.length * (e.rate_per_scoop || 5)).toLocaleString()}</span>
+                      <p class="text-[9px] text-blue-300 mt-1">ดูรายละเอียด →</p>
                     </div>
                   </div>
                 `;
@@ -2468,7 +2539,7 @@ class AdminDashboard {
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
               <h2 class="font-black text-lg text-white flex items-center gap-2">
-                <i data-lucide="camera" class="w-5 h-5 text-amber-400"></i>
+                <i data-lucide="camera" class="w-5 h-5 text-blue-400"></i>
                 ฟีดตรวจสอบการวิ่งสด (Trip Audit & GPS Stamp Feed)
               </h2>
               <p class="text-xs text-slate-400 mt-0.5">กดคลิกที่รูปภาพเพื่อตรวจสอบลายน้ำพิกัด GPS, วันที่, และเวลาแบบขยายใหญ่</p>
@@ -2533,7 +2604,104 @@ class AdminDashboard {
           </div>
         </div>
       </div>
+
+      <!-- Vehicle Work Detail Modal -->
+      <div id="vehicle-detail-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5">
+        <div class="bg-slate-900 border border-blue-500/40 max-w-3xl w-full max-h-[92vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+          <div class="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900">
+            <div>
+              <p class="text-[10px] text-blue-400 font-black uppercase tracking-wider">รายละเอียดรถและงาน</p>
+              <h3 id="vehicle-detail-title" class="font-black text-lg text-white">ข้อมูลรถ</h3>
+            </div>
+            <button onclick="adminDashboard.closeVehicleModal()" class="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold">✕</button>
+          </div>
+          <div id="vehicle-detail-content" class="p-4 sm:p-5 overflow-y-auto"></div>
+        </div>
+      </div>
     `;
+  }
+
+  openTruckDetail(code) {
+    const truck = window.quarryStore.getTrucks().find(t => t.code === code);
+    if (!truck) return;
+    const allTrips = window.quarryStore.getTrips({ truckPlate: code });
+    const today = new Date().toISOString().split('T')[0];
+    const todayTrips = allTrips.filter(t => t.date === today);
+    const totalToday = todayTrips.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalAll = allTrips.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const recent = allTrips.slice(0, 12);
+    this.showVehicleModal(
+      `🚚 ${truck.code}`,
+      `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          ${this.detailMetric('สถานะวันนี้', todayTrips.length ? '🟢 กำลังวิ่ง' : '⚪ จอด', todayTrips.length ? 'text-emerald-400' : 'text-slate-300')}
+          ${this.detailMetric('พิกัดรถ', `${truck.capacity_ton || 0} ตัน`, 'text-blue-400')}
+          ${this.detailMetric('เที่ยววันนี้', `${todayTrips.length} เที่ยว`, 'text-white')}
+          ${this.detailMetric('รายได้วันนี้', `฿${totalToday.toLocaleString()}`, 'text-emerald-400')}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5 text-sm">
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">คนขับประจำ</p><p class="font-bold text-white mt-1">${truck.driver_name || 'ยังไม่กำหนด'}</p><p class="text-xs text-blue-300 mt-1">ชื่อเรียก: ${truck.nickname || '-'}</p></div>
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">ข้อมูลติดต่อและยอดสะสม</p><p class="font-bold text-white mt-1">${truck.phone || '-'}</p><p class="text-xs text-emerald-400 mt-1">ทั้งหมด ${allTrips.length} เที่ยว • ฿${totalAll.toLocaleString()}</p></div>
+        </div>
+        ${this.renderTruckHistory(recent)}
+      `
+    );
+  }
+
+  openExcavatorDetail(code) {
+    const excavator = window.quarryStore.getExcavators().find(e => e.code === code);
+    if (!excavator) return;
+    const allLogs = window.quarryStore.getExcavatorLogs({ excavatorCode: code });
+    const today = new Date().toISOString().split('T')[0];
+    const todayLogs = allLogs.filter(l => l.date === today);
+    const totalToday = todayLogs.reduce((sum, l) => sum + Number(l.amount || excavator.rate_per_scoop || 0), 0);
+    const totalAll = allLogs.reduce((sum, l) => sum + Number(l.amount || excavator.rate_per_scoop || 0), 0);
+    this.showVehicleModal(
+      `🚜 ${excavator.code}`,
+      `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          ${this.detailMetric('สถานะ', excavator.status === 'repair' ? '🔴 ซ่อม' : (todayLogs.length ? '🟢 ทำงาน' : '⚪ ว่าง'), excavator.status === 'repair' ? 'text-red-400' : 'text-emerald-400')}
+          ${this.detailMetric('ตักวันนี้', `${todayLogs.length} คัน`, 'text-blue-400')}
+          ${this.detailMetric('เรทต่อตัก', `฿${excavator.rate_per_scoop || 0}`, 'text-white')}
+          ${this.detailMetric('รายได้วันนี้', `฿${totalToday.toLocaleString()}`, 'text-emerald-400')}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5 text-sm">
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">ผู้ควบคุมประจำ</p><p class="font-bold text-white mt-1">${excavator.driver_name || 'ยังไม่กำหนด'}</p><p class="text-xs text-blue-300 mt-1">ชื่อเรียก: ${excavator.nickname || '-'}</p></div>
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">ข้อมูลเพิ่มเติม</p><p class="font-bold text-white mt-1">${excavator.phone || '-'}</p><p class="text-xs text-emerald-400 mt-1">${excavator.is_contractor ? 'ทีมผู้รับเหมา' : 'ทีมประจำ'} • รวม ${allLogs.length} งาน • ฿${totalAll.toLocaleString()}</p></div>
+        </div>
+        ${this.renderExcavatorHistory(allLogs.slice(0, 12))}
+      `
+    );
+  }
+
+  detailMetric(label, value, colorClass) {
+    return `<div class="bg-slate-950 border border-slate-800 rounded-2xl p-3"><p class="text-[10px] text-slate-500 font-bold">${label}</p><p class="font-black ${colorClass} mt-1">${value}</p></div>`;
+  }
+
+  renderTruckHistory(items) {
+    if (!items.length) return '<div class="text-center py-8 text-slate-500 text-sm bg-slate-950 rounded-2xl border border-slate-800">ยังไม่มีประวัติงานของรถคันนี้</div>';
+    return `<div><h4 class="font-black text-white mb-3">ประวัติเที่ยวล่าสุด</h4><div class="space-y-2">${items.map(t => `<div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3"><div><p class="text-sm font-bold text-white">รอบ ${t.roundNumber || '-'} • ${t.jobTypeName || '-'}</p><p class="text-[11px] text-slate-400">${t.date || ''} ${t.timestamp || ''} • ${t.driverName || '-'}</p></div><p class="font-black text-emerald-400">฿${Number(t.amount || 0).toLocaleString()}</p></div>`).join('')}</div></div>`;
+  }
+
+  renderExcavatorHistory(items) {
+    if (!items.length) return '<div class="text-center py-8 text-slate-500 text-sm bg-slate-950 rounded-2xl border border-slate-800">ยังไม่มีประวัติงานของรถคันนี้</div>';
+    return `<div><h4 class="font-black text-white mb-3">ประวัติงานล่าสุด</h4><div class="space-y-2">${items.map(l => `<div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3"><div><p class="text-sm font-bold text-white">ตักให้รถ ${l.targetTruckPlate || '-'}</p><p class="text-[11px] text-slate-400">${l.date || ''} ${l.timestamp || ''} • ${l.operatorName || '-'}</p></div><p class="font-black text-emerald-400">฿${Number(l.amount || 0).toLocaleString()}</p></div>`).join('')}</div></div>`;
+  }
+
+  showVehicleModal(titleText, contentHtml) {
+    const modal = document.getElementById('vehicle-detail-modal');
+    const title = document.getElementById('vehicle-detail-title');
+    const content = document.getElementById('vehicle-detail-content');
+    if (!modal || !title || !content) return;
+    title.textContent = titleText;
+    content.innerHTML = contentHtml;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  closeVehicleModal() {
+    const modal = document.getElementById('vehicle-detail-modal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
   }
 
   viewPhoto(photoBase64, type, vehicle, timestamp) {
@@ -2603,10 +2771,10 @@ class ReportsView {
           <div class="flex items-center gap-2">
             <!-- View Mode Switcher -->
             <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800">
-              <button onclick="reportsView.setViewMode('overview')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('overview')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 สรุปภาพรวม
               </button>
-              <button onclick="reportsView.setViewMode('individual')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('individual')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 👤 เจาะลึกรายคน
               </button>
             </div>
@@ -2669,7 +2837,7 @@ class ReportsView {
             <button onclick="reportsView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">วันนี้</button>
             <button onclick="reportsView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">7 วัน</button>
             <button onclick="reportsView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-slate-300">เดือนนี้</button>
-            <button onclick="reportsView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+            <button onclick="reportsView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-blue-400">ทั้งหมด</button>
           </div>
         </div>
         
@@ -2703,7 +2871,7 @@ class ReportsView {
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
           <span class="text-xs text-slate-400 font-bold uppercase">จำนวนเที่ยวที่กรอง</span>
-          <p class="text-2xl font-black text-amber-400 mt-1">${totalTripsCount.toLocaleString()} เที่ยว</p>
+          <p class="text-2xl font-black text-blue-400 mt-1">${totalTripsCount.toLocaleString()} เที่ยว</p>
         </div>
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
           <span class="text-xs text-slate-400 font-bold uppercase">ยอดเงินค่าจ้างรวม</span>
@@ -2718,7 +2886,7 @@ class ReportsView {
       <!-- Table 1: Driver Payout Summary -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
         <h2 class="text-lg font-black text-white flex items-center gap-2">
-          <i data-lucide="users" class="w-5 h-5 text-amber-400"></i>
+          <i data-lucide="users" class="w-5 h-5 text-blue-400"></i>
           ตารางสรุปยอดค่าจ้างรายบุคคล (คลิกที่ชื่อเพื่อดูเจาะลึกได้)
         </h2>
 
@@ -2743,11 +2911,11 @@ class ReportsView {
                   <td class="p-3 font-bold text-slate-400">${idx + 1}</td>
                   <td class="p-3 font-bold text-white">${d.name}</td>
                   <td class="p-3 text-slate-400">${d.phone || '-'}</td>
-                  <td class="p-3 font-semibold text-amber-400">${d.truck || '-'}</td>
+                  <td class="p-3 font-semibold text-blue-400">${d.truck || '-'}</td>
                   <td class="p-3 text-right font-black text-white">${d.trips}</td>
                   <td class="p-3 text-right font-black text-emerald-400 text-sm">฿${d.totalAmount.toLocaleString()}</td>
                   <td class="p-3 text-center">
-                    <button onclick="reportsView.openDrilldown('${d.name}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-[11px] shadow">
+                    <button onclick="reportsView.openDrilldown('${d.name}')" class="px-2.5 py-1 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold rounded-lg text-[11px] shadow">
                       🔍 เจาะลึก
                     </button>
                   </td>
@@ -2779,17 +2947,17 @@ class ReportsView {
       <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-lg space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <div class="w-14 h-14 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-3xl shadow-md">
+            <div class="w-14 h-14 rounded-2xl bg-blue-500 text-slate-950 flex items-center justify-center font-black text-3xl shadow-md">
               👤
             </div>
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-xl font-black text-white">${this.selectedDrilldownDriver}</h2>
-                <span class="text-xs bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                <span class="text-xs bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/30">
                   ${driverObj.nickname ? 'น้า' + driverObj.nickname : 'คนขับ'}
                 </span>
               </div>
-              <p class="text-xs text-slate-400 mt-1">เบอร์โทร: <span class="text-slate-200 font-mono">${driverObj.phone || '-'}</span> | รถที่ขับ: <span class="text-amber-300 font-bold">${vehiclesUsed.join(', ') || 'ไม่มี'}</span></p>
+              <p class="text-xs text-slate-400 mt-1">เบอร์โทร: <span class="text-slate-200 font-mono">${driverObj.phone || '-'}</span> | รถที่ขับ: <span class="text-blue-300 font-bold">${vehiclesUsed.join(', ') || 'ไม่มี'}</span></p>
             </div>
           </div>
 
@@ -2812,7 +2980,7 @@ class ReportsView {
           </div>
 
           <div class="flex items-center gap-4 text-xs font-bold">
-            <span class="text-slate-300">จำนวนเที่ยว: <b class="text-amber-400 text-sm font-black">${filteredTrips.length}</b> เที่ยว</span>
+            <span class="text-slate-300">จำนวนเที่ยว: <b class="text-blue-400 text-sm font-black">${filteredTrips.length}</b> เที่ยว</span>
             <span class="text-slate-300">ยอดเงินรวม: <b class="text-emerald-400 text-sm font-black">฿${totalAmount.toLocaleString()}</b> บาท</span>
           </div>
         </div>
@@ -2821,7 +2989,7 @@ class ReportsView {
       <!-- Detailed Trip Log with Photos -->
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
         <h3 class="text-base font-black text-white flex items-center gap-2">
-          <i data-lucide="list" class="w-4 h-4 text-amber-400"></i>
+          <i data-lucide="list" class="w-4 h-4 text-blue-400"></i>
           ประวัติการวิ่งรายรอบและรูปถ่าย GPS (${filteredTrips.length} รอบ)
         </h3>
 
@@ -2844,7 +3012,7 @@ class ReportsView {
                 <tr><td colspan="8" class="p-6 text-center text-slate-500">ไม่มีประวัติการวิ่งของ ${this.selectedDrilldownDriver} ในช่วงเวลานี้</td></tr>
               ` : filteredTrips.map(t => `
                 <tr class="hover:bg-slate-800/50">
-                  <td class="p-3 font-black text-amber-400">#${t.roundNumber}</td>
+                  <td class="p-3 font-black text-blue-400">#${t.roundNumber}</td>
                   <td class="p-3 text-slate-400">${t.timestamp || t.date}</td>
                   <td class="p-3 font-bold text-white">${t.truckPlate}</td>
                   <td class="p-3 text-slate-300">${t.jobTypeName}</td>
@@ -2986,7 +3154,7 @@ class SettingsView {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
           <div>
             <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
-              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">⚙️</span>
+              <span class="p-2 bg-blue-500 text-slate-950 rounded-xl">⚙️</span>
               จัดการข้อมูลหลักและอัตราค่าจ้าง (Master Data Management)
             </h1>
             <p class="text-sm text-slate-400 mt-1">เพิ่ม / ลด / แก้ไข ข้อมูลรถ, คนขับ, เรทราคาค่าวิ่ง และเรทค่าตักของแม็คโคร</p>
@@ -3000,19 +3168,19 @@ class SettingsView {
 
         <!-- Navigation Tabs -->
         <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
-          <button onclick="settingsView.setTab('rates')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'rates' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('rates')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'rates' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             💰 เรทราคาค่าจ้าง (${rates.length})
           </button>
-          <button onclick="settingsView.setTab('trucks')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'trucks' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('trucks')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'trucks' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             🚚 รถบรรทุกสิบล้อ (${trucks.length})
           </button>
-          <button onclick="settingsView.setTab('excavators')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'excavators' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('excavators')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'excavators' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             🚜 รถขุด / แม็คโคร (${excavators.length})
           </button>
-          <button onclick="settingsView.setTab('drivers')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'drivers' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('drivers')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'drivers' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             👥 พนักงานขับรถ (${drivers.length})
           </button>
-          <button onclick="settingsView.setTab('cloud')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'cloud' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('cloud')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'cloud' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             ☁️ ซิงค์ Cloud & สำรองข้อมูล
           </button>
         </div>
@@ -3044,7 +3212,7 @@ class SettingsView {
     return `
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-black text-white">ตารางอัตราค่าจ้างต่อเที่ยว (11 รายการ)</h2>
+          <h2 class="text-lg font-black text-white">ตารางอัตราค่าจ้างต่อตัน (11 รายการ)</h2>
           <button onclick="settingsView.promptAddRate()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
             <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มประเภทงานใหม่
           </button>
@@ -3055,9 +3223,9 @@ class SettingsView {
             <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
               <tr>
                 <th class="p-3">รายการประเภทงานวิ่ง</th>
-                <th class="p-3 text-center">เรท 30 ตัน</th>
-                <th class="p-3 text-center">เรท 45 ตัน</th>
-                <th class="p-3 text-center">เรท 60 ตัน</th>
+                <th class="p-3 text-center">รถ 30 ตัน (บาท/ตัน)</th>
+                <th class="p-3 text-center">รถ 45 ตัน (บาท/ตัน)</th>
+                <th class="p-3 text-center">รถ 60 ตัน (บาท/ตัน)</th>
                 <th class="p-3 text-center">เรทแม็คโคร (บาท)</th>
                 <th class="p-3 text-right">จัดการ</th>
               </tr>
@@ -3066,12 +3234,12 @@ class SettingsView {
               ${rates.map(r => `
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${r.name}</td>
-                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_30_ton ? '฿' + r.rate_30_ton : '-'}</td>
-                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_45_ton ? '฿' + r.rate_45_ton : '-'}</td>
-                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_60_ton ? '฿' + r.rate_60_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-blue-400">${r.rate_30_ton ? '฿' + r.rate_30_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-blue-400">${r.rate_45_ton ? '฿' + r.rate_45_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-blue-400">${r.rate_60_ton ? '฿' + r.rate_60_ton : '-'}</td>
                   <td class="p-3 text-center font-semibold text-purple-400">฿${r.excavator_rate || 5}</td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.promptEditRate('${r.id}')" class="text-amber-400 hover:underline font-bold mr-2">แก้ไข</button>
+                    <button onclick="settingsView.promptEditRate('${r.id}')" class="text-blue-400 hover:underline font-bold mr-2">แก้ไข</button>
                     <button onclick="settingsView.deleteRate('${r.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
                   </td>
                 </tr>
@@ -3111,7 +3279,7 @@ class SettingsView {
               ${trucks.map(t => `
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${t.code}</td>
-                  <td class="p-3 text-center font-bold text-amber-400">${t.capacity_ton} ตัน</td>
+                  <td class="p-3 text-center font-bold text-blue-400">${t.capacity_ton} ตัน</td>
                   <td class="p-3">${t.nickname ? 'น้า' + t.nickname + ' ' : ''}${t.driver_name || '-'}</td>
                   <td class="p-3 text-slate-400">${t.phone || '-'}</td>
                   <td class="p-3 text-center">
@@ -3172,7 +3340,7 @@ class SettingsView {
                     </span>
                   </td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.promptEditExcRate('${e.id}')" class="text-amber-400 hover:underline font-bold mr-2">ปรับเรท</button>
+                    <button onclick="settingsView.promptEditExcRate('${e.id}')" class="text-blue-400 hover:underline font-bold mr-2">ปรับเรท</button>
                     <button onclick="settingsView.deleteExcavator('${e.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
                   </td>
                 </tr>
@@ -3212,10 +3380,10 @@ class SettingsView {
               ${drivers.map(d => `
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${d.name}</td>
-                  <td class="p-3 text-amber-400 font-semibold">${d.nickname || '-'}</td>
+                  <td class="p-3 text-blue-400 font-semibold">${d.nickname || '-'}</td>
                   <td class="p-3 text-slate-300">${d.phone || '-'}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.role === 'admin' ? 'bg-amber-500 text-slate-950' : (d.role === 'supervisor' ? 'bg-blue-900 text-blue-200' : 'bg-slate-800 text-slate-300')}">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.role === 'admin' ? 'bg-blue-500 text-slate-950' : (d.role === 'supervisor' ? 'bg-blue-900 text-blue-200' : 'bg-slate-800 text-slate-300')}">
                       ${d.role === 'admin' ? 'ผู้บริหาร' : (d.role === 'supervisor' ? 'หัวหน้างาน' : (d.role === 'excavator_operator' ? 'แม็คโคร' : 'คนขับสิบล้อ'))}
                     </span>
                   </td>
@@ -3237,17 +3405,17 @@ class SettingsView {
     return `
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-lg space-y-6 max-w-2xl">
         <h2 class="text-lg font-black text-white flex items-center gap-2">
-          <i data-lucide="cloud" class="w-5 h-5 text-amber-400"></i>
+          <i data-lucide="cloud" class="w-5 h-5 text-blue-400"></i>
           การเชื่อมต่อ Cloud และ Google Apps Script
         </h2>
 
         <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
           <p class="text-xs font-bold text-slate-400 uppercase">Web App URL ปัจจุบัน:</p>
-          <p class="text-xs text-amber-400 font-mono break-all">${CONFIG.API_URL}</p>
+          <p class="text-xs text-blue-400 font-mono break-all">${CONFIG.API_URL}</p>
         </div>
 
         <div class="space-y-3">
-          <button onclick="settingsView.syncInitialDatabaseToCloud()" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base">
+          <button onclick="settingsView.syncInitialDatabaseToCloud()" class="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base">
             <i data-lucide="upload-cloud" class="w-5 h-5"></i>
             ส่งข้อมูล Master Data เริ่มต้นขึ้น Google Sheets อัตโนมัติ
           </button>
@@ -3444,7 +3612,7 @@ class AICopilotView {
         <!-- Header -->
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-500 to-blue-300 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg">
               🤖
             </div>
             <div>
@@ -3462,19 +3630,19 @@ class AICopilotView {
 
         <!-- Quick Question Prompts -->
         <div class="flex flex-wrap gap-2">
-          <button onclick="aiCopilotView.sendQuick('วันนี้วิ่งไปกี่เที่ยว ยอดรวมเท่าไหร่')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('วันนี้วิ่งไปกี่เที่ยว ยอดรวมเท่าไหร่')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             📊 สรุปยอดรวมวันนี้
           </button>
-          <button onclick="aiCopilotView.sendQuick('ใครวิ่งได้เยอะที่สุดวันนี้')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('ใครวิ่งได้เยอะที่สุดวันนี้')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             🏆 ใครวิ่งเยอะสุด
           </button>
-          <button onclick="aiCopilotView.sendQuick('รถคันไหนจอดไม่ได้วิ่งบ้าง')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('รถคันไหนจอดไม่ได้วิ่งบ้าง')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             🛑 รถคันไหนจอดบ้าง
           </button>
-          <button onclick="aiCopilotView.sendQuick('ช่วยตรวจหาความผิดปกติของวันนี้ให้หน่อย')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-amber-400 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('ช่วยตรวจหาความผิดปกติของวันนี้ให้หน่อย')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-blue-400 font-semibold transition">
             ⚠️ ตรวจสอบความผิดปกติ
           </button>
-          <button onclick="aiCopilotView.sendQuick('ขอตารางเรทราคาวิ่งหิน')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('ขอตารางเรทราคาวิ่งหิน')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             💰 เรทราคาค่าเที่ยว
           </button>
         </div>
@@ -3487,12 +3655,12 @@ class AICopilotView {
             ${history.map(msg => `
               <div class="flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}">
                 ${msg.sender === 'ai' ? `
-                  <div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-sm flex-shrink-0 shadow">
+                  <div class="w-8 h-8 rounded-xl bg-blue-500 text-slate-950 flex items-center justify-center font-bold text-sm flex-shrink-0 shadow">
                     🤖
                   </div>
                 ` : ''}
 
-                <div class="max-w-lg ${msg.sender === 'user' ? 'bg-amber-500 text-slate-950 rounded-2xl rounded-tr-none font-medium' : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-2xl rounded-tl-none'} p-4 text-xs shadow-md space-y-1">
+                <div class="max-w-lg ${msg.sender === 'user' ? 'bg-blue-500 text-slate-950 rounded-2xl rounded-tr-none font-medium' : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-2xl rounded-tl-none'} p-4 text-xs shadow-md space-y-1">
                   <div class="whitespace-pre-line leading-relaxed">${msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}</div>
                   <p class="text-[9px] ${msg.sender === 'user' ? 'text-slate-800' : 'text-slate-500'} text-right">${msg.time}</p>
                 </div>
@@ -3508,8 +3676,8 @@ class AICopilotView {
 
           <!-- Input Bar -->
           <div class="pt-4 border-t border-slate-800 mt-2 flex items-center gap-2">
-            <input type="text" id="ai-input-box" onkeypress="if(event.key==='Enter') aiCopilotView.handleSend()" placeholder="พิมพ์คำถามที่นี่ เช่น สรุปยอดวันนี้, รถคันไหนจอดบ้าง..." class="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none">
-            <button onclick="aiCopilotView.handleSend()" class="px-5 py-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 rounded-2xl font-black text-xs shadow-lg transition flex items-center gap-1.5">
+            <input type="text" id="ai-input-box" onkeypress="if(event.key==='Enter') aiCopilotView.handleSend()" placeholder="พิมพ์คำถามที่นี่ เช่น สรุปยอดวันนี้, รถคันไหนจอดบ้าง..." class="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <button onclick="aiCopilotView.handleSend()" class="px-5 py-3 bg-blue-500 hover:bg-blue-400 active:scale-95 text-slate-950 rounded-2xl font-black text-xs shadow-lg transition flex items-center gap-1.5">
               <i data-lucide="send" class="w-4 h-4"></i> ส่ง
             </button>
           </div>
@@ -3574,14 +3742,41 @@ class QuarryApp {
     }
 
     const role = window.authService.getRole();
-    if (role === 'truck_driver') {
+    if (['truck_driver', 'excavator_operator'].includes(role) && !window.authService.getWorkMode()) {
+      this.renderWorkModeSelection();
+    } else if (window.authService.getWorkMode() === 'truck_driver') {
       this.renderDriver();
-    } else if (role === 'excavator_operator') {
+    } else if (window.authService.getWorkMode() === 'excavator_operator') {
       this.renderExcavator();
     } else {
       // Supervisor or Admin
       this.renderAdmin();
     }
+  }
+
+  renderWorkModeSelection() {
+    const user = window.authService.getUser();
+    const root = document.getElementById('app-root');
+    root.innerHTML = `
+      <div class="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
+        <div class="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+          <div class="text-center mb-6">
+            <div class="text-4xl mb-2">👤</div>
+            <h1 class="text-xl font-black">สวัสดี ${user.nickname || user.name}</h1>
+            <p class="text-sm text-slate-400 mt-1">วันนี้ปฏิบัติงานกับรถประเภทใด</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button onclick="app.chooseWorkMode('truck_driver')" class="p-6 bg-blue-500 hover:bg-blue-400 text-slate-950 rounded-2xl font-black text-lg"><span class="block text-5xl mb-3">🚚</span>รถบรรทุก</button>
+            <button onclick="app.chooseWorkMode('excavator_operator')" class="p-6 bg-cyan-600 hover:bg-cyan-500 text-white rounded-2xl font-black text-lg"><span class="block text-5xl mb-3">🚜</span>รถขุด / แม็คโคร</button>
+          </div>
+          <button onclick="app.logout()" class="w-full mt-5 py-3 text-slate-400 hover:text-white text-sm font-bold">ออกจากระบบ</button>
+        </div>
+      </div>`;
+  }
+
+  chooseWorkMode(mode) {
+    window.authService.selectWorkMode(mode);
+    this.route();
   }
 
   navigate(viewName) {
@@ -3642,27 +3837,27 @@ class QuarryApp {
             
             <!-- Brand -->
             <div class="flex items-center gap-3 cursor-pointer" onclick="window.app.navigate('dashboard')">
-              <div class="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xl shadow">
+              <div class="w-10 h-10 rounded-2xl bg-blue-500 text-slate-950 flex items-center justify-center font-black text-xl shadow">
                 🚚
               </div>
               <div>
                 <h1 class="font-black text-base text-white tracking-tight">ระบบบริหารงานโรงโม่</h1>
-                <p class="text-[11px] text-amber-400 font-semibold">ศูนย์ควบคุมกลาง (Executive Control Panel)</p>
+                <p class="text-[11px] text-blue-400 font-semibold">ศูนย์ควบคุมกลาง (Executive Control Panel)</p>
               </div>
             </div>
 
             <!-- Nav Links -->
             <nav class="hidden md:flex items-center gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-              <button onclick="window.app.navigate('dashboard')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="window.app.navigate('dashboard')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 แดชบอร์ดสด
               </button>
-              <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'ai-copilot' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'ai-copilot' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 🤖 AI ผู้ช่วย
               </button>
-              <button onclick="window.app.navigate('reports')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'reports' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="window.app.navigate('reports')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'reports' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📑 รายงาน & Excel
               </button>
-              <button onclick="window.app.navigate('settings')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'settings' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="window.app.navigate('settings')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'settings' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 ⚙️ ตั้งค่าข้อมูลหลัก
               </button>
             </nav>
@@ -3671,7 +3866,7 @@ class QuarryApp {
             <div class="flex items-center gap-3">
               <div class="text-right hidden sm:block">
                 <p class="text-xs font-bold text-white">${user.name}</p>
-                <span class="text-[10px] text-amber-400 font-semibold">${user.role === 'admin' ? 'ผู้บริหารสูงสุด' : 'หัวหน้างาน'}</span>
+                <span class="text-[10px] text-blue-400 font-semibold">${user.role === 'admin' ? 'ผู้บริหารสูงสุด' : 'หัวหน้างาน'}</span>
               </div>
               <button onclick="window.app.logout()" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1.5">
                 <i data-lucide="log-out" class="w-4 h-4"></i>

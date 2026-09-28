@@ -11,7 +11,7 @@ class AICopilotView {
         <!-- Header -->
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-500 to-blue-300 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg">
               🤖
             </div>
             <div>
@@ -29,19 +29,19 @@ class AICopilotView {
 
         <!-- Quick Question Prompts -->
         <div class="flex flex-wrap gap-2">
-          <button onclick="aiCopilotView.sendQuick('วันนี้วิ่งไปกี่เที่ยว ยอดรวมเท่าไหร่')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('วันนี้วิ่งไปกี่เที่ยว ยอดรวมเท่าไหร่')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             📊 สรุปยอดรวมวันนี้
           </button>
-          <button onclick="aiCopilotView.sendQuick('ใครวิ่งได้เยอะที่สุดวันนี้')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('ใครวิ่งได้เยอะที่สุดวันนี้')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             🏆 ใครวิ่งเยอะสุด
           </button>
-          <button onclick="aiCopilotView.sendQuick('รถคันไหนจอดไม่ได้วิ่งบ้าง')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('รถคันไหนจอดไม่ได้วิ่งบ้าง')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             🛑 รถคันไหนจอดบ้าง
           </button>
-          <button onclick="aiCopilotView.sendQuick('ช่วยตรวจหาความผิดปกติของวันนี้ให้หน่อย')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-amber-400 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('ช่วยตรวจหาความผิดปกติของวันนี้ให้หน่อย')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-blue-400 font-semibold transition">
             ⚠️ ตรวจสอบความผิดปกติ
           </button>
-          <button onclick="aiCopilotView.sendQuick('ขอตารางเรทราคาวิ่งหิน')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
+          <button onclick="aiCopilotView.sendQuick('ขอตารางเรทราคาวิ่งหิน')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/40 rounded-xl text-xs text-slate-300 font-semibold transition">
             💰 เรทราคาค่าเที่ยว
           </button>
         </div>
@@ -54,12 +54,12 @@ class AICopilotView {
             ${history.map(msg => `
               <div class="flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}">
                 ${msg.sender === 'ai' ? `
-                  <div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-sm flex-shrink-0 shadow">
+                  <div class="w-8 h-8 rounded-xl bg-blue-500 text-slate-950 flex items-center justify-center font-bold text-sm flex-shrink-0 shadow">
                     🤖
                   </div>
                 ` : ''}
 
-                <div class="max-w-lg ${msg.sender === 'user' ? 'bg-amber-500 text-slate-950 rounded-2xl rounded-tr-none font-medium' : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-2xl rounded-tl-none'} p-4 text-xs shadow-md space-y-1">
+                <div class="max-w-lg ${msg.sender === 'user' ? 'bg-blue-500 text-slate-950 rounded-2xl rounded-tr-none font-medium' : 'bg-slate-950 text-slate-200 border border-slate-800 rounded-2xl rounded-tl-none'} p-4 text-xs shadow-md space-y-1">
                   <div class="whitespace-pre-line leading-relaxed">${msg.text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')}</div>
                   <p class="text-[9px] ${msg.sender === 'user' ? 'text-slate-800' : 'text-slate-500'} text-right">${msg.time}</p>
                 </div>
@@ -75,8 +75,8 @@ class AICopilotView {
 
           <!-- Input Bar -->
           <div class="pt-4 border-t border-slate-800 mt-2 flex items-center gap-2">
-            <input type="text" id="ai-input-box" onkeypress="if(event.key==='Enter') aiCopilotView.handleSend()" placeholder="พิมพ์คำถามที่นี่ เช่น สรุปยอดวันนี้, รถคันไหนจอดบ้าง..." class="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none">
-            <button onclick="aiCopilotView.handleSend()" class="px-5 py-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 rounded-2xl font-black text-xs shadow-lg transition flex items-center gap-1.5">
+            <input type="text" id="ai-input-box" onkeypress="if(event.key==='Enter') aiCopilotView.handleSend()" placeholder="พิมพ์คำถามที่นี่ เช่น สรุปยอดวันนี้, รถคันไหนจอดบ้าง..." class="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <button onclick="aiCopilotView.handleSend()" class="px-5 py-3 bg-blue-500 hover:bg-blue-400 active:scale-95 text-slate-950 rounded-2xl font-black text-xs shadow-lg transition flex items-center gap-1.5">
               <i data-lucide="send" class="w-4 h-4"></i> ส่ง
             </button>
           </div>

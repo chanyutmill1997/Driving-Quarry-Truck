@@ -35,7 +35,7 @@ class AdminDashboard {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
           <div>
             <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
-              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">📊</span>
+              <span class="p-2 bg-blue-500 text-slate-950 rounded-xl">📊</span>
               ภาพรวมการทำงานประจำวัน (Live Operations)
             </h1>
             <p class="text-sm text-slate-400 mt-1">
@@ -43,7 +43,7 @@ class AdminDashboard {
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 rounded-xl text-sm font-black flex items-center gap-2 shadow-lg">
+            <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 text-slate-950 rounded-xl text-sm font-black flex items-center gap-2 shadow-lg">
               <i data-lucide="bot" class="w-4 h-4"></i>
               🤖 AI ผู้ช่วยอัจฉริยะ
             </button>
@@ -52,7 +52,7 @@ class AdminDashboard {
               รายงาน & Excel
             </button>
             <button onclick="window.app.navigate('settings')" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 border border-slate-700">
-              <i data-lucide="settings" class="w-4 h-4 text-amber-400"></i>
+              <i data-lucide="settings" class="w-4 h-4 text-blue-400"></i>
               ตั้งค่าข้อมูลหลัก
             </button>
           </div>
@@ -93,10 +93,10 @@ class AdminDashboard {
           <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg">
             <div class="flex items-center justify-between text-slate-400 mb-2">
               <span class="text-xs font-bold uppercase tracking-wider">เที่ยววิ่งสะสมวันนี้</span>
-              <span class="p-2 bg-amber-500/10 text-amber-400 rounded-xl">🏁</span>
+              <span class="p-2 bg-blue-500/10 text-blue-400 rounded-xl">🏁</span>
             </div>
             <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-black text-amber-400">${todayTrips.length}</span>
+              <span class="text-3xl font-black text-blue-400">${todayTrips.length}</span>
               <span class="text-sm font-bold text-slate-400">เที่ยว</span>
             </div>
             <p class="text-xs text-slate-400 mt-3 font-medium">เฉลี่ย ${(activeTrucksCount > 0 ? (todayTrips.length / activeTrucksCount).toFixed(1) : 0)} เที่ยว/คัน</p>
@@ -118,16 +118,16 @@ class AdminDashboard {
         </div>
 
         <!-- 🧠 AI Anomaly Detection & Recommendations Dashboard Section -->
-        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-blue-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div class="flex items-center gap-2.5">
-              <div class="p-2 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+              <div class="p-2 bg-blue-500/20 text-blue-400 rounded-xl border border-blue-500/30">
                 <i data-lucide="shield-alert" class="w-5 h-5"></i>
               </div>
               <div>
                 <h2 class="font-black text-lg text-white flex items-center gap-2">
                   ระบบ AI ตรวจจับความผิดปกติและคำแนะนำ (AI Insights & Anomalies)
-                  <span class="text-xs bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
+                  <span class="text-xs bg-blue-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
                     ${anomalies.length} ข้อสังเกต
                   </span>
                 </h2>
@@ -135,7 +135,7 @@ class AdminDashboard {
               </div>
             </div>
 
-            <button onclick="window.app.navigate('ai-copilot')" class="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1">
+            <button onclick="window.app.navigate('ai-copilot')" class="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
               เปิดหน้าต่างแชท AI <i data-lucide="chevron-right" class="w-4 h-4"></i>
             </button>
           </div>
@@ -147,10 +147,10 @@ class AdminDashboard {
                 ✅ ระบบตรวจสอบแล้ว ไม่พบพฤติกรรมผิดปกติในการวิ่งงาน ข้อมูล GPS และรอบวิ่งสอดคล้องสมบูรณ์
               </div>
             ` : anomalies.map(a => `
-              <div class="bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/60 bg-red-950/10' : (a.severity === 'warning' ? 'border-amber-500/50 bg-amber-950/10' : 'border-slate-800')} rounded-2xl p-4 space-y-2.5">
+              <div class="bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/60 bg-red-950/10' : (a.severity === 'warning' ? 'border-blue-500/50 bg-blue-950/10' : 'border-slate-800')} rounded-2xl p-4 space-y-2.5">
                 <div class="flex items-start justify-between">
                   <div class="flex items-center gap-2">
-                    <span class="text-xs font-black ${a.severity === 'critical' ? 'bg-red-900/60 text-red-300 border border-red-700' : (a.severity === 'warning' ? 'bg-amber-900/60 text-amber-300 border border-amber-700' : 'bg-slate-800 text-slate-300')} px-2 py-0.5 rounded-md">
+                    <span class="text-xs font-black ${a.severity === 'critical' ? 'bg-red-900/60 text-red-300 border border-red-700' : (a.severity === 'warning' ? 'bg-blue-900/60 text-blue-300 border border-blue-700' : 'bg-slate-800 text-slate-300')} px-2 py-0.5 rounded-md">
                       ${a.severity === 'critical' ? '⚠️ ตรวจสอบด่วน' : (a.severity === 'warning' ? '⚡ ข้อสังเกต' : 'ℹ️ ข้อมูล')}
                     </span>
                     <h3 class="font-bold text-sm text-white">${a.title}</h3>
@@ -159,7 +159,7 @@ class AdminDashboard {
 
                 <p class="text-xs text-slate-300 leading-relaxed">${a.desc}</p>
 
-                <div class="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-amber-300 space-y-1">
+                <div class="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-blue-300 space-y-1">
                   <p class="font-bold flex items-center gap-1">
                     💡 คำแนะนำที่ควรทำ:
                   </p>
@@ -169,7 +169,7 @@ class AdminDashboard {
                 <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
                   <span>อ้างอิง: <b class="text-slate-300">${a.vehicleCode}</b> (${a.driverName}) • ${a.timestamp}</span>
                   ${a.photoUrl ? `
-                    <button onclick="adminDashboard.viewPhoto('${a.photoUrl}', '${a.title}', '${a.vehicleCode}', '${a.timestamp}')" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg transition flex items-center gap-1">
+                    <button onclick="adminDashboard.viewPhoto('${a.photoUrl}', '${a.title}', '${a.vehicleCode}', '${a.timestamp}')" class="px-2.5 py-1 bg-blue-500 hover:bg-blue-400 text-slate-950 font-black rounded-lg transition flex items-center gap-1">
                       <i data-lucide="image" class="w-3 h-3"></i> ตรวจสอบรูปถ่าย
                     </button>
                   ` : ''}
@@ -186,7 +186,7 @@ class AdminDashboard {
           <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
               <div class="flex items-center gap-2">
-                <i data-lucide="truck" class="w-5 h-5 text-amber-400"></i>
+                <i data-lucide="truck" class="w-5 h-5 text-blue-400"></i>
                 <h2 class="font-black text-lg text-white">สถานะรถบรรทุกแบบ Real-time (28 คัน)</h2>
               </div>
               <div class="flex items-center gap-2 text-xs">
@@ -206,7 +206,7 @@ class AdminDashboard {
                 const totalEarn = tripsForTruck.reduce((sum, tr) => sum + (tr.amount || 0), 0);
 
                 return `
-                  <div class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/40 border-slate-800 opacity-70'} space-y-2">
+                  <div role="button" tabindex="0" onclick="adminDashboard.openTruckDetail('${t.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openTruckDetail('${t.code}')" class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/60 border-slate-800'} space-y-2 cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
                     <div class="flex items-start justify-between">
                       <div>
                         <p class="font-black text-sm text-white">${t.code}</p>
@@ -230,9 +230,10 @@ class AdminDashboard {
                     </div>
 
                     <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                      <span class="text-slate-400">วิ่งวันนี้: <b class="text-amber-400 font-bold">${tripsForTruck.length}</b> รอบ</span>
+                      <span class="text-slate-400">วิ่งวันนี้: <b class="text-blue-400 font-bold">${tripsForTruck.length}</b> รอบ</span>
                       <span class="text-emerald-400 font-black">฿${totalEarn.toLocaleString()}</span>
                     </div>
+                    <p class="text-[10px] text-blue-300 font-bold text-right">กดดูรายละเอียดงาน →</p>
                   </div>
                 `;
               }).join('')}
@@ -243,7 +244,7 @@ class AdminDashboard {
           <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
               <div class="flex items-center gap-2">
-                <i data-lucide="wrench" class="w-5 h-5 text-amber-500"></i>
+                <i data-lucide="wrench" class="w-5 h-5 text-blue-500"></i>
                 <h2 class="font-black text-lg text-white">รถขุด / แม็คโคร (20 คัน)</h2>
               </div>
             </div>
@@ -255,7 +256,7 @@ class AdminDashboard {
                 const isRepair = e.status === 'repair';
 
                 return `
-                  <div class="p-3 rounded-xl border ${isWorking ? 'bg-slate-950 border-amber-500/40' : (isRepair ? 'bg-red-950/20 border-red-800/30' : 'bg-slate-950/40 border-slate-800')} flex items-center justify-between text-xs">
+                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="p-3 rounded-xl border ${isWorking ? 'bg-slate-950 border-blue-500/40' : (isRepair ? 'bg-red-950/20 border-red-800/30' : 'bg-slate-950/60 border-slate-800')} flex items-center justify-between text-xs cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 transition-all">
                     <div>
                       <div class="flex items-center gap-1.5">
                         <span class="font-black text-white">${e.code}</span>
@@ -265,8 +266,9 @@ class AdminDashboard {
                       <p class="text-[11px] text-slate-400">${e.nickname ? 'ช่าง' + e.nickname : (e.driver_name || '-')}</p>
                     </div>
                     <div class="text-right">
-                      <p class="font-bold text-amber-400">${logsForExc.length} คัน</p>
+                      <p class="font-bold text-blue-400">${logsForExc.length} คัน</p>
                       <span class="text-[10px] text-emerald-400 font-bold">฿${(logsForExc.length * (e.rate_per_scoop || 5)).toLocaleString()}</span>
+                      <p class="text-[9px] text-blue-300 mt-1">ดูรายละเอียด →</p>
                     </div>
                   </div>
                 `;
@@ -281,7 +283,7 @@ class AdminDashboard {
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <div>
               <h2 class="font-black text-lg text-white flex items-center gap-2">
-                <i data-lucide="camera" class="w-5 h-5 text-amber-400"></i>
+                <i data-lucide="camera" class="w-5 h-5 text-blue-400"></i>
                 ฟีดตรวจสอบการวิ่งสด (Trip Audit & GPS Stamp Feed)
               </h2>
               <p class="text-xs text-slate-400 mt-0.5">กดคลิกที่รูปภาพเพื่อตรวจสอบลายน้ำพิกัด GPS, วันที่, และเวลาแบบขยายใหญ่</p>
@@ -346,7 +348,104 @@ class AdminDashboard {
           </div>
         </div>
       </div>
+
+      <!-- Vehicle Work Detail Modal -->
+      <div id="vehicle-detail-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5">
+        <div class="bg-slate-900 border border-blue-500/40 max-w-3xl w-full max-h-[92vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+          <div class="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900">
+            <div>
+              <p class="text-[10px] text-blue-400 font-black uppercase tracking-wider">รายละเอียดรถและงาน</p>
+              <h3 id="vehicle-detail-title" class="font-black text-lg text-white">ข้อมูลรถ</h3>
+            </div>
+            <button onclick="adminDashboard.closeVehicleModal()" class="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold">✕</button>
+          </div>
+          <div id="vehicle-detail-content" class="p-4 sm:p-5 overflow-y-auto"></div>
+        </div>
+      </div>
     `;
+  }
+
+  openTruckDetail(code) {
+    const truck = window.quarryStore.getTrucks().find(t => t.code === code);
+    if (!truck) return;
+    const allTrips = window.quarryStore.getTrips({ truckPlate: code });
+    const today = new Date().toISOString().split('T')[0];
+    const todayTrips = allTrips.filter(t => t.date === today);
+    const totalToday = todayTrips.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalAll = allTrips.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const recent = allTrips.slice(0, 12);
+    this.showVehicleModal(
+      `🚚 ${truck.code}`,
+      `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          ${this.detailMetric('สถานะวันนี้', todayTrips.length ? '🟢 กำลังวิ่ง' : '⚪ จอด', todayTrips.length ? 'text-emerald-400' : 'text-slate-300')}
+          ${this.detailMetric('พิกัดรถ', `${truck.capacity_ton || 0} ตัน`, 'text-blue-400')}
+          ${this.detailMetric('เที่ยววันนี้', `${todayTrips.length} เที่ยว`, 'text-white')}
+          ${this.detailMetric('รายได้วันนี้', `฿${totalToday.toLocaleString()}`, 'text-emerald-400')}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5 text-sm">
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">คนขับประจำ</p><p class="font-bold text-white mt-1">${truck.driver_name || 'ยังไม่กำหนด'}</p><p class="text-xs text-blue-300 mt-1">ชื่อเรียก: ${truck.nickname || '-'}</p></div>
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">ข้อมูลติดต่อและยอดสะสม</p><p class="font-bold text-white mt-1">${truck.phone || '-'}</p><p class="text-xs text-emerald-400 mt-1">ทั้งหมด ${allTrips.length} เที่ยว • ฿${totalAll.toLocaleString()}</p></div>
+        </div>
+        ${this.renderTruckHistory(recent)}
+      `
+    );
+  }
+
+  openExcavatorDetail(code) {
+    const excavator = window.quarryStore.getExcavators().find(e => e.code === code);
+    if (!excavator) return;
+    const allLogs = window.quarryStore.getExcavatorLogs({ excavatorCode: code });
+    const today = new Date().toISOString().split('T')[0];
+    const todayLogs = allLogs.filter(l => l.date === today);
+    const totalToday = todayLogs.reduce((sum, l) => sum + Number(l.amount || excavator.rate_per_scoop || 0), 0);
+    const totalAll = allLogs.reduce((sum, l) => sum + Number(l.amount || excavator.rate_per_scoop || 0), 0);
+    this.showVehicleModal(
+      `🚜 ${excavator.code}`,
+      `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          ${this.detailMetric('สถานะ', excavator.status === 'repair' ? '🔴 ซ่อม' : (todayLogs.length ? '🟢 ทำงาน' : '⚪ ว่าง'), excavator.status === 'repair' ? 'text-red-400' : 'text-emerald-400')}
+          ${this.detailMetric('ตักวันนี้', `${todayLogs.length} คัน`, 'text-blue-400')}
+          ${this.detailMetric('เรทต่อตัก', `฿${excavator.rate_per_scoop || 0}`, 'text-white')}
+          ${this.detailMetric('รายได้วันนี้', `฿${totalToday.toLocaleString()}`, 'text-emerald-400')}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5 text-sm">
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">ผู้ควบคุมประจำ</p><p class="font-bold text-white mt-1">${excavator.driver_name || 'ยังไม่กำหนด'}</p><p class="text-xs text-blue-300 mt-1">ชื่อเรียก: ${excavator.nickname || '-'}</p></div>
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">ข้อมูลเพิ่มเติม</p><p class="font-bold text-white mt-1">${excavator.phone || '-'}</p><p class="text-xs text-emerald-400 mt-1">${excavator.is_contractor ? 'ทีมผู้รับเหมา' : 'ทีมประจำ'} • รวม ${allLogs.length} งาน • ฿${totalAll.toLocaleString()}</p></div>
+        </div>
+        ${this.renderExcavatorHistory(allLogs.slice(0, 12))}
+      `
+    );
+  }
+
+  detailMetric(label, value, colorClass) {
+    return `<div class="bg-slate-950 border border-slate-800 rounded-2xl p-3"><p class="text-[10px] text-slate-500 font-bold">${label}</p><p class="font-black ${colorClass} mt-1">${value}</p></div>`;
+  }
+
+  renderTruckHistory(items) {
+    if (!items.length) return '<div class="text-center py-8 text-slate-500 text-sm bg-slate-950 rounded-2xl border border-slate-800">ยังไม่มีประวัติงานของรถคันนี้</div>';
+    return `<div><h4 class="font-black text-white mb-3">ประวัติเที่ยวล่าสุด</h4><div class="space-y-2">${items.map(t => `<div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3"><div><p class="text-sm font-bold text-white">รอบ ${t.roundNumber || '-'} • ${t.jobTypeName || '-'}</p><p class="text-[11px] text-slate-400">${t.date || ''} ${t.timestamp || ''} • ${t.driverName || '-'}</p></div><p class="font-black text-emerald-400">฿${Number(t.amount || 0).toLocaleString()}</p></div>`).join('')}</div></div>`;
+  }
+
+  renderExcavatorHistory(items) {
+    if (!items.length) return '<div class="text-center py-8 text-slate-500 text-sm bg-slate-950 rounded-2xl border border-slate-800">ยังไม่มีประวัติงานของรถคันนี้</div>';
+    return `<div><h4 class="font-black text-white mb-3">ประวัติงานล่าสุด</h4><div class="space-y-2">${items.map(l => `<div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3"><div><p class="text-sm font-bold text-white">ตักให้รถ ${l.targetTruckPlate || '-'}</p><p class="text-[11px] text-slate-400">${l.date || ''} ${l.timestamp || ''} • ${l.operatorName || '-'}</p></div><p class="font-black text-emerald-400">฿${Number(l.amount || 0).toLocaleString()}</p></div>`).join('')}</div></div>`;
+  }
+
+  showVehicleModal(titleText, contentHtml) {
+    const modal = document.getElementById('vehicle-detail-modal');
+    const title = document.getElementById('vehicle-detail-title');
+    const content = document.getElementById('vehicle-detail-content');
+    if (!modal || !title || !content) return;
+    title.textContent = titleText;
+    content.innerHTML = contentHtml;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  closeVehicleModal() {
+    const modal = document.getElementById('vehicle-detail-modal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
   }
 
   viewPhoto(photoBase64, type, vehicle, timestamp) {

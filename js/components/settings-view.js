@@ -19,7 +19,7 @@ class SettingsView {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
           <div>
             <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
-              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">⚙️</span>
+              <span class="p-2 bg-blue-500 text-slate-950 rounded-xl">⚙️</span>
               จัดการข้อมูลหลักและอัตราค่าจ้าง (Master Data Management)
             </h1>
             <p class="text-sm text-slate-400 mt-1">เพิ่ม / ลด / แก้ไข ข้อมูลรถ, คนขับ, เรทราคาค่าวิ่ง และเรทค่าตักของแม็คโคร</p>
@@ -33,19 +33,19 @@ class SettingsView {
 
         <!-- Navigation Tabs -->
         <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
-          <button onclick="settingsView.setTab('rates')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'rates' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('rates')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'rates' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             💰 เรทราคาค่าจ้าง (${rates.length})
           </button>
-          <button onclick="settingsView.setTab('trucks')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'trucks' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('trucks')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'trucks' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             🚚 รถบรรทุกสิบล้อ (${trucks.length})
           </button>
-          <button onclick="settingsView.setTab('excavators')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'excavators' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('excavators')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'excavators' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             🚜 รถขุด / แม็คโคร (${excavators.length})
           </button>
-          <button onclick="settingsView.setTab('drivers')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'drivers' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('drivers')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'drivers' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             👥 พนักงานขับรถ (${drivers.length})
           </button>
-          <button onclick="settingsView.setTab('cloud')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'cloud' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
+          <button onclick="settingsView.setTab('cloud')" class="px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center gap-2 ${this.activeTab === 'cloud' ? 'bg-blue-500 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white'}">
             ☁️ ซิงค์ Cloud & สำรองข้อมูล
           </button>
         </div>
@@ -77,7 +77,7 @@ class SettingsView {
     return `
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-black text-white">ตารางอัตราค่าจ้างต่อเที่ยว (11 รายการ)</h2>
+          <h2 class="text-lg font-black text-white">ตารางอัตราค่าจ้างต่อตัน (11 รายการ)</h2>
           <button onclick="settingsView.promptAddRate()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 shadow">
             <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มประเภทงานใหม่
           </button>
@@ -88,9 +88,9 @@ class SettingsView {
             <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
               <tr>
                 <th class="p-3">รายการประเภทงานวิ่ง</th>
-                <th class="p-3 text-center">เรท 30 ตัน</th>
-                <th class="p-3 text-center">เรท 45 ตัน</th>
-                <th class="p-3 text-center">เรท 60 ตัน</th>
+                <th class="p-3 text-center">รถ 30 ตัน (บาท/ตัน)</th>
+                <th class="p-3 text-center">รถ 45 ตัน (บาท/ตัน)</th>
+                <th class="p-3 text-center">รถ 60 ตัน (บาท/ตัน)</th>
                 <th class="p-3 text-center">เรทแม็คโคร (บาท)</th>
                 <th class="p-3 text-right">จัดการ</th>
               </tr>
@@ -99,12 +99,12 @@ class SettingsView {
               ${rates.map(r => `
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${r.name}</td>
-                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_30_ton ? '฿' + r.rate_30_ton : '-'}</td>
-                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_45_ton ? '฿' + r.rate_45_ton : '-'}</td>
-                  <td class="p-3 text-center font-semibold text-amber-400">${r.rate_60_ton ? '฿' + r.rate_60_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-blue-400">${r.rate_30_ton ? '฿' + r.rate_30_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-blue-400">${r.rate_45_ton ? '฿' + r.rate_45_ton : '-'}</td>
+                  <td class="p-3 text-center font-semibold text-blue-400">${r.rate_60_ton ? '฿' + r.rate_60_ton : '-'}</td>
                   <td class="p-3 text-center font-semibold text-purple-400">฿${r.excavator_rate || 5}</td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.promptEditRate('${r.id}')" class="text-amber-400 hover:underline font-bold mr-2">แก้ไข</button>
+                    <button onclick="settingsView.promptEditRate('${r.id}')" class="text-blue-400 hover:underline font-bold mr-2">แก้ไข</button>
                     <button onclick="settingsView.deleteRate('${r.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
                   </td>
                 </tr>
@@ -144,7 +144,7 @@ class SettingsView {
               ${trucks.map(t => `
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${t.code}</td>
-                  <td class="p-3 text-center font-bold text-amber-400">${t.capacity_ton} ตัน</td>
+                  <td class="p-3 text-center font-bold text-blue-400">${t.capacity_ton} ตัน</td>
                   <td class="p-3">${t.nickname ? 'น้า' + t.nickname + ' ' : ''}${t.driver_name || '-'}</td>
                   <td class="p-3 text-slate-400">${t.phone || '-'}</td>
                   <td class="p-3 text-center">
@@ -205,7 +205,7 @@ class SettingsView {
                     </span>
                   </td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.promptEditExcRate('${e.id}')" class="text-amber-400 hover:underline font-bold mr-2">ปรับเรท</button>
+                    <button onclick="settingsView.promptEditExcRate('${e.id}')" class="text-blue-400 hover:underline font-bold mr-2">ปรับเรท</button>
                     <button onclick="settingsView.deleteExcavator('${e.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
                   </td>
                 </tr>
@@ -245,10 +245,10 @@ class SettingsView {
               ${drivers.map(d => `
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${d.name}</td>
-                  <td class="p-3 text-amber-400 font-semibold">${d.nickname || '-'}</td>
+                  <td class="p-3 text-blue-400 font-semibold">${d.nickname || '-'}</td>
                   <td class="p-3 text-slate-300">${d.phone || '-'}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.role === 'admin' ? 'bg-amber-500 text-slate-950' : (d.role === 'supervisor' ? 'bg-blue-900 text-blue-200' : 'bg-slate-800 text-slate-300')}">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${d.role === 'admin' ? 'bg-blue-500 text-slate-950' : (d.role === 'supervisor' ? 'bg-blue-900 text-blue-200' : 'bg-slate-800 text-slate-300')}">
                       ${d.role === 'admin' ? 'ผู้บริหาร' : (d.role === 'supervisor' ? 'หัวหน้างาน' : (d.role === 'excavator_operator' ? 'แม็คโคร' : 'คนขับสิบล้อ'))}
                     </span>
                   </td>
@@ -270,17 +270,17 @@ class SettingsView {
     return `
       <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-lg space-y-6 max-w-2xl">
         <h2 class="text-lg font-black text-white flex items-center gap-2">
-          <i data-lucide="cloud" class="w-5 h-5 text-amber-400"></i>
+          <i data-lucide="cloud" class="w-5 h-5 text-blue-400"></i>
           การเชื่อมต่อ Cloud และ Google Apps Script
         </h2>
 
         <div class="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
           <p class="text-xs font-bold text-slate-400 uppercase">Web App URL ปัจจุบัน:</p>
-          <p class="text-xs text-amber-400 font-mono break-all">${CONFIG.API_URL}</p>
+          <p class="text-xs text-blue-400 font-mono break-all">${CONFIG.API_URL}</p>
         </div>
 
         <div class="space-y-3">
-          <button onclick="settingsView.syncInitialDatabaseToCloud()" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base">
+          <button onclick="settingsView.syncInitialDatabaseToCloud()" class="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 text-slate-950 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 text-base">
             <i data-lucide="upload-cloud" class="w-5 h-5"></i>
             ส่งข้อมูล Master Data เริ่มต้นขึ้น Google Sheets อัตโนมัติ
           </button>

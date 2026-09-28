@@ -14,6 +14,7 @@ class DriverView {
     // Filter สำหรับดูประวัติย้อนหลัง
     this.historyFromDate = '';
     this.historyToDate = '';
+    this.isCompletingRound = false;
   }
 
   render() {
@@ -40,12 +41,12 @@ class DriverView {
         <!-- Top Bar -->
         <div class="flex items-center justify-between py-3 border-b border-slate-800 mb-6">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg">
+            <div class="w-10 h-10 rounded-full bg-blue-500 text-slate-950 flex items-center justify-center font-black text-lg">
               🚚
             </div>
             <div>
               <h2 class="font-bold text-base text-white">${user.name}</h2>
-              <p class="text-xs text-amber-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
+              <p class="text-xs text-blue-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
             </div>
           </div>
           <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
@@ -65,7 +66,7 @@ class DriverView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               เลือกรถบรรทุก (ทั้งหมด 28 คัน)
             </label>
-            <select id="shift-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="shift-truck-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${trucks.map(t => {
                 const isBusy = activePlates.has(t.code);
                 return `<option value="${t.code}" data-capacity="${t.capacity_ton}">
@@ -75,7 +76,7 @@ class DriverView {
             </select>
           </div>
 
-          <button onclick="driverView.handleStartShift()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+          <button onclick="driverView.handleStartShift()" class="w-full py-4 bg-blue-500 hover:bg-blue-400 active:scale-98 text-slate-950 text-lg font-black rounded-xl shadow-lg transition flex items-center justify-center gap-2">
             <i data-lucide="play" class="w-6 h-6"></i>
             เริ่มงานประจำวันทันที
           </button>
@@ -111,13 +112,13 @@ class DriverView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
+              <div class="w-12 h-12 rounded-2xl bg-blue-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-inner">
                 🚚
               </div>
               <div>
                 <div class="flex items-center gap-2">
                   <span class="font-black text-base text-white">${shift.vehicleCode}</span>
-                  <span class="text-xs bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">
+                  <span class="text-xs bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/30">
                     ${shift.capacityTon} ตัน
                   </span>
                 </div>
@@ -147,7 +148,7 @@ class DriverView {
           <div class="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl p-4 text-center">
             <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">จำนวนเที่ยววันนี้</p>
             <div class="flex items-baseline justify-center gap-1 mt-1">
-              <span class="text-3xl font-black text-amber-400">${todayTrips.length}</span>
+              <span class="text-3xl font-black text-blue-400">${todayTrips.length}</span>
               <span class="text-xs text-slate-400">เที่ยว</span>
             </div>
           </div>
@@ -161,17 +162,17 @@ class DriverView {
         </div>
 
         <!-- Main Action Zone (Work Card) -->
-        <div class="bg-slate-900 border-2 border-amber-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
+        <div class="bg-slate-900 border-2 border-blue-500/40 rounded-3xl p-5 shadow-2xl space-y-4 relative overflow-hidden">
           
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <div class="flex items-center gap-2">
               <span class="flex h-3 w-3 relative">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
               </span>
               <h2 class="text-lg font-black text-white">บันทึกงาน: รอบที่ ${nextRoundNumber}</h2>
             </div>
-            <span class="text-xs font-bold px-2.5 py-1 bg-amber-500 text-slate-950 rounded-full">
+            <span class="text-xs font-bold px-2.5 py-1 bg-blue-500 text-slate-950 rounded-full">
               กำลังปฏิบัติงาน
             </span>
           </div>
@@ -181,7 +182,7 @@ class DriverView {
             <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               1. เลือกประเภทงานวิ่ง
             </label>
-            <select id="driver-job-select" onchange="driverView.handleJobChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="driver-job-select" onchange="driverView.handleJobChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${rates.map((r, idx) => {
                 const isSelected = (!this.activeJobId && idx === 0) || this.activeJobId === r.id ? 'selected' : '';
                 return `<option value="${r.id}" ${isSelected}>
@@ -233,9 +234,9 @@ class DriverView {
           </div>
 
           <!-- Big Finish Round Button -->
-          <button onclick="driverView.handleCompleteRound()" class="w-full py-4.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:scale-98 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
+          <button onclick="driverView.handleCompleteRound()" ${this.isCompletingRound ? 'disabled' : ''} class="w-full py-4.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:scale-98 disabled:opacity-60 text-slate-950 text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
             <i data-lucide="check-circle-2" class="w-7 h-7 text-slate-950"></i>
-            <span>จบงานรอบที่ ${nextRoundNumber} (นับ 1 เที่ยว)</span>
+            <span>${this.isCompletingRound ? 'กำลังบันทึกงาน...' : `จบงานรอบที่ ${nextRoundNumber} (นับ 1 เที่ยว)`}</span>
           </button>
 
         </div>
@@ -244,10 +245,10 @@ class DriverView {
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 class="font-black text-sm text-white flex items-center gap-1.5">
-              <i data-lucide="calendar" class="w-4 h-4 text-amber-400"></i>
+              <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i>
               ประวัติการวิ่งย้อนหลังของฉัน
             </h3>
-            <span class="text-xs bg-slate-800 text-amber-400 font-bold px-2.5 py-1 rounded-lg">
+            <span class="text-xs bg-slate-800 text-blue-400 font-bold px-2.5 py-1 rounded-lg">
               รวม ${historyTotalTrips} เที่ยว (฿${historyTotalAmount.toLocaleString()} บ.)
             </span>
           </div>
@@ -270,7 +271,7 @@ class DriverView {
               <button onclick="driverView.setQuickDateFilter('today')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">วันนี้</button>
               <button onclick="driverView.setQuickDateFilter('7days')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">7 วันล่าสุด</button>
               <button onclick="driverView.setQuickDateFilter('thisMonth')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-slate-300">เดือนนี้</button>
-              <button onclick="driverView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-amber-400">ทั้งหมด</button>
+              <button onclick="driverView.setQuickDateFilter('all')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold text-blue-400">ทั้งหมด</button>
             </div>
           </div>
 
@@ -283,7 +284,7 @@ class DriverView {
             ` : filteredHistory.map(t => `
               <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                  <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-black text-xs">
+                  <span class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-black text-xs">
                     #${t.roundNumber}
                   </span>
                   <div>
@@ -430,6 +431,7 @@ class DriverView {
   }
 
   handleCompleteRound() {
+    if (this.isCompletingRound) return;
     if (!this.loadPhoto) {
       alert("⚠️ กรุณากดถ่ายรูป [จุดรับหิน] ก่อนครับ");
       return;
@@ -449,6 +451,11 @@ class DriverView {
     const jobId = jobSelect ? jobSelect.value : (this.activeJobId || 'R1');
     const jobRates = window.quarryStore.getJobRates();
     const jobObj = jobRates.find(r => r.id === jobId) || jobRates[0];
+    if (!jobObj) {
+      alert('ยังไม่พบประเภทงานวิ่ง กรุณารีเฟรชระบบแล้วลองใหม่');
+      return;
+    }
+    this.isCompletingRound = true;
     const amount = window.quarryStore.calculateTruckRate(jobObj.id, shift.capacityTon);
 
     const tripRecord = {
@@ -465,23 +472,30 @@ class DriverView {
       jobTypeName: jobObj.name,
       amount: amount,
       loadPhotoBase64: this.loadPhoto,
-      loadLat: this.loadGPS ? this.loadGPS.lat : 14.8824,
-      loadLng: this.loadGPS ? this.loadGPS.lng : 102.0135,
+      loadLat: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lat : '',
+      loadLng: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lng : '',
       dumpPhotoBase64: this.dumpPhoto,
-      dumpLat: this.dumpGPS ? this.dumpGPS.lat : 14.8830,
-      dumpLng: this.dumpGPS ? this.dumpGPS.lng : 102.0145
+      dumpLat: this.dumpGPS && this.dumpGPS.isAvailable ? this.dumpGPS.lat : '',
+      dumpLng: this.dumpGPS && this.dumpGPS.isAvailable ? this.dumpGPS.lng : ''
     };
 
-    window.quarryStore.saveTrip(tripRecord);
-
-    // Reset state for next round
+    // รีเซ็ตก่อนแจ้งซิงก์ เพื่อให้หน้าจอพร้อมสำหรับรอบถัดไปเสมอ
     this.loadPhoto = null;
     this.loadGPS = null;
     this.dumpPhoto = null;
     this.dumpGPS = null;
+    this.activeJobId = null;
 
-    alert(`🎉 บันทึกรอบที่ ${roundNumber} สำเร็จ!\nระบบนับรวม: ${roundNumber} เที่ยว`);
-    window.app.render();
+    try {
+      window.quarryStore.saveTrip(tripRecord);
+      this.isCompletingRound = false;
+      window.app.render();
+      alert(`🎉 บันทึกรอบที่ ${roundNumber} สำเร็จ!\nพร้อมเริ่มรอบที่ ${roundNumber + 1} ได้ทันที`);
+    } catch (err) {
+      this.isCompletingRound = false;
+      window.app.render();
+      alert('บันทึกรอบไม่สำเร็จ: ' + (err.message || err));
+    }
   }
 }
 
