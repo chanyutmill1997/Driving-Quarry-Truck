@@ -140,13 +140,13 @@ class QuarryApp {
         <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
           <div class="max-w-7xl mx-auto flex items-center justify-between">
             
-            <!-- Brand -->
+            <!-- Brand with Logo -->
             <div class="flex items-center gap-3 cursor-pointer" onclick="window.app.navigate('dashboard')">
-              <div class="w-10 h-10 rounded-2xl bg-blue-500 text-slate-950 flex items-center justify-center font-black text-xl shadow">
-                🚚
+              <div class="w-10 h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow border border-slate-700">
+                <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-full h-full object-contain rounded-xl">
               </div>
               <div>
-                <h1 class="font-black text-base text-white tracking-tight">ระบบบริหารงานโรงโม่</h1>
+                <h1 class="font-black text-base text-white tracking-tight">โรงโม่ชาญยุทธ</h1>
                 <p class="text-[11px] text-blue-400 font-semibold">ศูนย์ควบคุมกลาง (Executive Control Panel)</p>
               </div>
             </div>
@@ -169,6 +169,12 @@ class QuarryApp {
 
             <!-- User Status, Theme Switcher & Logout -->
             <div class="flex items-center gap-2 sm:gap-3">
+              <!-- Change PIN Button -->
+              <button onclick="window.app.openChangePinModal()" title="เปลี่ยนรหัส PIN ของฉัน" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-blue-400 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
+                <i data-lucide="key" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">PIN</span>
+              </button>
+
               <!-- Theme Toggle Button -->
               <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง / โหมดมืด" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1">
                 <span>${this.theme === 'dark' ? '☀️' : '🌙'}</span>
@@ -195,13 +201,126 @@ class QuarryApp {
 
         <!-- Footer -->
         <footer class="border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
-          ระบบบริหารงานโรงโม่ • AI Insights & Cloud Fleet Management Engine
+          ${CONFIG.APP_NAME} • AI Insights & Cloud Fleet Management Engine
         </footer>
+
+        <!-- Global Modal Container -->
+        <div id="global-modal-container"></div>
 
       </div>
     `;
 
     if (window.lucide) lucide.createIcons();
+  }
+
+  // -------------------------------------------------------------
+  // ระบบเปลี่ยนรหัส PIN ด้วยตนเอง (Self-Service PIN Change)
+  // -------------------------------------------------------------
+  openChangePinModal() {
+    const user = window.authService.getUser();
+    if (!user) return;
+
+    let container = document.getElementById('global-modal-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'global-modal-container';
+      document.body.appendChild(container);
+    }
+
+    container.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-slate-100">
+          
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <span class="p-1.5 bg-blue-500/20 text-blue-400 rounded-xl">🔑</span>
+              เปลี่ยนรหัส PIN ของฉัน
+            </h3>
+            <button onclick="window.app.closeChangePinModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+              ✕
+            </button>
+          </div>
+
+          <div class="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center font-black">
+              👤
+            </div>
+            <div>
+              <p class="font-bold text-sm text-white">${user.name} ${user.nickname ? `(${user.nickname})` : ''}</p>
+              <p class="text-xs text-slate-400 font-mono">เบอร์โทร: ${user.phone || '-'}</p>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">รหัส PIN ปัจจุบัน</label>
+              <input type="password" id="chg-old-pin" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">รหัส PIN ใหม่ (4-6 หลัก)</label>
+              <input type="password" id="chg-new-pin" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">ยืนยันรหัส PIN ใหม่</label>
+              <input type="password" id="chg-confirm-pin" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+            </div>
+          </div>
+
+          <p id="chg-pin-error" class="hidden text-xs text-red-300 bg-red-950/60 border border-red-800 rounded-xl p-2.5"></p>
+
+          <div class="flex gap-2 pt-2 border-t border-slate-800">
+            <button onclick="window.app.closeChangePinModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">
+              ยกเลิก
+            </button>
+            <button onclick="window.app.handleSaveNewPin()" class="flex-1 py-3 bg-blue-500 hover:bg-blue-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition">
+              บันทึกรหัสใหม่
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  closeChangePinModal() {
+    const container = document.getElementById('global-modal-container');
+    if (container) container.innerHTML = '';
+  }
+
+  async handleSaveNewPin() {
+    const user = window.authService.getUser();
+    if (!user) return;
+
+    const oldPin = document.getElementById('chg-old-pin')?.value.trim();
+    const newPin = document.getElementById('chg-new-pin')?.value.trim();
+    const confirmPin = document.getElementById('chg-confirm-pin')?.value.trim();
+    const errorBox = document.getElementById('chg-pin-error');
+
+    if (!oldPin) {
+      if (errorBox) { errorBox.textContent = 'กรุณากรอกรหัส PIN ปัจจุบัน'; errorBox.classList.remove('hidden'); }
+      return;
+    }
+    if (!newPin || newPin.length < 4) {
+      if (errorBox) { errorBox.textContent = 'รหัส PIN ใหม่ต้องมีอย่างน้อย 4 หลัก'; errorBox.classList.remove('hidden'); }
+      return;
+    }
+    if (newPin !== confirmPin) {
+      if (errorBox) { errorBox.textContent = 'รหัส PIN ใหม่และการยืนยันไม่ตรงกัน'; errorBox.classList.remove('hidden'); }
+      return;
+    }
+
+    const res = await window.quarryStore.changeDriverPin(user.id, oldPin, newPin);
+    if (!res.success) {
+      if (errorBox) { errorBox.textContent = res.message; errorBox.classList.remove('hidden'); }
+      return;
+    }
+
+    user.pin = newPin;
+    localStorage.setItem(CONFIG.STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    this.closeChangePinModal();
+    alert('🎉 เปลี่ยนรหัส PIN สำเร็จเรียบร้อยแล้ว! สามารถใช้รหัสใหม่นี้เข้าสู่ระบบได้ทันที');
   }
 
   logout() {

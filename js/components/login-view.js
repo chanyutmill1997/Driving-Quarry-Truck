@@ -22,16 +22,17 @@ class LoginView {
       <div class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
         <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
           
-          <!-- Header Bar -->
-          <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-slate-950 text-center relative">
-            <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="absolute top-3 right-3 p-2 bg-slate-950/20 hover:bg-slate-950/30 rounded-xl text-slate-950 font-bold text-xs transition">
+          <!-- Header Bar with Company Logo -->
+          <div class="bg-gradient-to-r from-slate-900 to-slate-950 p-6 text-center relative border-b border-slate-800">
+            <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="absolute top-3 right-3 p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 font-bold text-xs transition">
               ${window.app && window.app.theme === 'dark' ? '☀️ สว่าง' : '🌙 มืด'}
             </button>
-            <div class="inline-flex p-3 bg-slate-950/15 rounded-2xl mb-2 shadow-inner">
-              <i data-lucide="truck" class="w-10 h-10"></i>
+            <div class="inline-flex p-2 bg-white rounded-2xl mb-3 shadow-lg border border-slate-700">
+              <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-16 h-16 object-contain rounded-xl">
             </div>
-            <h1 class="text-2xl font-black">${CONFIG.APP_NAME}</h1>
-            <p class="text-xs font-bold text-slate-900/80 mt-1">ระบบบันทึกเที่ยววิ่งและตรวจสอบจุดรับ-เทหิน</p>
+            <h1 class="text-xl font-black text-white tracking-wide">โรงโม่ชาญยุทธ</h1>
+            <p class="text-[11px] font-bold text-blue-400 mt-0.5 tracking-wider uppercase">CHANYUTH MILL FLEET MANAGEMENT</p>
+            <p class="text-xs text-slate-400 mt-1">ระบบบันทึกเที่ยววิ่งและตรวจสอบจุดรับ-เทหิน</p>
           </div>
 
           <!-- Login Form Content -->

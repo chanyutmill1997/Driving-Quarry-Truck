@@ -49,12 +49,15 @@ class DriverView {
               <p class="text-xs text-blue-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5">
+            <button onclick="window.app.openChangePinModal()" title="เปลี่ยนรหัส PIN ของฉัน" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-blue-400 font-bold flex items-center gap-1 border border-slate-700">
+              <i data-lucide="key" class="w-3.5 h-3.5"></i> เปลี่ยน PIN
+            </button>
             <button onclick="window.app.toggleTheme()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-slate-300 font-bold">
               ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
             </button>
-            <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
-              <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
+            <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออก
             </button>
           </div>
         </div>
@@ -137,6 +140,9 @@ class DriverView {
                 <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-xl font-bold">
                   ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
                 </button>
+                <button onclick="window.app.openChangePinModal()" title="เปลี่ยนรหัส PIN" class="text-xs bg-slate-800 hover:bg-slate-700 text-blue-400 px-2 py-1.5 rounded-xl font-bold border border-slate-700 flex items-center gap-1">
+                  <i data-lucide="key" class="w-3 h-3"></i> PIN
+                </button>
                 <button onclick="driverView.promptSwitchTruck()" title="เปลี่ยนรถระหว่างวัน" class="text-xs bg-blue-900/60 hover:bg-blue-800 text-blue-300 px-2.5 py-1.5 rounded-xl font-bold border border-blue-700/50 flex items-center gap-1">
                   <i data-lucide="refresh-cw" class="w-3 h-3"></i> เปลี่ยนรถ
                 </button>
@@ -144,9 +150,11 @@ class DriverView {
                   <i data-lucide="log-out" class="w-3 h-3"></i> พัก/ออก
                 </button>
               </div>
-              <button onclick="driverView.confirmEndShift()" class="text-[11px] bg-red-950/60 border border-red-800/80 text-red-300 hover:bg-red-900 px-3 py-1 rounded-lg font-bold">
-                🏁 สิ้นสุดวัน (ปิดกะ)
-              </button>
+              <div class="flex items-center gap-2">
+                <button onclick="driverView.confirmEndShift()" class="text-[11px] bg-red-950/60 border border-red-800/80 text-red-300 hover:bg-red-900 px-3 py-1 rounded-lg font-bold">
+                  🏁 สิ้นสุดวัน (ปิดกะ)
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,12 @@
-const CACHE_NAME = 'quarry-v1';
+const CACHE_NAME = 'quarry-chanyuth-v2.2';
 const ASSETS = [
   './',
   './index.html',
+  './manifest.json',
+  './assets/logo.png',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
+  './assets/apple-touch-icon.png',
   './css/app.css',
   './data/seed_data.json',
   './js/config.js',
