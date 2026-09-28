@@ -1,8 +1,8 @@
 /**
- * หน้าจอสรุปรายงานและส่งออก Excel (Reports & Excel Export Component)
- * เพิ่มระบบ: 
- * 1) เจาะลึกประวัติรายบุคคล (Individual Driver Deep-Dive Profile)
- * 2) กระทบยอดสิบล้อ vs แม็คโคร (Truck vs Excavator Reconciliation Audit Tab)
+ * หน้าจอสรุปรายงานและส่งออก Excel / PDF (Reports & Export Component)
+ * รองรับการส่งออกทั้ง:
+ * 1) Excel Spreadsheet (.xlsx) แยก 3 ชีท
+ * 2) Official PDF Report (.pdf) และ Print Preview สำหรับพิมพ์ลงกระดาษ A4
  */
 class ReportsView {
   constructor() {
@@ -30,38 +30,52 @@ class ReportsView {
       <div class="space-y-6">
         
         <!-- Header -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
           <div>
             <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
               <span class="p-2 bg-emerald-500 text-slate-950 rounded-xl">📑</span>
               รายงานและสรุปยอดค่าจ้าง (Reports & Audits)
             </h1>
-            <p class="text-sm text-slate-400 mt-1">กรองดูภาพรวม, เจาะลึกรายคนขับ หรือตรวจสอบการกระทบยอดสิบล้อ vs แม็คโคร</p>
+            <p class="text-sm text-slate-400 mt-1">กรองดูภาพรวม, กระทบยอดสิบล้อ vs แม็คโคร หรือส่งออกรายงานเป็น Excel และ PDF</p>
           </div>
           
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2.5">
             <!-- View Mode Switcher -->
             <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800">
-              <button onclick="reportsView.setViewMode('overview')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('overview')" class="px-3 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 สรุปภาพรวม
               </button>
-              <button onclick="reportsView.setViewMode('reconciliation')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'reconciliation' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('reconciliation')" class="px-3 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'reconciliation' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 ⚖️ กระทบยอดสิบล้อ/แม็คโคร
               </button>
-              <button onclick="reportsView.setViewMode('individual')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+              <button onclick="reportsView.setViewMode('individual')" class="px-3 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 👤 เจาะลึกรายคน
               </button>
             </div>
 
-            <!-- Export Excel Button -->
-            <button onclick="reportsView.exportToExcel()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black rounded-xl text-xs shadow-lg transition flex items-center gap-1.5">
-              <i data-lucide="download" class="w-4 h-4"></i>
-              Export Excel (3 ชีท)
-            </button>
+            <!-- Export Buttons Group -->
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800">
+              <button onclick="reportsView.exportToExcel()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs shadow transition flex items-center gap-1.5" title="ดาวน์โหลดไฟล์ Excel (.xlsx)">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                Excel (.xlsx)
+              </button>
+
+              <button onclick="reportsView.exportToPDF()" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl text-xs shadow transition flex items-center gap-1.5" title="ดาวน์โหลดไฟล์ PDF (.pdf)">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                PDF (.pdf)
+              </button>
+
+              <button onclick="reportsView.printReport()" class="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 transition flex items-center gap-1" title="พิมพ์เอกสารออกเครื่องพิมพ์">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                พิมพ์
+              </button>
+            </div>
           </div>
         </div>
 
-        ${this.renderActiveView(trips, excLogs, trucks, drivers)}
+        <div id="report-printable-area">
+          ${this.renderActiveView(trips, excLogs, trucks, drivers)}
+        </div>
 
       </div>
     `;
@@ -218,7 +232,7 @@ class ReportsView {
     `;
   }
 
-  // 2. NEW: โหมดกระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Mode)
+  // 2. โหมดกระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Mode)
   renderReconciliationMode(trips, excLogs, trucks) {
     let filteredTrips = trips.filter(t => {
       if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
@@ -348,7 +362,7 @@ class ReportsView {
             <i data-lucide="scale" class="w-5 h-5 text-amber-400"></i>
             ตารางกระทบยอดเปรียบเทียบสิบล้อ vs แม็คโครรายคัน (${reconList.length} คัน)
           </h2>
-          <span class="text-xs text-slate-400">คลิกที่ปุ่มเพื่อดูไทม์ไลน์เปรียบเทียบ</span>
+          <span class="text-xs text-slate-400">สรุปตามช่วงเวลาที่เลือก</span>
         </div>
 
         <div class="overflow-x-auto">
@@ -498,6 +512,9 @@ class ReportsView {
     window.app.render();
   }
 
+  // -------------------------------------------------------------
+  // EXPORT 1: EXCEL (.xlsx)
+  // -------------------------------------------------------------
   exportToExcel() {
     const trips = window.quarryStore.getTrips();
     const excLogs = window.quarryStore.getExcavatorLogs();
@@ -555,7 +572,7 @@ class ReportsView {
       "สิบล้อรายงานรับหิน (เที่ยว)": r.truck,
       "แม็คโครบันทึกตัก (คัน)": r.exc,
       "ผลต่าง (Diff)": r.truck - r.exc,
-      "สถานะ": r.truck === r.exc ? 'ตรงกัน' : (r.truck > r.exc ? 'สิบล้อแจ้งเกิน' : 'แม็คโครตักเกิน')
+      "สถานะ": r.truck === r.exc ? 'ตรงกัน 100%' : (r.truck > r.exc ? 'สิบล้อแจ้งเกิน' : 'แม็คโครตักเกิน')
     }));
 
     // Generate workbook with 3 sheets
@@ -568,8 +585,201 @@ class ReportsView {
     XLSX.utils.book_append_sheet(wb, wsExc, "รายการตักแม็คโคร");
     XLSX.utils.book_append_sheet(wb, wsRecon, "กระทบยอดสิบล้อVSแม็คโคร");
 
-    const fileName = `รายงานกระทบยอดโรงโม่_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `รายงานโรงโม่_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
+  }
+
+  // -------------------------------------------------------------
+  // EXPORT 2: PDF REPORT (.pdf)
+  // -------------------------------------------------------------
+  exportToPDF() {
+    const reportHtml = this.generatePrintableHTML();
+    
+    // สร้าง Container เสมือนสำหรับเรนเดอร์ PDF
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `รายงานโรงโม่_${this.viewMode}_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+
+    const element = document.createElement('div');
+    element.innerHTML = reportHtml;
+    element.style.fontFamily = "'Sarabun', -apple-system, sans-serif";
+    element.style.color = '#111827';
+    element.style.backgroundColor = '#ffffff';
+    element.style.padding = '20px';
+
+    if (window.html2pdf) {
+      window.html2pdf().set(opt).from(element).save();
+    } else {
+      this.printReport();
+    }
+  }
+
+  // -------------------------------------------------------------
+  // EXPORT 3: PRINT / PRINT PREVIEW
+  // -------------------------------------------------------------
+  printReport() {
+    const reportContent = this.generatePrintableHTML();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("กรุณาอนุญาตให้เปิดหน้าต่าง Pop-up เพื่อพิมพ์รายงาน");
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="th">
+      <head>
+        <meta charset="UTF-8">
+        <title>พิมพ์รายงานโรงโม่</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          @page { size: landscape; margin: 12mm; }
+          body { font-family: 'Sarabun', -apple-system, sans-serif; background: #fff; color: #0f172a; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #cbd5e1; padding: 6px 10px; font-size: 12px; }
+          th { background-color: #f1f5f9; font-weight: bold; }
+        </style>
+      </head>
+      <body class="p-6">
+        ${reportContent}
+        <script>
+          window.onload = function() {
+            setTimeout(() => { window.print(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  // สร้างเทมเพลต HTML รายงานทางการสำหรับ PDF / Print
+  generatePrintableHTML() {
+    const dateRangeStr = (this.filterDateFrom || this.filterDateTo)
+      ? `ช่วงวันที่: ${this.filterDateFrom || 'เริ่มต้น'} ถึง ${this.filterDateTo || 'ปัจจุบัน'}`
+      : `ข้อมูลประจำวันที่: ${new Date().toLocaleDateString('th-TH', { dateStyle: 'full' })}`;
+
+    const trips = window.quarryStore.getTrips();
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    const trucks = window.quarryStore.getTrucks();
+
+    let title = "รายงานสรุปภาพรวมรอบวิ่งและยอดค่าจ้าง";
+    if (this.viewMode === 'reconciliation') title = "รายงานการตรวจสอบกระทบยอด (สิบล้อรับหิน vs แม็คโครตักหิน)";
+    if (this.viewMode === 'individual') title = `รายงานประวัติรอบวิ่งเจาะลึก: ${this.selectedDrilldownDriver}`;
+
+    let tableHtml = '';
+
+    if (this.viewMode === 'reconciliation') {
+      const recon = window.quarryAI ? window.quarryAI.getReconciliationReport(new Date().toISOString().split('T')[0]) : { perTruckList: [] };
+      tableHtml = `
+        <table class="w-full text-left border border-slate-300">
+          <thead>
+            <tr class="bg-slate-100 text-slate-800 font-bold">
+              <th class="p-2 border">ลำดับ</th>
+              <th class="p-2 border">เบอร์รถสิบล้อ</th>
+              <th class="p-2 border">คนขับประจำ</th>
+              <th class="p-2 border text-center">พิกัดตัน</th>
+              <th class="p-2 border text-center">สิบล้อแจ้งวิ่ง (เที่ยว)</th>
+              <th class="p-2 border text-center">แม็คโครตักให้ (คัน)</th>
+              <th class="p-2 border text-center">ผลต่าง (Diff)</th>
+              <th class="p-2 border text-center">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recon.perTruckList.map((r, i) => `
+              <tr>
+                <td class="p-2 border text-center">${i + 1}</td>
+                <td class="p-2 border font-bold">${r.code}</td>
+                <td class="p-2 border">${r.driverName || '-'}</td>
+                <td class="p-2 border text-center">${r.capacityTon}</td>
+                <td class="p-2 border text-center font-bold text-blue-700">${r.truckReported}</td>
+                <td class="p-2 border text-center font-bold text-purple-700">${r.excavatorRecorded}</td>
+                <td class="p-2 border text-center font-bold ${r.variance === 0 ? 'text-emerald-700' : 'text-amber-700'}">${r.variance > 0 ? `+${r.variance}` : r.variance}</td>
+                <td class="p-2 border text-center font-bold">${r.status === 'match' ? '✓ ตรงกัน' : (r.status === 'truck_over' ? 'สิบล้อเกิน' : 'แม็คโครเกิน')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      const driverMap = {};
+      trips.forEach(t => {
+        const k = t.driverName || 'ไม่ระบุ';
+        if (!driverMap[k]) driverMap[k] = { name: k, phone: t.driverPhone, truck: t.truckPlate, trips: 0, amount: 0 };
+        driverMap[k].trips += 1;
+        driverMap[k].amount += (t.amount || 0);
+      });
+      const rows = Object.values(driverMap);
+
+      tableHtml = `
+        <table class="w-full text-left border border-slate-300">
+          <thead>
+            <tr class="bg-slate-100 text-slate-800 font-bold">
+              <th class="p-2 border">ลำดับ</th>
+              <th class="p-2 border">ชื่อคนขับ</th>
+              <th class="p-2 border">เบอร์โทรศัพท์</th>
+              <th class="p-2 border">เบอร์รถประจำ</th>
+              <th class="p-2 border text-center">จำนวนเที่ยววิ่ง</th>
+              <th class="p-2 border text-right">ยอดรวมค่าจ้าง (บาท)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((r, i) => `
+              <tr>
+                <td class="p-2 border text-center">${i + 1}</td>
+                <td class="p-2 border font-bold">${r.name}</td>
+                <td class="p-2 border">${r.phone || '-'}</td>
+                <td class="p-2 border font-mono">${r.truck || '-'}</td>
+                <td class="p-2 border text-center font-bold">${r.trips} เที่ยว</td>
+                <td class="p-2 border text-right font-bold text-emerald-700">฿${r.amount.toLocaleString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    return `
+      <div class="space-y-4 text-slate-900">
+        <!-- Header -->
+        <div class="border-b-2 border-slate-800 pb-3 flex justify-between items-end">
+          <div>
+            <h1 class="text-xl font-black text-slate-900">${CONFIG.APP_NAME}</h1>
+            <h2 class="text-base font-bold text-slate-700 mt-0.5">${title}</h2>
+            <p class="text-xs text-slate-500 mt-1">${dateRangeStr}</p>
+          </div>
+          <div class="text-right text-xs text-slate-500">
+            <p>พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</p>
+            <p class="font-bold text-slate-800">เอกสารทางการโรงโม่</p>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="pt-2">
+          ${tableHtml}
+        </div>
+
+        <!-- Signatures Block -->
+        <div class="pt-12 grid grid-cols-3 gap-8 text-center text-xs text-slate-700">
+          <div class="border-t border-slate-400 pt-2">
+            <p>ผู้จัดทำรายงาน / เจ้าหน้าที่ลาน</p>
+            <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
+          </div>
+          <div class="border-t border-slate-400 pt-2">
+            <p>ผู้ตรวจสอบ / หัวหน้างาน</p>
+            <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
+          </div>
+          <div class="border-t border-slate-400 pt-2">
+            <p>ผู้อนุมัติ / ผู้บริหารโรงโม่</p>
+            <p class="text-[10px] text-slate-400 mt-1">(........................................................)</p>
+          </div>
+        </div>
+      </div>
+    `;
   }
 }
 
