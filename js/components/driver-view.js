@@ -49,9 +49,14 @@ class DriverView {
               <p class="text-xs text-blue-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
             </div>
           </div>
-          <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
-            <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="window.app.toggleTheme()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-slate-300 font-bold">
+              ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
+            </button>
+          </div>
         </div>
 
         <!-- Shift Start Card -->
@@ -129,6 +134,9 @@ class DriverView {
             <!-- Action Buttons: Switch Truck, Temp Logout, End Shift -->
             <div class="flex flex-col gap-1.5 items-end">
               <div class="flex items-center gap-1.5">
+                <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-xl font-bold">
+                  ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
+                </button>
                 <button onclick="driverView.promptSwitchTruck()" title="เปลี่ยนรถระหว่างวัน" class="text-xs bg-blue-900/60 hover:bg-blue-800 text-blue-300 px-2.5 py-1.5 rounded-xl font-bold border border-blue-700/50 flex items-center gap-1">
                   <i data-lucide="refresh-cw" class="w-3 h-3"></i> เปลี่ยนรถ
                 </button>

@@ -53,6 +53,55 @@ body {
   color: #f8fafc;
   user-select: none;
   touch-action: manipulation;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ==========================================================================
+   Light Mode Theme Overrides
+   ========================================================================== */
+html.light body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+html.light .bg-slate-950 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-900 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+html.light .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-300, html.light .text-slate-200 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+html.light .border-slate-800, html.light .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light input, html.light select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
 }
 
 /* Custom Scrollbars */
@@ -62,6 +111,9 @@ body {
 }
 ::-webkit-scrollbar-track {
   background: #0f172a;
+}
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
   background: #334155;
@@ -1248,7 +1300,10 @@ class LoginView {
     return `
       <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
         <div class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-          <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-slate-950 text-center">
+          <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-slate-950 text-center relative">
+            <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="absolute top-3 right-3 p-2 bg-slate-950/20 hover:bg-slate-950/30 rounded-xl text-slate-950 font-bold text-xs">
+              ${window.app && window.app.theme === 'dark' ? '☀️ สว่าง' : '🌙 มืด'}
+            </button>
             <div class="inline-flex p-3 bg-slate-950/10 rounded-2xl mb-2"><i data-lucide="truck" class="w-10 h-10"></i></div>
             <h1 class="text-2xl font-black">ระบบบริหารงานโรงโม่</h1>
             <p class="text-sm font-medium text-slate-900/80 mt-1">เข้าสู่ระบบด้วยบัญชีของตนเอง</p>
@@ -1399,9 +1454,14 @@ class DriverView {
               <p class="text-xs text-blue-400 font-medium">คนขับรถบรรทุกประจำโรงโม่</p>
             </div>
           </div>
-          <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
-            <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="window.app.toggleTheme()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-slate-300 font-bold">
+              ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
+            </button>
+          </div>
         </div>
 
         <!-- Shift Start Card -->
@@ -1479,6 +1539,9 @@ class DriverView {
             <!-- Action Buttons: Switch Truck, Temp Logout, End Shift -->
             <div class="flex flex-col gap-1.5 items-end">
               <div class="flex items-center gap-1.5">
+                <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-xl font-bold">
+                  ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
+                </button>
                 <button onclick="driverView.promptSwitchTruck()" title="เปลี่ยนรถระหว่างวัน" class="text-xs bg-blue-900/60 hover:bg-blue-800 text-blue-300 px-2.5 py-1.5 rounded-xl font-bold border border-blue-700/50 flex items-center gap-1">
                   <i data-lucide="refresh-cw" class="w-3 h-3"></i> เปลี่ยนรถ
                 </button>
@@ -1894,9 +1957,14 @@ class ExcavatorView {
               <p class="text-xs text-blue-400 font-medium">คนขับรถขุด / แม็คโครประจำโรงโม่</p>
             </div>
           </div>
-          <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
-            <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="window.app.toggleTheme()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-slate-300 font-bold">
+              ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <button onclick="window.app.logout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 flex items-center gap-1">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i> ออกจากระบบ
+            </button>
+          </div>
         </div>
 
         <!-- Shift Start Card -->
@@ -1974,6 +2042,9 @@ class ExcavatorView {
             <!-- Action Buttons: Switch Machine, Temp Logout, End Shift -->
             <div class="flex flex-col gap-1.5 items-end">
               <div class="flex items-center gap-1.5">
+                <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-xl font-bold">
+                  ${window.app && window.app.theme === 'dark' ? '☀️' : '🌙'}
+                </button>
                 <button onclick="excavatorView.promptSwitchExcavator()" title="เปลี่ยนเครื่องจักรระหว่างวัน" class="text-xs bg-blue-900/60 hover:bg-blue-800 text-blue-300 px-2.5 py-1.5 rounded-xl font-bold border border-blue-700/50 flex items-center gap-1">
                   <i data-lucide="refresh-cw" class="w-3 h-3"></i> เปลี่ยนรถ
                 </button>
@@ -3723,19 +3794,41 @@ window.aiCopilotView = new AICopilotView();
   <script>
 /**
  * ควบคุมการนำทางและแสดงผลหลักของแอปพลิเคชัน (Main App Controller)
+ * รองรับ: ระบบสลับโหมดสว่าง/มืด (Light/Dark Theme)
  */
 class QuarryApp {
   constructor() {
     this.currentView = 'dashboard'; // dashboard, reports, settings, ai-copilot
+    this.theme = localStorage.getItem('quarry_theme') || 'dark';
+    this.applyTheme();
+  }
+
+  applyTheme() {
+    if (this.theme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
+  }
+
+  toggleTheme() {
+    this.theme = this.theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('quarry_theme', this.theme);
+    this.applyTheme();
+    this.render();
   }
 
   async init() {
+    this.applyTheme();
     await window.quarryStore.init();
     window.quarryStore.subscribe(() => this.render());
     this.route();
   }
 
   route() {
+    this.applyTheme();
     if (!window.authService.isLoggedIn()) {
       this.renderLogin();
       return;
@@ -3760,6 +3853,12 @@ class QuarryApp {
     root.innerHTML = `
       <div class="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
         <div class="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-xs text-blue-400 font-bold">เลือกลักษณะงาน</span>
+            <button onclick="window.app.toggleTheme()" class="px-3 py-1.5 bg-slate-800 text-xs rounded-xl text-slate-300 font-bold">
+              ${this.theme === 'dark' ? '☀️ สว่าง' : '🌙 มืด'}
+            </button>
+          </div>
           <div class="text-center mb-6">
             <div class="text-4xl mb-2">👤</div>
             <h1 class="text-xl font-black">สวัสดี ${user.nickname || user.name}</h1>
@@ -3862,8 +3961,14 @@ class QuarryApp {
               </button>
             </nav>
 
-            <!-- User Status & Logout -->
-            <div class="flex items-center gap-3">
+            <!-- User Status, Theme Switcher & Logout -->
+            <div class="flex items-center gap-2 sm:gap-3">
+              <!-- Theme Toggle Button -->
+              <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง / โหมดมืด" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1">
+                <span>${this.theme === 'dark' ? '☀️' : '🌙'}</span>
+                <span class="hidden sm:inline">${this.theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
+              </button>
+
               <div class="text-right hidden sm:block">
                 <p class="text-xs font-bold text-white">${user.name}</p>
                 <span class="text-[10px] text-blue-400 font-semibold">${user.role === 'admin' ? 'ผู้บริหารสูงสุด' : 'หัวหน้างาน'}</span>
@@ -3884,7 +3989,7 @@ class QuarryApp {
 
         <!-- Footer -->
         <footer class="border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
-          ระบบบริหารงานโรงโม่ • AI Insights & Google Apps Script Cloud Engine
+          ระบบบริหารงานโรงโม่ • AI Insights & Cloud Fleet Management Engine
         </footer>
 
       </div>

@@ -12,6 +12,55 @@ body {
   color: #f8fafc;
   user-select: none;
   touch-action: manipulation;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ==========================================================================
+   Light Mode Theme Overrides
+   ========================================================================== */
+html.light body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+html.light .bg-slate-950 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-900 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+html.light .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-300, html.light .text-slate-200 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+html.light .border-slate-800, html.light .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light input, html.light select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
 }
 
 /* Custom Scrollbars */
@@ -21,6 +70,9 @@ body {
 }
 ::-webkit-scrollbar-track {
   background: #0f172a;
+}
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
   background: #334155;

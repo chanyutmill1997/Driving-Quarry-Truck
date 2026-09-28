@@ -8,7 +8,10 @@ class LoginView {
     return `
       <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
         <div class="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-          <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-slate-950 text-center">
+          <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-slate-950 text-center relative">
+            <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง/มืด" class="absolute top-3 right-3 p-2 bg-slate-950/20 hover:bg-slate-950/30 rounded-xl text-slate-950 font-bold text-xs">
+              ${window.app && window.app.theme === 'dark' ? '☀️ สว่าง' : '🌙 มืด'}
+            </button>
             <div class="inline-flex p-3 bg-slate-950/10 rounded-2xl mb-2"><i data-lucide="truck" class="w-10 h-10"></i></div>
             <h1 class="text-2xl font-black">ระบบบริหารงานโรงโม่</h1>
             <p class="text-sm font-medium text-slate-900/80 mt-1">เข้าสู่ระบบด้วยบัญชีของตนเอง</p>

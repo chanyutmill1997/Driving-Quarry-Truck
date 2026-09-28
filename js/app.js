@@ -1,18 +1,40 @@
 /**
  * ควบคุมการนำทางและแสดงผลหลักของแอปพลิเคชัน (Main App Controller)
+ * รองรับ: ระบบสลับโหมดสว่าง/มืด (Light/Dark Theme)
  */
 class QuarryApp {
   constructor() {
     this.currentView = 'dashboard'; // dashboard, reports, settings, ai-copilot
+    this.theme = localStorage.getItem('quarry_theme') || 'dark';
+    this.applyTheme();
+  }
+
+  applyTheme() {
+    if (this.theme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
+  }
+
+  toggleTheme() {
+    this.theme = this.theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('quarry_theme', this.theme);
+    this.applyTheme();
+    this.render();
   }
 
   async init() {
+    this.applyTheme();
     await window.quarryStore.init();
     window.quarryStore.subscribe(() => this.render());
     this.route();
   }
 
   route() {
+    this.applyTheme();
     if (!window.authService.isLoggedIn()) {
       this.renderLogin();
       return;
@@ -37,6 +59,12 @@ class QuarryApp {
     root.innerHTML = `
       <div class="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
         <div class="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-xs text-blue-400 font-bold">เลือกลักษณะงาน</span>
+            <button onclick="window.app.toggleTheme()" class="px-3 py-1.5 bg-slate-800 text-xs rounded-xl text-slate-300 font-bold">
+              ${this.theme === 'dark' ? '☀️ สว่าง' : '🌙 มืด'}
+            </button>
+          </div>
           <div class="text-center mb-6">
             <div class="text-4xl mb-2">👤</div>
             <h1 class="text-xl font-black">สวัสดี ${user.nickname || user.name}</h1>
@@ -139,8 +167,14 @@ class QuarryApp {
               </button>
             </nav>
 
-            <!-- User Status & Logout -->
-            <div class="flex items-center gap-3">
+            <!-- User Status, Theme Switcher & Logout -->
+            <div class="flex items-center gap-2 sm:gap-3">
+              <!-- Theme Toggle Button -->
+              <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง / โหมดมืด" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1">
+                <span>${this.theme === 'dark' ? '☀️' : '🌙'}</span>
+                <span class="hidden sm:inline">${this.theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
+              </button>
+
               <div class="text-right hidden sm:block">
                 <p class="text-xs font-bold text-white">${user.name}</p>
                 <span class="text-[10px] text-blue-400 font-semibold">${user.role === 'admin' ? 'ผู้บริหารสูงสุด' : 'หัวหน้างาน'}</span>
@@ -161,7 +195,7 @@ class QuarryApp {
 
         <!-- Footer -->
         <footer class="border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
-          ระบบบริหารงานโรงโม่ • AI Insights & Google Apps Script Cloud Engine
+          ระบบบริหารงานโรงโม่ • AI Insights & Cloud Fleet Management Engine
         </footer>
 
       </div>
