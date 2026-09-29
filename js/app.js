@@ -264,17 +264,17 @@ class QuarryApp {
           <div class="space-y-3 text-xs">
             <div>
               <label class="block font-bold text-slate-300 mb-1">รหัส PIN ปัจจุบัน</label>
-              <input type="password" id="chg-old-pin" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <input type="password" id="chg-old-pin" maxlength="6" inputmode="numeric" placeholder="••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none">
             </div>
 
             <div>
-              <label class="block font-bold text-slate-300 mb-1">รหัส PIN ใหม่ (4-6 หลัก)</label>
-              <input type="password" id="chg-new-pin" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <label class="block font-bold text-slate-300 mb-1">รหัส PIN ใหม่ (6 หลัก)</label>
+              <input type="password" id="chg-new-pin" maxlength="6" inputmode="numeric" placeholder="••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
             </div>
 
             <div>
-              <label class="block font-bold text-slate-300 mb-1">ยืนยันรหัส PIN ใหม่</label>
-              <input type="password" id="chg-confirm-pin" maxlength="6" inputmode="numeric" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+              <label class="block font-bold text-slate-300 mb-1">ยืนยันรหัส PIN ใหม่ (6 หลัก)</label>
+              <input type="password" id="chg-confirm-pin" maxlength="6" inputmode="numeric" placeholder="••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-black text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
             </div>
           </div>
 
@@ -312,8 +312,8 @@ class QuarryApp {
       if (errorBox) { errorBox.textContent = 'กรุณากรอกรหัส PIN ปัจจุบัน'; errorBox.classList.remove('hidden'); }
       return;
     }
-    if (!newPin || newPin.length < 4) {
-      if (errorBox) { errorBox.textContent = 'รหัส PIN ใหม่ต้องมีอย่างน้อย 4 หลัก'; errorBox.classList.remove('hidden'); }
+    if (!newPin || newPin.length !== 6) {
+      if (errorBox) { errorBox.textContent = 'รหัส PIN ใหม่ต้องเป็นตัวเลข 6 หลัก'; errorBox.classList.remove('hidden'); }
       return;
     }
     if (newPin !== confirmPin) {

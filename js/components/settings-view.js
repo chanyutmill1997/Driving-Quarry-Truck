@@ -331,7 +331,7 @@ class SettingsView {
                       }
                     </span>
                   </td>
-                  <td class="p-3 text-center font-mono font-bold text-blue-400">${d.pin || '1234'}</td>
+                  <td class="p-3 text-center font-mono font-bold text-blue-400">${d.pin || '123456'}</td>
                   <td class="p-3 text-center">
                     <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
                       d.status === 'suspended' ? 'bg-red-950 text-red-300 border border-red-800' :
@@ -626,8 +626,8 @@ class SettingsView {
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block font-bold text-slate-300 mb-1">รหัส PIN เข้าสู่ระบบ (4 หลัก)</label>
-                <input type="text" id="modal-user-pin" value="1234" maxlength="6" inputmode="numeric" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-center text-blue-400 font-mono font-black focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <label class="block font-bold text-slate-300 mb-1">รหัส PIN เข้าสู่ระบบ (6 หลัก)</label>
+                <input type="text" id="modal-user-pin" value="123456" maxlength="6" inputmode="numeric" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-center text-blue-400 font-mono font-black focus:ring-2 focus:ring-blue-500 focus:outline-none">
               </div>
               <div>
                 <label class="block font-bold text-slate-300 mb-1">สถานะเริ่มต้น</label>
@@ -720,8 +720,8 @@ class SettingsView {
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block font-bold text-slate-300 mb-1">กำหนดรหัส PIN ใหม่</label>
-                <input type="text" id="edit-user-pin" value="${user.pin || '1234'}" maxlength="6" inputmode="numeric" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-center text-blue-400 font-mono font-black focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <label class="block font-bold text-slate-300 mb-1">กำหนดรหัส PIN ใหม่ (6 หลัก)</label>
+                <input type="text" id="edit-user-pin" value="${user.pin || '123456'}" maxlength="6" inputmode="numeric" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-center text-blue-400 font-mono font-black focus:ring-2 focus:ring-blue-500 focus:outline-none">
               </div>
               <div>
                 <label class="block font-bold text-slate-300 mb-1">สถานะบัญชี</label>
@@ -759,7 +759,7 @@ class SettingsView {
     const phone = document.getElementById('modal-user-phone')?.value.trim();
     const role = document.getElementById('modal-user-role')?.value || 'truck_driver';
     const vehicle = document.getElementById('modal-user-vehicle')?.value || '';
-    const pin = document.getElementById('modal-user-pin')?.value.trim() || '1234';
+    const pin = document.getElementById('modal-user-pin')?.value.trim() || '123456';
     const status = document.getElementById('modal-user-status')?.value || 'active';
 
     if (!name) return alert('กรุณาระบุชื่อ-นามสกุล');
@@ -791,7 +791,7 @@ class SettingsView {
     const phone = document.getElementById('edit-user-phone')?.value.trim();
     const role = document.getElementById('edit-user-role')?.value || user.role;
     const vehicle = document.getElementById('edit-user-vehicle')?.value;
-    const pin = document.getElementById('edit-user-pin')?.value.trim() || user.pin;
+    const pin = document.getElementById('edit-user-pin')?.value.trim() || user.pin || '123456';
     const status = document.getElementById('edit-user-status')?.value || 'active';
 
     if (!name) return alert('กรุณาระบุชื่อ-นามสกุล');

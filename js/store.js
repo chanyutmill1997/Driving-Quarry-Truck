@@ -72,6 +72,34 @@ class QuarryStore {
       }
     }
 
+    // อัปเกรดรหัส PIN เดิมเป็น 6 หลัก (123456 สำหรับคนขับ, 999999 สำหรับ admin, 888888 สำหรับ SUP)
+    if (this.masterData && this.masterData.drivers) {
+      let migrated = false;
+      this.masterData.drivers.forEach(d => {
+        if (d.role === 'admin' || d.id === 'ADMIN_1' || d.phone === 'admin') {
+          if (!d.pin || d.pin === '1234' || d.pin === '9999') {
+            d.pin = '999999';
+            d.phone = 'admin';
+            migrated = true;
+          }
+        } else if (d.role === 'supervisor' || d.id === 'SUP_1' || d.phone === 'SUP') {
+          if (!d.pin || d.pin === '1234' || d.pin === '8888') {
+            d.pin = '888888';
+            d.phone = 'SUP';
+            migrated = true;
+          }
+        } else {
+          if (!d.pin || d.pin === '1234') {
+            d.pin = '123456';
+            migrated = true;
+          }
+        }
+      });
+      if (migrated) {
+        this.saveMasterData();
+      }
+    }
+
     // 2. โหลดรายการ Trips และ Excavator Logs ในเครื่อง
     this.trips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]').map(trip => {
       const { loadPhotoBase64, dumpPhotoBase64, ...cleanTrip } = trip;
@@ -788,20 +816,24 @@ class QuarryStore {
 
     // ค้นหาผู้ใช้ตาม เบอร์โทร, ID หรือ รหัสพนักงาน
     let user = drivers.find(d => {
-      const userPhone = String(d.phone || '').replace(/[-\s]/g, '');
+      const userPhone = String(d.phone || '').replace(/[-\s]/g, '').toLowerCase();
       const userId = String(d.id || '').toLowerCase();
-      const userName = String(d.name || '').toLowerCase();
+      const target = cleanId.toLowerCase();
       
+      // เทียบกับ Admin alias
+      if ((target === 'admin' || target === 'admin_1' || target === '0899999999') && (d.role === 'admin' || userId === 'admin_1' || userPhone === 'admin')) {
+        return true;
+      }
+      // เทียบกับ Supervisor alias
+      if ((target === 'sup' || target === 'sup_1' || target === 'supervisor' || target === '0888888888') && (d.role === 'supervisor' || userId === 'sup_1' || userPhone === 'sup')) {
+        return true;
+      }
       // เทียบกับเบอร์โทร (รองรับทั้งแบบมี 0 และตัด 0)
-      if (userPhone && (userPhone === cleanId || userPhone.endsWith(cleanId) || cleanId.endsWith(userPhone))) {
+      if (userPhone && (userPhone === target || userPhone.endsWith(target) || target.endsWith(userPhone))) {
         return true;
       }
       // เทียบกับ ID
-      if (userId === cleanId.toLowerCase()) return true;
-
-      // เทียบกับ Admin / Supervisor alias
-      if (cleanId.toUpperCase() === 'ADMIN_1' && (d.role === 'admin' || userId === 'admin_1')) return true;
-      if (cleanId.toUpperCase() === 'SUP_1' && (d.role === 'supervisor' || userId === 'sup_1')) return true;
+      if (userId === target) return true;
 
       return false;
     });
@@ -823,11 +855,11 @@ class QuarryStore {
     }
 
     // กรณีทดสอบระบบบัญชี Admin / Supervisor ถ้าไม่มีในฐานข้อมูล ให้สร้างบัญชีเริ่มต้น
-    if (!user && (cleanId.toUpperCase() === 'ADMIN_1' || cleanId.toLowerCase() === 'admin')) {
-      user = { id: 'ADMIN_1', name: 'ผู้บริหารโรงโม่ (แอดมิน)', phone: '0888888888', role: 'admin', pin: '1234', status: 'active' };
+    if (!user && (cleanId.toLowerCase() === 'admin' || cleanId.toUpperCase() === 'ADMIN_1')) {
+      user = { id: 'ADMIN_1', name: 'ผู้บริหารโรงโม่ (Admin)', phone: 'admin', role: 'admin', pin: '999999', status: 'active' };
       this.addOrUpdateDriver(user);
-    } else if (!user && (cleanId.toUpperCase() === 'SUP_1' || cleanId.toLowerCase() === 'supervisor')) {
-      user = { id: 'SUP_1', name: 'หัวหน้างานหน้างาน', phone: '0999999999', role: 'supervisor', pin: '1234', status: 'active' };
+    } else if (!user && (cleanId.toLowerCase() === 'sup' || cleanId.toUpperCase() === 'SUP_1' || cleanId.toLowerCase() === 'supervisor')) {
+      user = { id: 'SUP_1', name: 'หัวหน้างานหน้างาน (Supervisor)', phone: 'SUP', role: 'supervisor', pin: '888888', status: 'active' };
       this.addOrUpdateDriver(user);
     }
 
@@ -844,7 +876,8 @@ class QuarryStore {
     }
 
     // ตรวจสอบรหัส PIN
-    const expectedPin = String(user.pin || '1234').trim();
+    const defaultExpected = (user.role === 'admin' ? '999999' : (user.role === 'supervisor' ? '888888' : '123456'));
+    const expectedPin = String(user.pin || defaultExpected).trim();
     if (cleanPin !== expectedPin) {
       return { success: false, message: 'รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' };
     }

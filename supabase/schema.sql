@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS public.drivers (
     name TEXT NOT NULL,
     nickname TEXT,
     phone TEXT NOT NULL UNIQUE,
-    pin TEXT NOT NULL DEFAULT '1234',
+    pin TEXT NOT NULL DEFAULT '123456',
     role TEXT NOT NULL DEFAULT 'truck_driver', -- 'truck_driver', 'excavator_operator', 'supervisor', 'admin'
     assigned_vehicle TEXT,
     status TEXT NOT NULL DEFAULT 'active',
@@ -226,19 +226,19 @@ ON CONFLICT (id) DO NOTHING;
 
 -- ผู้ใช้งานระบบและคนขับ
 INSERT INTO public.drivers (id, name, nickname, phone, pin, role, assigned_vehicle, status) VALUES
-('D0', 'ผู้บริหารโรงโม่ (Admin)', 'บอส', '080-000-9999', '9999', 'admin', NULL, 'active'),
-('D_SUP', 'หัวหน้างานคุมลาน (Supervisor)', 'หัวหน้า', '080-000-8888', '8888', 'supervisor', NULL, 'active'),
-('D1', 'นาย ประเสริฐ แซ่ตั้ง', 'หวัง', '081-111-0001', '1234', 'truck_driver', 'C2-38', 'active'),
-('D2', 'นาย สมหมาย ชาญชัย', 'หมาย', '081-111-0002', '1234', 'truck_driver', 'C2-39', 'active'),
-('D3', 'นาย สุรเดช บุญมา', 'เดช', '081-111-0003', '1234', 'truck_driver', 'C2-40', 'active'),
-('D4', 'นาย สมศักดิ์ มีสุข', 'ศักดิ์', '081-111-0004', '1234', 'truck_driver', 'C2-41', 'active'),
-('D5', 'นาย เอกชัย มั่งมี', 'เอก', '081-111-0005', '1234', 'truck_driver', 'C2-42', 'active'),
-('D6', 'นาย มานพ รุ่งเรือง', 'นพ', '081-111-0006', '1234', 'truck_driver', 'C2-43', 'active'),
-('D7', 'นาย สมพร ยั่งยืน', 'พร', '081-111-0007', '1234', 'truck_driver', 'C2-44', 'active'),
-('D8', 'นาย ประวิทย์ สุขสม', 'วิทย์', '081-111-0008', '1234', 'truck_driver', 'C2-45', 'active'),
-('D9', 'นาย สมชัย ก้าวหน้า', 'ชัย', '081-111-0009', '1234', 'truck_driver', 'C2-46', 'active'),
-('D10', 'นาย สุชาติ เจริญพร', 'ชาติ', '081-111-0010', '1234', 'truck_driver', 'C2-47', 'active'),
-('DE1', 'นาย ชัยรัตน์ ช่างขุด', 'ชัย', '082-222-0001', '1234', 'excavator_operator', 'CAT 320-01', 'active'),
-('DE2', 'นาย วรพจน์ มั่นหมาย', 'พจน์', '082-222-0002', '1234', 'excavator_operator', 'CAT 320-02', 'active'),
-('DE3', 'นาย เกรียงไกร ชัยศรี', 'ไกร', '082-222-0003', '1234', 'excavator_operator', 'PC200-01', 'active')
+('D0', 'ผู้บริหารโรงโม่ (Admin)', 'บอส', 'admin', '999999', 'admin', NULL, 'active'),
+('D_SUP', 'หัวหน้างานคุมลาน (Supervisor)', 'หัวหน้า', 'SUP', '888888', 'supervisor', NULL, 'active'),
+('D1', 'นาย ประเสริฐ แซ่ตั้ง', 'หวัง', '081-111-0001', '123456', 'truck_driver', 'C2-38', 'active'),
+('D2', 'นาย สมหมาย ชาญชัย', 'หมาย', '081-111-0002', '123456', 'truck_driver', 'C2-39', 'active'),
+('D3', 'นาย สุรเดช บุญมา', 'เดช', '081-111-0003', '123456', 'truck_driver', 'C2-40', 'active'),
+('D4', 'นาย สมศักดิ์ มีสุข', 'ศักดิ์', '081-111-0004', '123456', 'truck_driver', 'C2-41', 'active'),
+('D5', 'นาย เอกชัย มั่งมี', 'เอก', '081-111-0005', '123456', 'truck_driver', 'C2-42', 'active'),
+('D6', 'นาย มานพ รุ่งเรือง', 'นพ', '081-111-0006', '123456', 'truck_driver', 'C2-43', 'active'),
+('D7', 'นาย สมพร ยั่งยืน', 'พร', '081-111-0007', '123456', 'truck_driver', 'C2-44', 'active'),
+('D8', 'นาย ประวิทย์ สุขสม', 'วิทย์', '081-111-0008', '123456', 'truck_driver', 'C2-45', 'active'),
+('D9', 'นาย สมชัย ก้าวหน้า', 'ชัย', '081-111-0009', '123456', 'truck_driver', 'C2-46', 'active'),
+('D10', 'นาย สุชาติ เจริญพร', 'ชาติ', '081-111-0010', '123456', 'truck_driver', 'C2-47', 'active'),
+('DE1', 'นาย ชัยรัตน์ ช่างขุด', 'ชัย', '082-222-0001', '123456', 'excavator_operator', 'CAT 320-01', 'active'),
+('DE2', 'นาย วรพจน์ มั่นหมาย', 'พจน์', '082-222-0002', '123456', 'excavator_operator', 'CAT 320-02', 'active'),
+('DE3', 'นาย เกรียงไกร ชัยศรี', 'ไกร', '082-222-0003', '123456', 'excavator_operator', 'PC200-01', 'active')
 ON CONFLICT (id) DO NOTHING;

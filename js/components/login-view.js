@@ -83,15 +83,14 @@ class LoginView {
             <!-- 3. PIN Code -->
             <div>
               <div class="flex justify-between items-center mb-2">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">3. รหัส PIN (4-6 หลัก)</label>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">3. รหัส PIN (6 หลัก)</label>
                 <button type="button" onclick="loginView.togglePinVisibility()" class="text-xs text-blue-400 hover:text-blue-300 font-bold">
                   ${this.showPin ? 'ซ่อน PIN' : 'แสดง PIN'}
                 </button>
               </div>
               <div class="relative">
-                <input type="${this.showPin ? 'text' : 'password'}" id="login-pin" maxlength="6" inputmode="numeric" autocomplete="current-password" placeholder="••••" class="field-control w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-center text-2xl font-black tracking-widest text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" onkeydown="if(event.key==='Enter') loginView.handleLogin()">
+                <input type="${this.showPin ? 'text' : 'password'}" id="login-pin" maxlength="6" inputmode="numeric" autocomplete="current-password" placeholder="••••••" class="field-control w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-center text-2xl font-black tracking-widest text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" onkeydown="if(event.key==='Enter') loginView.handleLogin()">
               </div>
-              <p class="mt-1 text-[11px] text-slate-500 text-center">รหัสเริ่มต้นสำหรับคนขับเดิมคือ <span class="font-mono font-bold text-slate-300">1234</span></p>
             </div>
 
             <!-- Submit Button -->
@@ -138,14 +137,14 @@ class LoginView {
     const identifier = document.getElementById('login-identifier');
     const hint = document.getElementById('login-account-hint');
     if (role === 'supervisor') {
-      if (!identifier.value || identifier.value === 'ADMIN_1') identifier.value = 'SUP_1';
-      hint.textContent = 'บัญชีหัวหน้างาน: SUP_1 หรือเบอร์โทรหัวหน้างาน';
+      if (!identifier.value || identifier.value === 'admin') identifier.value = 'SUP';
+      hint.textContent = 'บัญชีหัวหน้างาน: SUP (รหัส PIN 888888)';
     } else if (role === 'admin') {
-      if (!identifier.value || identifier.value === 'SUP_1') identifier.value = 'ADMIN_1';
-      hint.textContent = 'บัญชีผู้บริหาร: ADMIN_1 หรือเบอร์โทรผู้ดูแลระบบ';
+      if (!identifier.value || identifier.value === 'SUP') identifier.value = 'admin';
+      hint.textContent = 'บัญชีผู้บริหาร: admin (รหัส PIN 999999)';
     } else {
-      if (identifier.value === 'SUP_1' || identifier.value === 'ADMIN_1') identifier.value = '';
-      hint.textContent = 'ใช้เบอร์โทรศัพท์ 10 หลักหรือรหัสพนักงานของตนเอง';
+      if (identifier.value === 'SUP' || identifier.value === 'admin' || identifier.value === 'SUP_1' || identifier.value === 'ADMIN_1') identifier.value = '';
+      hint.textContent = 'ใช้เบอร์โทรศัพท์ 10 หลักของตนเอง (รหัส PIN 6 หลัก)';
     }
   }
 
@@ -159,7 +158,7 @@ class LoginView {
 
   async handleLogin() {
     const typedIdentifier = document.getElementById('login-identifier')?.value.trim();
-    const identifier = typedIdentifier || (this.selectedRole === 'supervisor' ? 'SUP_1' : (this.selectedRole === 'admin' ? 'ADMIN_1' : ''));
+    const identifier = typedIdentifier || (this.selectedRole === 'supervisor' ? 'SUP' : (this.selectedRole === 'admin' ? 'admin' : ''));
     const pin = document.getElementById('login-pin')?.value.trim();
     const errorBox = document.getElementById('login-error');
 

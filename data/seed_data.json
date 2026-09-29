@@ -321,7 +321,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E2",
@@ -334,7 +334,7 @@
       "status": "available",
       "is_contractor": false,
       "note": "ว่าง",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E3",
@@ -347,7 +347,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E4",
@@ -360,7 +360,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E5",
@@ -373,7 +373,7 @@
       "status": "available",
       "is_contractor": false,
       "note": "ว่าง",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E6",
@@ -386,7 +386,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E7",
@@ -399,7 +399,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E8",
@@ -412,7 +412,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E9",
@@ -425,7 +425,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E10",
@@ -438,7 +438,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E11",
@@ -451,7 +451,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E12",
@@ -464,7 +464,7 @@
       "status": "active",
       "is_contractor": true,
       "note": "ทีม ผรม.น้าภาณ",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E13",
@@ -477,7 +477,7 @@
       "status": "active",
       "is_contractor": true,
       "note": "ทีม ผรม.น้าภาณ",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E14",
@@ -490,7 +490,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E15",
@@ -503,7 +503,7 @@
       "status": "active",
       "is_contractor": true,
       "note": "ทีม ผรม.น้าภาณ",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E16",
@@ -516,7 +516,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E17",
@@ -529,7 +529,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E18",
@@ -542,7 +542,7 @@
       "status": "repair",
       "is_contractor": false,
       "note": "ซ่อม",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E19",
@@ -555,7 +555,7 @@
       "status": "active",
       "is_contractor": false,
       "note": "",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     },
     {
       "id": "E20",
@@ -568,7 +568,7 @@
       "status": "available",
       "is_contractor": false,
       "note": "ว่าง",
-      "rate_per_scoop": 5.0
+      "rate_per_scoop": 5
     }
   ],
   "drivers": [
@@ -579,7 +579,7 @@
       "phone": "065-6348605",
       "role": "truck_driver",
       "assigned_vehicle": "C2-33 UD TRUCK",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_2",
@@ -588,7 +588,7 @@
       "phone": "081-9195518",
       "role": "truck_driver",
       "assigned_vehicle": "C2-38 HINO VICTOR 500",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_3",
@@ -597,7 +597,7 @@
       "phone": "062-2248233",
       "role": "truck_driver",
       "assigned_vehicle": "C2-39 HINO VICTOR 500",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_4",
@@ -606,7 +606,7 @@
       "phone": "080-1571669",
       "role": "truck_driver",
       "assigned_vehicle": "C2-40 HINO VICTOR 500",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_5",
@@ -615,7 +615,7 @@
       "phone": "062-1565059",
       "role": "truck_driver",
       "assigned_vehicle": "C2-41 HINO VICTOR 500",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_6",
@@ -624,7 +624,7 @@
       "phone": "098-9485156",
       "role": "truck_driver",
       "assigned_vehicle": "C2-42 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_7",
@@ -633,7 +633,7 @@
       "phone": "094-2740808",
       "role": "truck_driver",
       "assigned_vehicle": "C2-44 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_8",
@@ -642,7 +642,7 @@
       "phone": "086-2209773",
       "role": "truck_driver",
       "assigned_vehicle": "C2-45 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_9",
@@ -651,7 +651,7 @@
       "phone": "095-9801759",
       "role": "truck_driver",
       "assigned_vehicle": "C2-46 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_10",
@@ -660,7 +660,7 @@
       "phone": "092-9453218",
       "role": "truck_driver",
       "assigned_vehicle": "C2-47 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_11",
@@ -669,7 +669,7 @@
       "phone": "082-0241167",
       "role": "truck_driver",
       "assigned_vehicle": "C2-48 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_12",
@@ -678,7 +678,7 @@
       "phone": "061-6614953",
       "role": "truck_driver",
       "assigned_vehicle": "C2-49 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_13",
@@ -687,7 +687,7 @@
       "phone": "925071764",
       "role": "truck_driver",
       "assigned_vehicle": "C2-50 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_14",
@@ -696,7 +696,7 @@
       "phone": "098-8425271",
       "role": "truck_driver",
       "assigned_vehicle": "C2-51 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_15",
@@ -705,7 +705,7 @@
       "phone": "087-2365012",
       "role": "truck_driver",
       "assigned_vehicle": "C2-52 XCMG ดั้มเล็ก",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_16",
@@ -714,7 +714,7 @@
       "phone": "092-5837734",
       "role": "truck_driver",
       "assigned_vehicle": "C2-53 XCMG ดั้มเล็ก",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_17",
@@ -723,7 +723,7 @@
       "phone": "063-6266512",
       "role": "truck_driver",
       "assigned_vehicle": "C2-54 XCMG ดั้มเล็ก",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_18",
@@ -732,7 +732,7 @@
       "phone": "080-7190445",
       "role": "truck_driver",
       "assigned_vehicle": "C2-55 XCMG ดั้มเล็ก",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_19",
@@ -741,7 +741,7 @@
       "phone": "625345710",
       "role": "truck_driver",
       "assigned_vehicle": "C2-56 XCMG ดั้มเล็ก",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_20",
@@ -750,7 +750,7 @@
       "phone": "086-0423678",
       "role": "truck_driver",
       "assigned_vehicle": "C2-57 XCMG ดั้มเล็ก",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_21",
@@ -759,7 +759,7 @@
       "phone": "081-0511264",
       "role": "truck_driver",
       "assigned_vehicle": "C2-58 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_22",
@@ -768,7 +768,7 @@
       "phone": "082-5291876",
       "role": "truck_driver",
       "assigned_vehicle": "C2-59 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_23",
@@ -777,7 +777,7 @@
       "phone": "065-3968552",
       "role": "truck_driver",
       "assigned_vehicle": "C2-60 XCMG ดั้มใหญ่",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_24",
@@ -786,7 +786,7 @@
       "phone": "064-2061174",
       "role": "truck_driver",
       "assigned_vehicle": "11730 HINO FM",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_25",
@@ -795,7 +795,7 @@
       "phone": "084-1820802",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-37 KOMATSU PC200 (C18574)",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_26",
@@ -804,7 +804,7 @@
       "phone": "065-5704256",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-45 HITACHI ZAXIS350",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_27",
@@ -813,7 +813,7 @@
       "phone": "093-2390176",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-46 HITACHI ZAXIS350",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_28",
@@ -822,7 +822,7 @@
       "phone": "093-1980920",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-49 DOOSAN DX520",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_29",
@@ -831,7 +831,7 @@
       "phone": "065-4235401",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-51 DOOSAN DX200",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_30",
@@ -840,7 +840,7 @@
       "phone": "090-9145117",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-53 CAT 349",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_31",
@@ -849,7 +849,7 @@
       "phone": "082-8458771",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-59 KOMATSU PC500 (100053)",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_32",
@@ -858,7 +858,7 @@
       "phone": "098-1560400",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-62 CAT 336",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_33",
@@ -867,7 +867,7 @@
       "phone": "062-1347026",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-72 KOMATSU PC500 (C100966)",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_34",
@@ -876,7 +876,7 @@
       "phone": "092-4299064",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-74 KOMATSU PC200 (C52730)",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_35",
@@ -885,7 +885,7 @@
       "phone": "095-6576028",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-75 KOMATSU PC350 (C52730)",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "D_36",
@@ -894,115 +894,115 @@
       "phone": "096-7629720",
       "role": "excavator_operator",
       "assigned_vehicle": "C1-80 DOOSAN DX360",
-      "pin": "1234"
+      "pin": "123456"
     },
     {
       "id": "ADMIN_1",
       "name": "ผู้บริหารโรงโม่ (Admin)",
       "nickname": "เฮีย/ผู้บริหาร",
-      "phone": "089-9999999",
+      "phone": "admin",
       "role": "admin",
       "assigned_vehicle": "",
-      "pin": "9999"
+      "pin": "999999"
     },
     {
       "id": "SUP_1",
       "name": "หัวหน้างานหน้างาน (Supervisor)",
       "nickname": "หัวหน้า",
-      "phone": "088-8888888",
+      "phone": "SUP",
       "role": "supervisor",
       "assigned_vehicle": "",
-      "pin": "8888"
+      "pin": "888888"
     }
   ],
   "job_rates": [
     {
       "id": "R1",
       "name": "วิ่งหินปากโม่",
-      "rate_30_ton": 20.0,
-      "rate_45_ton": 23.0,
-      "rate_60_ton": 26.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 20,
+      "rate_45_ton": 23,
+      "rate_60_ton": 26,
+      "excavator_rate": 5
     },
     {
       "id": "R2",
       "name": "Otวิ่งหินปากโม่",
       "rate_30_ton": null,
-      "rate_45_ton": 34.0,
-      "rate_60_ton": 39.0,
-      "excavator_rate": 5.0
+      "rate_45_ton": 34,
+      "rate_60_ton": 39,
+      "excavator_rate": 5
     },
     {
       "id": "R3",
       "name": "วิ่งดิน",
-      "rate_30_ton": 15.0,
-      "rate_45_ton": 18.0,
-      "rate_60_ton": 22.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 15,
+      "rate_45_ton": 18,
+      "rate_60_ton": 22,
+      "excavator_rate": 5
     },
     {
       "id": "R4",
       "name": "วิ่งหินดำ",
-      "rate_30_ton": 15.0,
-      "rate_45_ton": 18.0,
-      "rate_60_ton": 22.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 15,
+      "rate_45_ton": 18,
+      "rate_60_ton": 22,
+      "excavator_rate": 5
     },
     {
       "id": "R5",
       "name": "วิ่งหินสต๊อกเปิดยุ้งโรง 2",
-      "rate_30_ton": 11.0,
-      "rate_45_ton": 13.0,
-      "rate_60_ton": 14.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 11,
+      "rate_45_ton": 13,
+      "rate_60_ton": 14,
+      "excavator_rate": 5
     },
     {
       "id": "R6",
       "name": "วิ่งหินสต๊อกเปิดยุ้งโรง 3",
-      "rate_30_ton": 11.0,
-      "rate_45_ton": 13.0,
-      "rate_60_ton": 14.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 11,
+      "rate_45_ton": 13,
+      "rate_60_ton": 14,
+      "excavator_rate": 5
     },
     {
       "id": "R7",
       "name": "วิ่งหินฝุ่นลงบอ (รถตักให้)",
-      "rate_30_ton": 14.0,
-      "rate_45_ton": 16.0,
-      "rate_60_ton": 18.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 14,
+      "rate_45_ton": 16,
+      "rate_60_ton": 18,
+      "excavator_rate": 5
     },
     {
       "id": "R8",
       "name": "วิ่งหินเข้าแพล้น (ผ่าน)",
-      "rate_30_ton": 12.0,
-      "rate_45_ton": 14.0,
+      "rate_30_ton": 12,
+      "rate_45_ton": 14,
       "rate_60_ton": null,
-      "excavator_rate": 5.0
+      "excavator_rate": 5
     },
     {
       "id": "R9",
       "name": "วิ่งหินเข้าแพล้น (ไม่ผ่าน)",
-      "rate_30_ton": 17.0,
-      "rate_45_ton": 19.0,
+      "rate_30_ton": 17,
+      "rate_45_ton": 19,
       "rate_60_ton": null,
-      "excavator_rate": 5.0
+      "excavator_rate": 5
     },
     {
       "id": "R10",
       "name": "วิ่งหินฝุ่นเปิดยุ้ง(OT)",
-      "rate_30_ton": 24.0,
-      "rate_45_ton": 27.0,
-      "rate_60_ton": 32.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 24,
+      "rate_45_ton": 27,
+      "rate_60_ton": 32,
+      "excavator_rate": 5
     },
     {
       "id": "R11",
       "name": "ช่วยช่าง",
-      "rate_30_ton": 50.0,
-      "rate_45_ton": 50.0,
-      "rate_60_ton": 50.0,
-      "excavator_rate": 5.0
+      "rate_30_ton": 50,
+      "rate_45_ton": 50,
+      "rate_60_ton": 50,
+      "excavator_rate": 5
     }
   ],
   "meta": {
