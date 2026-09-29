@@ -458,6 +458,38 @@ class QuarryStore {
     return ratePerTon * capacityTon;
   }
 
+  // คำนวณราคาค่าตักสำหรับรถแม็คโครแยกตามขนาดพิกัดตันของรถบรรทุกที่เข้ามาตัก (30 ตัน / 45 ตัน / 60 ตัน)
+  calculateExcavatorRate(excavatorCode, truckPlateOrCapacity) {
+    let capacityTon = 30;
+    if (typeof truckPlateOrCapacity === 'number') {
+      capacityTon = truckPlateOrCapacity;
+    } else if (typeof truckPlateOrCapacity === 'string') {
+      const trucks = this.getTrucks();
+      const truck = trucks.find(t => t.code === truckPlateOrCapacity);
+      if (truck) capacityTon = Number(truck.capacity_ton) || 30;
+    }
+
+    const excavators = this.getExcavators();
+    const exc = excavators.find(e => e.code === excavatorCode);
+
+    if (exc) {
+      if (capacityTon >= 60 && exc.rate_60_ton !== undefined && exc.rate_60_ton !== null) return Number(exc.rate_60_ton);
+      if (capacityTon >= 45 && exc.rate_45_ton !== undefined && exc.rate_45_ton !== null) return Number(exc.rate_45_ton);
+      if (exc.rate_30_ton !== undefined && exc.rate_30_ton !== null) return Number(exc.rate_30_ton);
+      if (exc.rate_per_scoop) {
+        const base = Number(exc.rate_per_scoop);
+        if (capacityTon >= 60) return Math.round(base * 2.0); // 60 ตัน
+        if (capacityTon >= 45) return Math.round(base * 1.5); // 45 ตัน
+        return base; // 30 ตัน
+      }
+    }
+
+    // มาตรฐานราคาค่าตักโรงโม่แยกตามพิกัดตันรถบรรทุก
+    if (capacityTon >= 60) return 10.0;
+    if (capacityTon >= 45) return 8.0;
+    return 5.0;
+  }
+
   // -------------------------------------------------------------
   // Truck Trips Methods
   // -------------------------------------------------------------

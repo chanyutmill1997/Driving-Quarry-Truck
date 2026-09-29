@@ -183,7 +183,9 @@ class SettingsView {
                 <th class="p-3">เบอร์รถ / รุ่นเครื่องจักร</th>
                 <th class="p-3">ผู้ควบคุมประจำ</th>
                 <th class="p-3 text-center">สังกัด</th>
-                <th class="p-3 text-center">ค่าตักต่อคัน (บาท)</th>
+                <th class="p-3 text-center text-blue-300">ตัก 30 ตัน</th>
+                <th class="p-3 text-center text-blue-300">ตัก 45 ตัน</th>
+                <th class="p-3 text-center text-blue-300">ตัก 60 ตัน</th>
                 <th class="p-3 text-center">สถานะ</th>
                 <th class="p-3 text-right">จัดการ</th>
               </tr>
@@ -198,7 +200,9 @@ class SettingsView {
                       ${e.is_contractor ? 'ทีม ผรม.' : 'ประจำโรงโม่'}
                     </span>
                   </td>
-                  <td class="p-3 text-center font-bold text-emerald-400">฿${e.rate_per_scoop || 5}</td>
+                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_30_ton !== undefined && e.rate_30_ton !== null ? e.rate_30_ton : (e.rate_per_scoop || 5)}</td>
+                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_45_ton !== undefined && e.rate_45_ton !== null ? e.rate_45_ton : 8}</td>
+                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_60_ton !== undefined && e.rate_60_ton !== null ? e.rate_60_ton : 10}</td>
                   <td class="p-3 text-center">
                     <span class="status-badge px-2 py-0.5 rounded text-[10px] font-bold ${e.status === 'repair' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'}">
                       ${e.status === 'repair' ? 'ซ่อม' : 'พร้อมใช้'}
@@ -541,11 +545,31 @@ class SettingsView {
     const excs = window.quarryStore.getExcavators();
     const exc = excs.find(e => e.id === excId);
     if (!exc) return;
-    const rate = parseFloat(prompt(`ระบุค่าตักต่อคันสำหรับ ${exc.code} (บาท):`, exc.rate_per_scoop || 5));
-    if (!isNaN(rate)) {
-      window.quarryStore.addOrUpdateExcavator({ ...exc, rate_per_scoop: rate });
-      window.app.render();
-    }
+
+    const cur30 = exc.rate_30_ton !== undefined && exc.rate_30_ton !== null ? exc.rate_30_ton : (exc.rate_per_scoop || 5);
+    const cur45 = exc.rate_45_ton !== undefined && exc.rate_45_ton !== null ? exc.rate_45_ton : 8;
+    const cur60 = exc.rate_60_ton !== undefined && exc.rate_60_ton !== null ? exc.rate_60_ton : 10;
+
+    const r30Str = prompt(`🚜 กำหนดค่าตักสำหรับเครื่องจักร: ${exc.code}\n\n1. ค่าตักรถบรรทุก 30 ตัน (บาท):`, cur30);
+    if (r30Str === null) return;
+    const r45Str = prompt(`2. ค่าตักรถบรรทุก 45 ตัน (บาท):`, cur45);
+    if (r45Str === null) return;
+    const r60Str = prompt(`3. ค่าตักรถบรรทุก 60 ตัน (บาท):`, cur60);
+    if (r60Str === null) return;
+
+    const r30 = parseFloat(r30Str) || 5;
+    const r45 = parseFloat(r45Str) || 8;
+    const r60 = parseFloat(r60Str) || 10;
+
+    window.quarryStore.addOrUpdateExcavator({
+      ...exc,
+      rate_30_ton: r30,
+      rate_45_ton: r45,
+      rate_60_ton: r60,
+      rate_per_scoop: r30
+    });
+    alert(`✅ อัปเดตเรทค่าตัก ${exc.code} สำเร็จ!\n• 30 ตัน = ฿${r30}\n• 45 ตัน = ฿${r45}\n• 60 ตัน = ฿${r60}`);
+    window.app.render();
   }
 
   deleteExcavator(excId) {

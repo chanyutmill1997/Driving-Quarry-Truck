@@ -90,23 +90,8 @@ class ExcavatorView {
     if (this.customScoopRate !== null && !isNaN(this.customScoopRate)) {
       return Number(this.customScoopRate);
     }
-    const excavators = window.quarryStore.getExcavators();
-    const currentExcObj = excavators.find(e => e.code === this.selectedShiftExcavator) || {};
-    const trucks = window.quarryStore.getTrucks();
-    const targetTruck = trucks.find(t => t.code === targetTruckCode) || trucks[0];
-
-    // ถ้ามี rate_per_scoop ในเครื่องจักร
-    if (currentExcObj.rate_per_scoop && currentExcObj.rate_per_scoop > 0) {
-      return Number(currentExcObj.rate_per_scoop);
-    }
-
-    // เรทตามพิกัดตันของรถบรรทุก (ถ้ามี)
-    if (targetTruck) {
-      const cap = Number(targetTruck.capacity_ton) || 30;
-      if (cap >= 60) return 10.0;
-      if (cap >= 45) return 8.0;
-      return 5.0;
-    }
+    return window.quarryStore.calculateExcavatorRate(this.selectedShiftExcavator, targetTruckCode);
+  }
 
     return 5.0;
   }
@@ -399,6 +384,7 @@ class ExcavatorView {
 
   handleTargetTruckChange(truckCode) {
     this.selectedTargetTruck = truckCode;
+    this.customScoopRate = null;
     window.app.render();
   }
 
