@@ -19,11 +19,11 @@ class LoginView {
 
   renderLoginForm() {
     return `
-      <div class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden glass-card">
+      <div class="login-page min-h-screen flex items-center justify-center p-4 bg-slate-950">
+        <div class="login-shell max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden glass-card">
           
           <!-- Hero Banner with Real Quarry Plant & Official Branding -->
-          <div class="relative overflow-hidden border-b border-slate-800">
+          <div class="login-hero relative overflow-hidden border-b border-slate-800">
             <!-- Plant Image Backdrop -->
             <div class="h-44 w-full bg-slate-950 relative overflow-hidden">
               <img src="assets/quarry_plant.png" alt="โรงโม่หิน ป.ศรีวิไลลักษณ์" class="w-full h-full object-cover opacity-60">
@@ -51,7 +51,12 @@ class LoginView {
           </div>
 
           <!-- Login Form Content -->
-          <div class="p-6 space-y-5">
+          <div class="login-panel p-6 space-y-5">
+            <div class="login-welcome">
+              <p class="text-[11px] font-black text-blue-400 tracking-[0.16em] uppercase">Secure Operations Portal</p>
+              <h2 class="text-xl font-black text-white mt-1">เข้าสู่ระบบบริหารงานโรงโม่</h2>
+              <p class="text-sm text-slate-400 mt-1">เลือกบทบาทและยืนยันตัวตนเพื่อเริ่มปฏิบัติงาน</p>
+            </div>
             
             <!-- 1. Role Selector -->
             <div>
@@ -67,7 +72,7 @@ class LoginView {
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">2. เบอร์โทรศัพท์ หรือ รหัสผู้ใช้</label>
               <div class="relative">
-                <input type="text" id="login-identifier" autocomplete="username" inputmode="tel" placeholder="เช่น 0656348605" class="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-base font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <input type="text" id="login-identifier" autocomplete="username" inputmode="tel" placeholder="เช่น 0656348605" class="field-control w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-base font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <div class="absolute right-3.5 top-3.5 text-slate-500">
                   <i data-lucide="phone" class="w-5 h-5"></i>
                 </div>
@@ -84,13 +89,13 @@ class LoginView {
                 </button>
               </div>
               <div class="relative">
-                <input type="${this.showPin ? 'text' : 'password'}" id="login-pin" maxlength="6" inputmode="numeric" autocomplete="current-password" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-center text-2xl font-black tracking-widest text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" onkeydown="if(event.key==='Enter') loginView.handleLogin()">
+                <input type="${this.showPin ? 'text' : 'password'}" id="login-pin" maxlength="6" inputmode="numeric" autocomplete="current-password" placeholder="••••" class="field-control w-full bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-center text-2xl font-black tracking-widest text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" onkeydown="if(event.key==='Enter') loginView.handleLogin()">
               </div>
               <p class="mt-1 text-[11px] text-slate-500 text-center">รหัสเริ่มต้นสำหรับคนขับเดิมคือ <span class="font-mono font-bold text-slate-300">1234</span></p>
             </div>
 
             <!-- Submit Button -->
-            <button id="login-button" onclick="loginView.handleLogin()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white text-base font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
+            <button id="login-button" onclick="loginView.handleLogin()" class="primary-action w-full py-4 bg-blue-600 hover:bg-blue-500 text-white text-base font-black rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
               <i data-lucide="log-in" class="w-5 h-5 text-white"></i> เข้าสู่ระบบ
             </button>
             
@@ -98,7 +103,7 @@ class LoginView {
 
             <!-- Notice for New Drivers -->
             <div class="pt-3 border-t border-slate-800 text-center">
-              <div class="p-3 bg-slate-950/80 border border-slate-800 rounded-2xl text-xs space-y-1">
+              <div class="notice-card p-3 bg-slate-950/80 border border-slate-800 rounded-2xl text-xs space-y-1">
                 <p class="text-slate-300 font-bold flex items-center justify-center gap-1.5">
                   <i data-lucide="shield-alert" class="w-4 h-4 text-blue-400"></i>
                   สำหรับพนักงานขับรถใหม่
@@ -111,7 +116,7 @@ class LoginView {
 
           </div>
 
-          <div class="bg-slate-950 p-3.5 text-center border-t border-slate-800">
+          <div class="login-footer bg-slate-950 p-3.5 text-center border-t border-slate-800">
             <p class="text-[11px] text-slate-500">เวอร์ชัน ${CONFIG.VERSION} | ระบบฐานข้อมูล Supabase PostgreSQL</p>
           </div>
         </div>
@@ -120,14 +125,14 @@ class LoginView {
 
   roleButton(role, icon, label) {
     const active = this.selectedRole === role;
-    return `<button data-role="${role}" onclick="loginView.selectRole('${role}')" class="role-button min-h-20 p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center ${active ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-md font-black' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'}"><span class="block text-2xl mb-1">${icon}</span>${label}</button>`;
+    return `<button data-role="${role}" onclick="loginView.selectRole('${role}')" class="role-button role-card min-h-20 p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center ${active ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-md font-black' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'}"><span class="block text-2xl mb-1">${icon}</span>${label}</button>`;
   }
 
   selectRole(role) {
     this.selectedRole = role;
     document.querySelectorAll('.role-button').forEach(button => {
       const active = button.dataset.role === role;
-      button.className = `role-button min-h-20 p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center ${active ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-md font-black' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'}`;
+      button.className = `role-button role-card min-h-20 p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center ${active ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-md font-black' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'}`;
     });
     document.getElementById('login-error')?.classList.add('hidden');
     const identifier = document.getElementById('login-identifier');

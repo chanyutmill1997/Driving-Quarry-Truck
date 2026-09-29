@@ -57,8 +57,8 @@ class QuarryApp {
     const user = window.authService.getUser();
     const root = document.getElementById('app-root');
     root.innerHTML = `
-      <div class="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
-        <div class="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+      <div class="work-mode-page min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
+        <div class="work-mode-card max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
           <div class="flex justify-between items-center mb-4">
             <span class="text-xs text-blue-400 font-bold">เลือกลักษณะงาน</span>
             <button onclick="window.app.toggleTheme()" class="px-3 py-1.5 bg-slate-800 text-xs rounded-xl text-slate-300 font-bold">
@@ -134,14 +134,14 @@ class QuarryApp {
     }
 
     root.innerHTML = `
-      <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      <div class="app-shell min-h-screen bg-slate-950 text-slate-100 flex flex-col">
         
         <!-- Top Navbar -->
-        <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
+        <header class="app-header bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
           <div class="max-w-7xl mx-auto flex items-center justify-between">
             
             <!-- Brand with Logo -->
-            <div class="flex items-center gap-3 cursor-pointer" onclick="window.app.navigate('dashboard')">
+            <div class="app-brand flex items-center gap-3 cursor-pointer" onclick="window.app.navigate('dashboard')">
               <div class="w-10 h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow border border-slate-700">
                 <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-full h-full object-contain rounded-xl">
               </div>
@@ -155,7 +155,7 @@ class QuarryApp {
             </div>
 
             <!-- Nav Links -->
-            <nav class="hidden md:flex items-center gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+            <nav class="app-nav hidden md:flex items-center gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
               <button onclick="window.app.navigate('dashboard')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 แดชบอร์ดสด
               </button>
@@ -198,12 +198,19 @@ class QuarryApp {
         </header>
 
         <!-- Main Body Container -->
-        <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-1">
+        <main class="app-main max-w-7xl w-full mx-auto p-4 md:p-6 flex-1">
           ${mainContent}
         </main>
 
+        <nav class="mobile-nav md:hidden" aria-label="เมนูหลักบนโทรศัพท์">
+          <button onclick="window.app.navigate('dashboard')" class="${this.currentView === 'dashboard' ? 'active' : ''}"><span>📊</span><small>แดชบอร์ด</small></button>
+          <button onclick="window.app.navigate('ai-copilot')" class="${this.currentView === 'ai-copilot' ? 'active' : ''}"><span>🤖</span><small>AI ผู้ช่วย</small></button>
+          <button onclick="window.app.navigate('reports')" class="${this.currentView === 'reports' ? 'active' : ''}"><span>📄</span><small>รายงาน</small></button>
+          <button onclick="window.app.navigate('settings')" class="${this.currentView === 'settings' ? 'active' : ''}"><span>⚙️</span><small>ตั้งค่า</small></button>
+        </nav>
+
         <!-- Footer -->
-        <footer class="border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
+        <footer class="app-footer border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
           ${CONFIG.APP_NAME} • AI Insights & Cloud Fleet Management Engine
         </footer>
 
