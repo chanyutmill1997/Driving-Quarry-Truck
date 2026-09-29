@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quarry-chanyuth-v2.4.2';
+const CACHE_NAME = 'quarry-chanyuth-v2.5.0';
 const ASSETS = [
   './',
   './index.html',
@@ -13,12 +13,14 @@ const ASSETS = [
   './js/camera.js',
   './js/store.js',
   './js/auth.js',
+  './js/ai-engine.js',
   './js/components/login-view.js',
   './js/components/driver-view.js',
   './js/components/excavator-view.js',
   './js/components/admin-dashboard.js',
   './js/components/reports-view.js',
   './js/components/settings-view.js',
+  './js/components/ai-copilot-view.js',
   './js/app.js'
 ];
 
