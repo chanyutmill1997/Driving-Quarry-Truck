@@ -15,18 +15,20 @@ class QuarryAIEngine {
   // ------------------------------------------------------------------------
   // 1. ระบบตรวจจับความผิดปกติ (Anomaly Detection)
   // ------------------------------------------------------------------------
-  detectAnomalies() {
+  detectAnomalies(targetDateFrom, targetDateTo = targetDateFrom) {
     const trips = window.quarryStore.getTrips();
     const excLogs = window.quarryStore.getExcavatorLogs();
     const trucks = window.quarryStore.getTrucks();
     const today = new Date().toISOString().split('T')[0];
-    const todayTrips = trips.filter(t => t.date === today);
+    const dateFrom = targetDateFrom || today;
+    const dateTo = targetDateTo || dateFrom;
+    const todayTrips = trips.filter(t => t.date >= dateFrom && t.date <= dateTo);
 
     const anomalies = [];
 
     // กฎที่ 1: ตรวจจับความเร็วในการอัปรูปจุดรับและจุดเท (Load-to-Dump Speed Anomaly)
     // หากระยะเวลาจากจุดรับถึงจุดเทน้อยกว่า 3 นาที (180 วินาที) ถือว่าผิดปกติอย่างยิ่ง
-    trips.forEach(t => {
+    todayTrips.forEach(t => {
       let durationSec = t.durationSeconds;
       
       // คำนวณจาก timestamp ถ้าไม่มี durationSeconds ใน record เก่า
@@ -116,7 +118,7 @@ class QuarryAIEngine {
     });
 
     // กฎที่ 4: ตรวจสอบความสอดคล้องระหว่างสิบล้อกับแม็คโคร (Truck-Excavator Daily Reconciliation Audit)
-    const recon = this.getReconciliationReport(today);
+    const recon = this.getReconciliationReport(dateFrom, dateTo);
     if (recon.perTruckList.length > 0) {
       const mismatchedTrucks = recon.perTruckList.filter(x => x.variance !== 0);
       if (mismatchedTrucks.length > 0) {
@@ -180,10 +182,11 @@ class QuarryAIEngine {
   // ------------------------------------------------------------------------
   // เครื่องยนต์กระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Audit Engine)
   // ------------------------------------------------------------------------
-  getReconciliationReport(targetDate) {
+  getReconciliationReport(targetDate, targetDateTo = targetDate) {
     const date = targetDate || new Date().toISOString().split('T')[0];
-    const trips = window.quarryStore.getTrips().filter(t => t.date === date);
-    const excLogs = window.quarryStore.getExcavatorLogs().filter(l => l.date === date);
+    const dateTo = targetDateTo || date;
+    const trips = window.quarryStore.getTrips().filter(t => t.date >= date && t.date <= dateTo);
+    const excLogs = window.quarryStore.getExcavatorLogs().filter(l => l.date >= date && l.date <= dateTo);
     const trucks = window.quarryStore.getTrucks();
 
     const totalTruckTrips = trips.length;
@@ -262,6 +265,7 @@ class QuarryAIEngine {
 
     return {
       date,
+      dateTo,
       totalTruckTrips,
       totalExcavatorScoops,
       diff,
@@ -275,7 +279,7 @@ class QuarryAIEngine {
   // ------------------------------------------------------------------------
   // 2. ระบบ AI ผู้ช่วยถามตอบอัจฉริยะ (AI Chatbot)
   // ------------------------------------------------------------------------
-  ask(question) {
+  ask(question, options = {}) {
     const q = (question || '').trim().toLowerCase();
     const trips = window.quarryStore.getTrips();
     const excLogs = window.quarryStore.getExcavatorLogs();
@@ -285,8 +289,11 @@ class QuarryAIEngine {
     const rates = window.quarryStore.getJobRates();
 
     const today = new Date().toISOString().split('T')[0];
-    const todayTrips = trips.filter(t => t.date === today);
-    const todayExcLogs = excLogs.filter(l => l.date === today);
+    const dateFrom = options.dateFrom || today;
+    const dateTo = options.dateTo || dateFrom;
+    const todayTrips = trips.filter(t => t.date >= dateFrom && t.date <= dateTo);
+    const todayExcLogs = excLogs.filter(l => l.date >= dateFrom && l.date <= dateTo);
+    const rangeLabel = dateFrom === dateTo ? dateFrom : `${dateFrom} ถึง ${dateTo}`;
 
     let answer = "";
 
@@ -296,11 +303,11 @@ class QuarryAIEngine {
       const totalAmountExc = todayExcLogs.reduce((s, l) => s + (l.amount || 5), 0);
       const activeTrucks = new Set(todayTrips.map(t => t.truckPlate)).size;
 
-      answer = `📊 **สรุปภาพรวมวันนี้ (${new Date().toLocaleDateString('th-TH')}):**\n` +
+      answer = `📊 **สรุปภาพรวมช่วงวันที่ ${rangeLabel}:**\n` +
                `• 🚚 รถบรรทุกวิ่งงาน: **${activeTrucks} / ${trucks.length} คัน**\n` +
                `• 🏁 รอบวิ่งสำเร็จ: **${todayTrips.length} เที่ยว** (ยอดจ่าย: ฿${totalAmountTrucks.toLocaleString()} บาท)\n` +
                `• 🚜 แม็คโครตักหิน: **${todayExcLogs.length} คัน** (ยอดจ่าย: ฿${totalAmountExc.toLocaleString()} บาท)\n` +
-               `• 💰 **ยอดจ่ายรวมทั้งสิ้นวันนี้: ฿${(totalAmountTrucks + totalAmountExc).toLocaleString()} บาท**`;
+               `• 💰 **ยอดจ่ายรวมทั้งสิ้น: ฿${(totalAmountTrucks + totalAmountExc).toLocaleString()} บาท**`;
     }
     // 2. ถามว่าใครวิ่งเยอะสุด / ท็อป
     else if (q.includes('เยอะสุด') || q.includes('อันดับ') || q.includes('ท็อป') || q.includes('ใครวิ่ง')) {
@@ -311,9 +318,9 @@ class QuarryAIEngine {
       const sorted = Object.entries(countMap).sort((a, b) => b[1] - a[1]);
 
       if (sorted.length === 0) {
-        answer = 'วันนี้ยังไม่มีข้อมูลการวิ่งส่งเข้ามาครับ';
+        answer = `ยังไม่มีข้อมูลการวิ่งในช่วงวันที่ ${rangeLabel} ครับ`;
       } else {
-        answer = `🏆 **อันดับคนขับที่วิ่งได้มากที่สุดวันนี้:**\n` +
+        answer = `🏆 **อันดับคนขับที่วิ่งได้มากที่สุด ช่วงวันที่ ${rangeLabel}:**\n` +
                  sorted.slice(0, 5).map((item, idx) => `${idx + 1}. **${item[0]}**: ${item[1]} เที่ยว`).join('\n');
       }
     }
@@ -321,13 +328,13 @@ class QuarryAIEngine {
     else if (q.includes('รถจอด') || q.includes('ไม่ได้วิ่ง') || q.includes('ว่าง')) {
       const activeTrucks = new Set(todayTrips.map(t => t.truckPlate));
       const idleTrucks = trucks.filter(t => !activeTrucks.has(t.code));
-      answer = `🛑 **รถบรรทุกที่ยังไม่ได้วิ่งในวันนี้ (${idleTrucks.length} คัน):**\n` +
+      answer = `🛑 **รถบรรทุกที่ยังไม่มีเที่ยววิ่งในช่วงวันที่ ${rangeLabel} (${idleTrucks.length} คัน):**\n` +
                idleTrucks.slice(0, 10).map(t => `• ${t.code} (${t.capacity_ton} ตัน) ${t.driver_name ? '- ' + t.driver_name : ''}`).join('\n') +
                (idleTrucks.length > 10 ? `\n...และอีก ${idleTrucks.length - 10} คัน` : '');
     }
     // 4. ถามเรื่องความผิดปกติ
     else if (q.includes('ผิดปกติ') || q.includes('โกง') || q.includes('เตือน') || q.includes('ปัญหา')) {
-      const anomalies = this.detectAnomalies();
+      const anomalies = this.detectAnomalies(dateFrom, dateTo);
       if (anomalies.length === 0) {
         answer = '✅ **ผลการวิเคราะห์:** ไม่พบสิ่งผิดปกติในระบบ ข้อมูลพิกัด GPS และความถี่การวิ่งอยู่ในเกณฑ์ปกติครับ';
       } else {
