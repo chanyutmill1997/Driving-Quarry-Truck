@@ -784,6 +784,12 @@ html.light .app-main .excavator-status-card {
   background: #fff !important;
   border-color: #cbd6e3 !important;
 }
+html.light .app-main .excavator-status-card .bg-purple-950 {
+  background: #f0e5ff !important;
+  border: 1px solid #c4a2ea !important;
+  color: #5b218a !important;
+  text-shadow: none !important;
+}
 html.light .app-main .excavator-code { color: #101c30 !important; font-size: .95rem !important; }
 html.light .app-main .excavator-operator { color: #485a70 !important; font-size: .78rem !important; }
 html.light .app-main .excavator-count { color: #334155 !important; font-size: .9rem !important; }
