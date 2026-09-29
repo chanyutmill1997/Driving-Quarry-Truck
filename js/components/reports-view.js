@@ -68,16 +68,16 @@ class ReportsView {
           
           <div class="flex flex-wrap items-center gap-2.5">
             <!-- View Mode Switcher -->
-            <div class="flex flex-wrap bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800 gap-1.5 shadow-inner">
-              <button onclick="reportsView.setViewMode('disbursement')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.viewMode === 'disbursement' ? 'bg-emerald-500 text-slate-950 font-black shadow-md ring-1 ring-emerald-400/50' : 'text-slate-400 hover:text-white hover:bg-slate-900/60'}">
+            <div class="flex flex-wrap bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800 gap-1.5 shadow-inner shrink-0">
+              <button onclick="reportsView.setViewMode('disbursement')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.viewMode === 'disbursement' ? 'bg-emerald-500 text-slate-950 font-black shadow-md ring-1 ring-emerald-400/50' : 'text-slate-400 hover:text-white hover:bg-slate-900/60'}">
                 <span>📸</span>
                 <span>หลักฐานแนบเบิกจ่าย & รูปทุกเที่ยว</span>
               </button>
-              <button onclick="reportsView.setViewMode('overview')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.viewMode === 'overview' ? 'bg-blue-600 text-white font-black shadow-md ring-1 ring-blue-400/50' : 'text-slate-400 hover:text-white hover:bg-slate-900/60'}">
+              <button onclick="reportsView.setViewMode('overview')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.viewMode === 'overview' ? 'bg-blue-600 text-white font-black shadow-md ring-1 ring-blue-400/50' : 'text-slate-400 hover:text-white hover:bg-slate-900/60'}">
                 <span>📊</span>
                 <span>สรุปภาพรวมค่าจ้าง</span>
               </button>
-              <button onclick="reportsView.setViewMode('individual')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.viewMode === 'individual' ? 'bg-indigo-600 text-white font-black shadow-md ring-1 ring-indigo-400/50' : 'text-slate-400 hover:text-white hover:bg-slate-900/60'}">
+              <button onclick="reportsView.setViewMode('individual')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.viewMode === 'individual' ? 'bg-indigo-600 text-white font-black shadow-md ring-1 ring-indigo-400/50' : 'text-slate-400 hover:text-white hover:bg-slate-900/60'}">
                 <span>👤</span>
                 <span>เจาะลึกรายบุคคล</span>
               </button>

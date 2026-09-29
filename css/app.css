@@ -714,6 +714,21 @@ html.light .mobile-nav { background: rgba(255,255,255,.98); }
 .mobile-nav button small { font-size: 10px; font-weight: 600; white-space: nowrap; }
 .mobile-nav button.active { color: #fff; background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 4px 12px rgba(37,99,235,.3); }
 
+/* Desktop Top Navbar Styling */
+.app-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.app-nav button {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  text-wrap: nowrap !important;
+  font-family: 'Prompt', 'Sarabun', sans-serif !important;
+  letter-spacing: -0.01em;
+}
+
 /* Universal surface refinement for every menu */
 .app-main .bg-slate-900,
 .app-main .bg-slate-800,

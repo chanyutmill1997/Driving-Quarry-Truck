@@ -143,51 +143,51 @@ class QuarryApp {
       <div class="app-shell min-h-screen bg-slate-950 text-slate-100 flex flex-col">
         
         <!-- Top Navbar -->
-        <header class="app-header bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40 px-3 sm:px-5 py-2.5 shadow-md">
-          <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        <header class="app-header bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40 px-3 sm:px-6 py-2 shadow-md">
+          <div class="max-w-[1440px] mx-auto flex items-center justify-between gap-2.5 xl:gap-4">
             
             <!-- Brand with Logo -->
-            <div class="app-brand flex items-center gap-3 cursor-pointer shrink-0 group" onclick="window.app.navigate('dashboard')">
-              <div class="w-10 h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow-md border border-slate-700/60 group-hover:scale-105 transition transform">
+            <div class="app-brand flex items-center gap-2.5 sm:gap-3 cursor-pointer shrink-0 group" onclick="window.app.navigate('dashboard')">
+              <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow-md border border-slate-700/60 group-hover:scale-105 transition transform">
                 <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-full h-full object-contain rounded-xl">
               </div>
-              <div>
-                <h1 class="font-extrabold text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5">
+              <div class="hidden sm:block">
+                <h1 class="font-black text-xs sm:text-sm lg:text-base text-white tracking-tight flex items-center gap-1.5">
                   <span>โรงโม่หิน ป.ศรีวิไลลักษณ์</span>
                   <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">ป.ศรีฯ</span>
                 </h1>
-                <p class="text-[10px] sm:text-xs text-blue-400 font-medium truncate">บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
+                <p class="text-[9px] sm:text-[11px] text-blue-400 font-medium truncate">บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
               </div>
             </div>
 
-            <!-- Nav Links (Desktop) -->
-            <nav class="app-nav hidden lg:flex items-center gap-1 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800/90 shadow-inner">
-              <button onclick="window.app.navigate('dashboard')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
-                <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+            <!-- Nav Links (Desktop) - Sleek Horizontal Pills with Zero Text Wrapping -->
+            <nav class="app-nav hidden lg:flex items-center gap-1 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800/90 shadow-inner shrink-0">
+              <button onclick="window.app.navigate('dashboard')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.currentView === 'dashboard' ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-600/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'}">
+                <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 shrink-0"></i>
                 <span>แดชบอร์ดสด</span>
               </button>
-              <button onclick="window.app.navigate('trips')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'trips' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
-                <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+              <button onclick="window.app.navigate('trips')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.currentView === 'trips' ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-600/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'}">
+                <i data-lucide="truck" class="w-3.5 h-3.5 shrink-0"></i>
                 <span>ประวัติการวิ่ง</span>
               </button>
-              <button onclick="window.app.navigate('reconciliation')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'reconciliation' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
-                <i data-lucide="scale" class="w-3.5 h-3.5"></i>
-                <span>ตรวจสอบกระทบยอด</span>
+              <button onclick="window.app.navigate('reconciliation')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.currentView === 'reconciliation' ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'}">
+                <i data-lucide="scale" class="w-3.5 h-3.5 shrink-0"></i>
+                <span>กระทบยอด</span>
               </button>
-              <button onclick="window.app.navigate('anomalies')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'anomalies' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
-                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
-                <span>ตรวจจับความผิดปกติ</span>
+              <button onclick="window.app.navigate('anomalies')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.currentView === 'anomalies' ? 'bg-rose-500 text-white font-black shadow-md shadow-rose-500/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'}">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0"></i>
+                <span>ความผิดปกติ</span>
               </button>
-              <button onclick="window.app.navigate('reports')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'reports' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
-                <i data-lucide="file-chart-column" class="w-3.5 h-3.5"></i>
+              <button onclick="window.app.navigate('reports')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.currentView === 'reports' ? 'bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'}">
+                <i data-lucide="file-chart-column" class="w-3.5 h-3.5 shrink-0"></i>
                 <span>รายงาน & เบิกจ่าย</span>
               </button>
-              <button onclick="window.app.navigate('ai-copilot')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'ai-copilot' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300"></i>
+              <button onclick="window.app.navigate('ai-copilot')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.currentView === 'ai-copilot' ? 'bg-indigo-600 text-white font-black shadow-md shadow-indigo-600/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'}">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300 shrink-0"></i>
                 <span>AI ผู้ช่วย</span>
               </button>
-              <button onclick="window.app.navigate('settings')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'settings' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
-                <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+              <button onclick="window.app.navigate('settings')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${this.currentView === 'settings' ? 'bg-slate-700 text-white font-black shadow-md shadow-slate-700/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'}">
+                <i data-lucide="settings-2" class="w-3.5 h-3.5 shrink-0"></i>
                 <span>ตั้งค่า</span>
               </button>
             </nav>
@@ -195,21 +195,21 @@ class QuarryApp {
             <!-- User Status, Theme Switcher & Logout -->
             <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <!-- Change PIN Button -->
-              <button onclick="window.app.openChangePinModal()" title="เปลี่ยนรหัส PIN ของฉัน" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-blue-400 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
+              <button onclick="window.app.openChangePinModal()" title="เปลี่ยนรหัส PIN ของฉัน" class="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-xl text-blue-400 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
                 <i data-lucide="key" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">PIN</span>
+                <span>PIN</span>
               </button>
 
               <!-- Theme Toggle Button -->
-              <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง / โหมดมืด" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
+              <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง / โหมดมืด" class="p-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
                 <span>${this.theme === 'dark' ? '☀️' : '🌙'}</span>
               </button>
 
-              <div class="text-right hidden sm:block">
-                <p class="text-xs font-bold text-white leading-tight">${user.name}</p>
+              <div class="text-right hidden xl:block">
+                <p class="text-xs font-bold text-white leading-tight truncate max-w-[150px]">${user.name}</p>
                 <span class="text-[10px] text-blue-400 font-semibold">${user.role === 'admin' ? 'ผู้บริหารสูงสุด' : 'หัวหน้างาน'}</span>
               </div>
-              <button onclick="window.app.logout()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
+              <button onclick="window.app.logout()" class="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 rounded-xl text-slate-300 hover:text-rose-400 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
                 <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                 <span class="hidden sm:inline">ออก</span>
               </button>
