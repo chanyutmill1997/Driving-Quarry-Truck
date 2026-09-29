@@ -143,45 +143,52 @@ class QuarryApp {
       <div class="app-shell min-h-screen bg-slate-950 text-slate-100 flex flex-col">
         
         <!-- Top Navbar -->
-        <header class="app-header bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-3 sm:px-4 py-2.5 shadow-md">
-          <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+        <header class="app-header bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40 px-3 sm:px-5 py-2.5 shadow-md">
+          <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
             
             <!-- Brand with Logo -->
-            <div class="app-brand flex items-center gap-2.5 cursor-pointer shrink-0" onclick="window.app.navigate('dashboard')">
-              <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow border border-slate-700">
+            <div class="app-brand flex items-center gap-3 cursor-pointer shrink-0 group" onclick="window.app.navigate('dashboard')">
+              <div class="w-10 h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow-md border border-slate-700/60 group-hover:scale-105 transition transform">
                 <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-full h-full object-contain rounded-xl">
               </div>
               <div>
-                <h1 class="font-black text-xs sm:text-base text-white tracking-tight flex items-center gap-1">
+                <h1 class="font-extrabold text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5">
                   <span>โรงโม่หิน ป.ศรีวิไลลักษณ์</span>
-                  <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">ป.ศรีฯ</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">ป.ศรีฯ</span>
                 </h1>
-                <p class="text-[9px] sm:text-[11px] text-blue-400 font-semibold truncate max-w-[160px] sm:max-w-none">บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
+                <p class="text-[10px] sm:text-xs text-blue-400 font-medium truncate">บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
               </div>
             </div>
 
             <!-- Nav Links (Desktop) -->
-            <nav class="app-nav hidden lg:flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800">
-              <button onclick="window.app.navigate('dashboard')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>แดชบอร์ดสด
+            <nav class="app-nav hidden lg:flex items-center gap-1 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800/90 shadow-inner">
+              <button onclick="window.app.navigate('dashboard')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
+                <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+                <span>แดชบอร์ดสด</span>
               </button>
-              <button onclick="window.app.navigate('trips')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'trips' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="truck" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ประวัติการวิ่ง
+              <button onclick="window.app.navigate('trips')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'trips' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
+                <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+                <span>ประวัติการวิ่ง</span>
               </button>
-              <button onclick="window.app.navigate('reconciliation')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'reconciliation' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ตรวจสอบกระทบยอด
+              <button onclick="window.app.navigate('reconciliation')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'reconciliation' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
+                <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                <span>ตรวจสอบกระทบยอด</span>
               </button>
-              <button onclick="window.app.navigate('anomalies')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'anomalies' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ตรวจจับความผิดปกติ
+              <button onclick="window.app.navigate('anomalies')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'anomalies' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                <span>ตรวจจับความผิดปกติ</span>
               </button>
-              <button onclick="window.app.navigate('reports')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'reports' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="file-chart-column" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>รายงาน & เบิกจ่าย
+              <button onclick="window.app.navigate('reports')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'reports' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
+                <i data-lucide="file-chart-column" class="w-3.5 h-3.5"></i>
+                <span>รายงาน & เบิกจ่าย</span>
               </button>
-              <button onclick="window.app.navigate('ai-copilot')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'ai-copilot' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>AI ผู้ช่วย
+              <button onclick="window.app.navigate('ai-copilot')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'ai-copilot' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300"></i>
+                <span>AI ผู้ช่วย</span>
               </button>
-              <button onclick="window.app.navigate('settings')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'settings' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="settings-2" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ตั้งค่า
+              <button onclick="window.app.navigate('settings')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.currentView === 'settings' ? 'bg-slate-700 text-white shadow-md' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/70'}">
+                <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                <span>ตั้งค่า</span>
               </button>
             </nav>
 
