@@ -155,6 +155,110 @@ class AdminDashboard {
           </div>
         </div>
 
+        <!-- 🚚 Fleet Real-time Matrix Section (28 Trucks & 20 Excavators) - ON TOP -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Left 2 Cols: Real-time Fleet Status Matrix (28 Trucks) -->
+          <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="truck" class="w-5 h-5 text-blue-400"></i>
+                <h2 class="font-black text-lg text-white">สถานะรถบรรทุกแบบ Real-time (${trucks.length} คัน)</h2>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="inline-flex items-center gap-1 text-emerald-400 font-bold">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> วิ่ง (${activeTrucksCount})
+                </span>
+                <span class="inline-flex items-center gap-1 text-slate-400 font-bold">
+                  <span class="w-2 h-2 rounded-full bg-slate-500"></span> จอด (${parkedTrucksCount})
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[460px] overflow-y-auto pr-1">
+              ${trucks.map(t => {
+                const tripsForTruck = todayTrips.filter(tr => tr.truckPlate === t.code);
+                const isRunning = tripsForTruck.length > 0;
+                const totalEarn = tripsForTruck.reduce((sum, tr) => sum + (tr.amount || 0), 0);
+
+                return `
+                  <div role="button" tabindex="0" onclick="adminDashboard.openTruckDetail('${t.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openTruckDetail('${t.code}')" class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/60 border-slate-800'} space-y-2 cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
+                    <div class="flex items-start justify-between">
+                      <div>
+                        <p class="font-black text-sm text-white">${t.code}</p>
+                        <span class="text-[10px] bg-slate-800 text-slate-300 font-bold px-1.5 py-0.5 rounded">
+                          ${t.capacity_ton} ตัน
+                        </span>
+                      </div>
+                      ${isRunning ? `
+                        <span class="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-full border border-emerald-500/30">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> วิ่ง
+                        </span>
+                      ` : `
+                        <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">
+                          จอด
+                        </span>
+                      `}
+                    </div>
+
+                    <div class="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/60">
+                      <span>คนขับ: <b class="text-slate-300 font-semibold">${t.nickname || t.driver_name || '-'}</b></span>
+                      <span class="font-black text-blue-400">${tripsForTruck.length} เที่ยว</span>
+                    </div>
+
+                    ${isRunning ? `
+                      <div class="text-[11px] text-emerald-400 font-bold flex justify-between items-center">
+                        <span>ยอดรวม</span>
+                        <span>฿${totalEarn.toLocaleString()}</span>
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Right Col: Excavators Status (20 Machines) -->
+          <div class="excavator-panel bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="wrench" class="w-5 h-5 text-blue-400"></i>
+                <h2 class="font-black text-lg text-white">รถขุด / แม็คโคร (20 คัน)</h2>
+              </div>
+              <span class="text-sm font-bold text-slate-400">วันนี้ตัก ${todayExcLogs.length} คัน</span>
+            </div>
+
+            <div class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+              ${excavators.map(e => {
+                const logsForExc = todayExcLogs.filter(l => l.excavatorCode === e.code);
+                const hasWork = logsForExc.length > 0;
+
+                return `
+                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="excavator-status-card min-h-[76px] p-3.5 bg-slate-950 rounded-2xl border ${hasWork ? 'border-blue-500/40' : 'border-slate-800'} flex items-center justify-between cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <p class="excavator-code font-black text-sm text-white">${e.code}</p>
+                        <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${e.is_contractor ? 'bg-purple-950 text-purple-300' : 'bg-slate-800 text-slate-300'}">
+                          ${e.is_contractor ? 'ผรม.' : 'ประจำ'}
+                        </span>
+                      </div>
+                      <p class="excavator-operator text-xs text-slate-400 mt-1">ผู้ควบคุม: <b class="text-slate-300 font-semibold">${e.nickname || e.driver_name || '-'}</b></p>
+                    </div>
+
+                    <div class="text-right">
+                      <span class="excavator-count text-sm font-black ${hasWork ? 'text-emerald-400' : 'text-slate-500'}">
+                        ${logsForExc.length} คัน
+                      </span>
+                      <p class="excavator-rate text-[11px] text-slate-500 font-bold mt-0.5">฿${e.rate_per_scoop || 5}/คัน</p>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+        </div>
+
         <!-- ⚖️ NEW: Truck vs Excavator Reconciliation Matrix Section (ระบบตรวจสอบกระทบยอด) -->
         <div class="bg-slate-900 border ${recon.diff !== 0 ? 'border-amber-500/80 shadow-amber-500/10 shadow-2xl' : 'border-emerald-500/50'} rounded-3xl p-5 shadow-lg space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
@@ -328,110 +432,6 @@ class AdminDashboard {
               </div>
             `).join('')}
           </div>
-        </div>
-
-        <!-- Fleet Real-time Matrix Section (28 Trucks & 20 Excavators) -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <!-- Left 2 Cols: Real-time Fleet Status Matrix (28 Trucks) -->
-          <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div class="flex items-center gap-2">
-                <i data-lucide="truck" class="w-5 h-5 text-blue-400"></i>
-                <h2 class="font-black text-lg text-white">สถานะรถบรรทุกแบบ Real-time (28 คัน)</h2>
-              </div>
-              <div class="flex items-center gap-2 text-xs">
-                <span class="inline-flex items-center gap-1 text-emerald-400 font-bold">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> วิ่ง (${activeTrucksCount})
-                </span>
-                <span class="inline-flex items-center gap-1 text-slate-400 font-bold">
-                  <span class="w-2 h-2 rounded-full bg-slate-500"></span> จอด (${parkedTrucksCount})
-                </span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[460px] overflow-y-auto pr-1">
-              ${trucks.map(t => {
-                const tripsForTruck = todayTrips.filter(tr => tr.truckPlate === t.code);
-                const isRunning = tripsForTruck.length > 0;
-                const totalEarn = tripsForTruck.reduce((sum, tr) => sum + (tr.amount || 0), 0);
-
-                return `
-                  <div role="button" tabindex="0" onclick="adminDashboard.openTruckDetail('${t.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openTruckDetail('${t.code}')" class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/60 border-slate-800'} space-y-2 cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
-                    <div class="flex items-start justify-between">
-                      <div>
-                        <p class="font-black text-sm text-white">${t.code}</p>
-                        <span class="text-[10px] bg-slate-800 text-slate-300 font-bold px-1.5 py-0.5 rounded">
-                          ${t.capacity_ton} ตัน
-                        </span>
-                      </div>
-                      ${isRunning ? `
-                        <span class="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-full border border-emerald-500/30">
-                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> วิ่ง
-                        </span>
-                      ` : `
-                        <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">
-                          จอด
-                        </span>
-                      `}
-                    </div>
-
-                    <div class="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/60">
-                      <span>คนขับ: <b class="text-slate-300 font-semibold">${t.nickname || t.driver_name || '-'}</b></span>
-                      <span class="font-black text-blue-400">${tripsForTruck.length} เที่ยว</span>
-                    </div>
-
-                    ${isRunning ? `
-                      <div class="text-[11px] text-emerald-400 font-bold flex justify-between items-center">
-                        <span>ยอดรวม</span>
-                        <span>฿${totalEarn.toLocaleString()}</span>
-                      </div>
-                    ` : ''}
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
-          <!-- Right Col: Excavators Status (20 Machines) -->
-          <div class="excavator-panel bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div class="flex items-center gap-2">
-                <i data-lucide="wrench" class="w-5 h-5 text-blue-400"></i>
-                <h2 class="font-black text-lg text-white">รถขุด / แม็คโคร (20 คัน)</h2>
-              </div>
-              <span class="text-sm font-bold text-slate-400">วันนี้ตัก ${todayExcLogs.length} คัน</span>
-            </div>
-
-            <div class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-              ${excavators.map(e => {
-                const logsForExc = todayExcLogs.filter(l => l.excavatorCode === e.code);
-                const hasWork = logsForExc.length > 0;
-
-                return `
-                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="excavator-status-card min-h-[76px] p-3.5 bg-slate-950 rounded-2xl border ${hasWork ? 'border-blue-500/40' : 'border-slate-800'} flex items-center justify-between cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
-                    <div>
-                      <div class="flex items-center gap-1.5">
-                        <p class="excavator-code font-black text-sm text-white">${e.code}</p>
-                        <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${e.is_contractor ? 'bg-purple-950 text-purple-300' : 'bg-slate-800 text-slate-300'}">
-                          ${e.is_contractor ? 'ผรม.' : 'ประจำ'}
-                        </span>
-                      </div>
-                      <p class="excavator-operator text-xs text-slate-400 mt-1">ผู้ควบคุม: <b class="text-slate-300 font-semibold">${e.nickname || e.driver_name || '-'}</b></p>
-                    </div>
-
-                    <div class="text-right">
-                      <span class="excavator-count text-sm font-black ${hasWork ? 'text-emerald-400' : 'text-slate-500'}">
-                        ${logsForExc.length} คัน
-                      </span>
-                      <p class="excavator-rate text-[11px] text-slate-500 font-bold mt-0.5">฿${e.rate_per_scoop || 5}/คัน</p>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
         </div>
 
         <!-- Live Audit Trip Feed with Photos -->

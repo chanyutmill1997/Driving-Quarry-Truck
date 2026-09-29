@@ -123,7 +123,13 @@ class QuarryApp {
     if (!root) return;
 
     let mainContent = '';
-    if (this.currentView === 'reports') {
+    if (this.currentView === 'trips') {
+      mainContent = window.reportsView.renderTripsView();
+    } else if (this.currentView === 'reconciliation') {
+      mainContent = window.reportsView.renderReconciliationView();
+    } else if (this.currentView === 'anomalies') {
+      mainContent = window.reportsView.renderAnomaliesView();
+    } else if (this.currentView === 'reports') {
       mainContent = window.reportsView.render();
     } else if (this.currentView === 'settings') {
       mainContent = window.settingsView.render();
@@ -137,59 +143,67 @@ class QuarryApp {
       <div class="app-shell min-h-screen bg-slate-950 text-slate-100 flex flex-col">
         
         <!-- Top Navbar -->
-        <header class="app-header bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
-          <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <header class="app-header bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-3 sm:px-4 py-2.5 shadow-md">
+          <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
             
             <!-- Brand with Logo -->
-            <div class="app-brand flex items-center gap-3 cursor-pointer" onclick="window.app.navigate('dashboard')">
-              <div class="w-10 h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow border border-slate-700">
+            <div class="app-brand flex items-center gap-2.5 cursor-pointer shrink-0" onclick="window.app.navigate('dashboard')">
+              <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-white p-1 flex items-center justify-center shadow border border-slate-700">
                 <img src="assets/logo.png" alt="CHANYUTH MILL" class="w-full h-full object-contain rounded-xl">
               </div>
               <div>
-                <h1 class="font-black text-sm sm:text-base text-white tracking-tight flex items-center gap-1.5">
+                <h1 class="font-black text-xs sm:text-base text-white tracking-tight flex items-center gap-1">
                   <span>โรงโม่หิน ป.ศรีวิไลลักษณ์</span>
-                  <span class="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">ป.ศรีฯ</span>
+                  <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">ป.ศรีฯ</span>
                 </h1>
-                <p class="text-[10px] sm:text-[11px] text-blue-400 font-semibold truncate">บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
+                <p class="text-[9px] sm:text-[11px] text-blue-400 font-semibold truncate max-w-[160px] sm:max-w-none">บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด</p>
               </div>
             </div>
 
-            <!-- Nav Links -->
-            <nav class="app-nav hidden md:flex items-center gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-              <button onclick="window.app.navigate('dashboard')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="layout-dashboard" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>แดชบอร์ดสด
+            <!-- Nav Links (Desktop) -->
+            <nav class="app-nav hidden lg:flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800">
+              <button onclick="window.app.navigate('dashboard')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>แดชบอร์ดสด
               </button>
-              <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'ai-copilot' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="sparkles" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>AI ผู้ช่วย
+              <button onclick="window.app.navigate('trips')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'trips' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <i data-lucide="truck" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ประวัติการวิ่ง
               </button>
-              <button onclick="window.app.navigate('reports')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'reports' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="file-chart-column" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>รายงาน & Excel
+              <button onclick="window.app.navigate('reconciliation')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'reconciliation' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <i data-lucide="scale" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ตรวจสอบกระทบยอด
               </button>
-              <button onclick="window.app.navigate('settings')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'settings' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                <i data-lucide="settings-2" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>ตั้งค่าข้อมูลหลัก
+              <button onclick="window.app.navigate('anomalies')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'anomalies' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ตรวจจับความผิดปกติ
+              </button>
+              <button onclick="window.app.navigate('reports')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'reports' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <i data-lucide="file-chart-column" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>รายงาน & เบิกจ่าย
+              </button>
+              <button onclick="window.app.navigate('ai-copilot')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'ai-copilot' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>AI ผู้ช่วย
+              </button>
+              <button onclick="window.app.navigate('settings')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.currentView === 'settings' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <i data-lucide="settings-2" class="w-3.5 h-3.5 inline-block mr-1 align-text-bottom"></i>ตั้งค่า
               </button>
             </nav>
 
             <!-- User Status, Theme Switcher & Logout -->
-            <div class="flex items-center gap-2 sm:gap-3">
+            <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <!-- Change PIN Button -->
-              <button onclick="window.app.openChangePinModal()" title="เปลี่ยนรหัส PIN ของฉัน" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-blue-400 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
-                <i data-lucide="key" class="w-4 h-4"></i>
+              <button onclick="window.app.openChangePinModal()" title="เปลี่ยนรหัส PIN ของฉัน" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-blue-400 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
+                <i data-lucide="key" class="w-3.5 h-3.5"></i>
                 <span class="hidden sm:inline">PIN</span>
               </button>
 
               <!-- Theme Toggle Button -->
-              <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง / โหมดมืด" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1">
+              <button onclick="window.app.toggleTheme()" title="สลับโหมดสว่าง / โหมดมืด" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
                 <span>${this.theme === 'dark' ? '☀️' : '🌙'}</span>
-                <span class="hidden sm:inline">${this.theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
               </button>
 
               <div class="text-right hidden sm:block">
-                <p class="text-xs font-bold text-white">${user.name}</p>
+                <p class="text-xs font-bold text-white leading-tight">${user.name}</p>
                 <span class="text-[10px] text-blue-400 font-semibold">${user.role === 'admin' ? 'ผู้บริหารสูงสุด' : 'หัวหน้างาน'}</span>
               </div>
-              <button onclick="window.app.logout()" class="p-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1.5">
-                <i data-lucide="log-out" class="w-4 h-4"></i>
+              <button onclick="window.app.logout()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition text-xs font-bold flex items-center gap-1 border border-slate-700">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                 <span class="hidden sm:inline">ออก</span>
               </button>
             </div>
@@ -198,19 +212,23 @@ class QuarryApp {
         </header>
 
         <!-- Main Body Container -->
-        <main class="app-main max-w-7xl w-full mx-auto p-4 md:p-6 flex-1">
+        <main class="app-main max-w-7xl w-full mx-auto p-3 md:p-6 flex-1">
           ${mainContent}
         </main>
 
-        <nav class="mobile-nav md:hidden" aria-label="เมนูหลักบนโทรศัพท์">
+        <!-- Mobile Nav (Bottom Bar) -->
+        <nav class="mobile-nav lg:hidden" aria-label="เมนูหลักบนโทรศัพท์">
           <button onclick="window.app.navigate('dashboard')" class="${this.currentView === 'dashboard' ? 'active' : ''}"><i data-lucide="layout-dashboard"></i><small>แดชบอร์ด</small></button>
-          <button onclick="window.app.navigate('ai-copilot')" class="${this.currentView === 'ai-copilot' ? 'active' : ''}"><i data-lucide="sparkles"></i><small>AI ผู้ช่วย</small></button>
+          <button onclick="window.app.navigate('trips')" class="${this.currentView === 'trips' ? 'active' : ''}"><i data-lucide="truck"></i><small>ประวัติวิ่ง</small></button>
+          <button onclick="window.app.navigate('reconciliation')" class="${this.currentView === 'reconciliation' ? 'active' : ''}"><i data-lucide="scale"></i><small>กระทบยอด</small></button>
+          <button onclick="window.app.navigate('anomalies')" class="${this.currentView === 'anomalies' ? 'active' : ''}"><i data-lucide="alert-triangle"></i><small>ผิดปกติ</small></button>
           <button onclick="window.app.navigate('reports')" class="${this.currentView === 'reports' ? 'active' : ''}"><i data-lucide="file-chart-column"></i><small>รายงาน</small></button>
+          <button onclick="window.app.navigate('ai-copilot')" class="${this.currentView === 'ai-copilot' ? 'active' : ''}"><i data-lucide="sparkles"></i><small>AI</small></button>
           <button onclick="window.app.navigate('settings')" class="${this.currentView === 'settings' ? 'active' : ''}"><i data-lucide="settings-2"></i><small>ตั้งค่า</small></button>
         </nav>
 
         <!-- Footer -->
-        <footer class="app-footer border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
+        <footer class="app-footer border-t border-slate-800/80 bg-slate-900/50 py-3 text-center text-[11px] text-slate-500">
           ${CONFIG.APP_NAME} • AI Insights & Cloud Fleet Management Engine
         </footer>
 

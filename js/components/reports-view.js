@@ -17,6 +17,8 @@ class ReportsView {
     this.disbursementLayout = 'truck_grouped'; // 'truck_grouped', 'trip_timeline', 'audit_table'
     this.disbursementSearchQuery = '';
     this.selectedZoomPhoto = null;
+    this.expandedTrucks = new Set();
+    this.showAllTripsDirectly = false;
 
     // สำหรับโหมดเจาะลึกรายคน
     this.selectedDrilldownDriver = '';
@@ -25,6 +27,20 @@ class ReportsView {
     this.filterAnomalyStatus = 'all';
     this.filterAnomalyCategory = 'all';
     this.anomalySearchQuery = '';
+  }
+
+  toggleTruckExpand(truckPlate) {
+    if (this.expandedTrucks.has(truckPlate)) {
+      this.expandedTrucks.delete(truckPlate);
+    } else {
+      this.expandedTrucks.add(truckPlate);
+    }
+    window.app.render();
+  }
+
+  toggleShowAllTrips() {
+    this.showAllTripsDirectly = !this.showAllTripsDirectly;
+    window.app.render();
   }
 
   render() {
@@ -320,7 +336,7 @@ class ReportsView {
     `;
   }
 
-  // มุมมองที่ 1: แยกตามคันรถ (Group by Vehicle)
+  // มุมมองที่ 1: แยกตามคันรถ (Group by Vehicle) - เรียบร้อย ไม่รกตา กดขยายเพื่อดูรูปและดาวน์โหลด
   renderDisbursementTruckGrouped(trips, trucks) {
     // จัดกลุ่มตามทะเบียนรถ
     const grouped = {};
@@ -339,66 +355,124 @@ class ReportsView {
     });
 
     const groups = Object.values(grouped).sort((a, b) => a.truckPlate.localeCompare(b.truckPlate));
+    const allExpanded = this.showAllTripsDirectly;
 
     return `
-      <div class="space-y-6">
-        ${groups.map(group => {
-          const groupTotal = group.trips.reduce((sum, t) => sum + (t.amount || 0), 0);
-          const groupPhotosCount = group.trips.length * 2;
-          return `
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-              <!-- Truck Header Bar -->
-              <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div class="flex items-center gap-3.5">
-                  <div class="p-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-2xl font-black text-base">
-                    🚛
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <h3 class="text-base font-black text-white">${group.truckPlate}</h3>
-                      <span class="px-2.5 py-0.5 bg-blue-950 text-blue-300 text-[11px] font-bold rounded-lg border border-blue-800/60">
-                        พิกัด ${group.capacityTon} ตัน
-                      </span>
+      <div class="space-y-4">
+        
+        <!-- Batch Actions & Summary Bar -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-2.5 py-1 bg-blue-500/20 text-blue-400 font-bold rounded-lg border border-blue-500/30">
+              🚛 รถที่พบ ${groups.length} คัน
+            </span>
+            <span class="text-slate-400">
+              รวม <strong class="text-white">${trips.length}</strong> เที่ยววิ่ง
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="reportsView.toggleShowAllTrips()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition flex items-center gap-1.5 border border-slate-700 shadow-sm">
+              <span>${allExpanded ? '📁 ย่อรายการทุกคัน' : '📂 แสดงรายการและรูปทุกคัน'}</span>
+            </button>
+            <button onclick="reportsView.printDisbursementVouchers()" class="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+              <span>🖨️</span> พิมพ์ใบปะหน้าทุกคัน (A4)
+            </button>
+          </div>
+        </div>
+
+        <!-- Truck Cards List -->
+        <div class="space-y-3.5">
+          ${groups.map(group => {
+            const groupTotal = group.trips.reduce((sum, t) => sum + (t.amount || 0), 0);
+            const groupPhotosCount = group.trips.length * 2;
+            const isExpanded = allExpanded || this.expandedTrucks.has(group.truckPlate);
+
+            return `
+              <div class="bg-slate-900 border ${isExpanded ? 'border-blue-500/50 shadow-xl' : 'border-slate-800 hover:border-slate-700'} rounded-3xl overflow-hidden transition-all shadow-md">
+                
+                <!-- Truck Header Bar -->
+                <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-4 md:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  
+                  <!-- Truck & Driver Info -->
+                  <div class="flex items-center gap-3.5">
+                    <div class="p-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-2xl font-black text-lg">
+                      🚛
                     </div>
-                    <p class="text-xs text-slate-300 mt-0.5">
-                      👤 คนขับ: <strong class="text-white">${group.driverName || 'ไม่ระบุ'}</strong>
-                      ${group.driverPhone ? `<span class="text-slate-400 ml-1.5 font-mono">(${group.driverPhone})</span>` : ''}
-                    </p>
+                    <div>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-base font-black text-white">${group.truckPlate}</h3>
+                        <span class="px-2 py-0.5 bg-blue-950 text-blue-300 text-[11px] font-bold rounded-lg border border-blue-800/60">
+                          พิกัด ${group.capacityTon} ตัน
+                        </span>
+                      </div>
+                      <p class="text-xs text-slate-300 mt-0.5">
+                        👤 คนขับ: <strong class="text-white">${group.driverName || 'ไม่ระบุ'}</strong>
+                        ${group.driverPhone ? `<span class="text-slate-400 ml-1.5 font-mono text-[11px]">(${group.driverPhone})</span>` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Summary Stats & Actions -->
+                  <div class="flex items-center gap-2.5 flex-wrap justify-between lg:justify-end">
+                    
+                    <!-- KPI Badges -->
+                    <div class="flex items-center gap-2">
+                      <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-center min-w-[70px]">
+                        <span class="text-[10px] text-slate-400 block font-bold">เที่ยว</span>
+                        <span class="text-xs font-black text-white">${group.trips.length}</span>
+                      </div>
+
+                      <div class="bg-emerald-950/60 px-3.5 py-1.5 rounded-xl border border-emerald-800/60 text-center min-w-[90px]">
+                        <span class="text-[10px] text-emerald-400 block font-bold">ยอดขอเบิก</span>
+                        <span class="text-xs font-black text-emerald-400">฿${groupTotal.toLocaleString()}</span>
+                      </div>
+
+                      <div class="bg-amber-950/60 px-3 py-1.5 rounded-xl border border-amber-800/60 text-center min-w-[75px]">
+                        <span class="text-[10px] text-amber-400 block font-bold">รูปหลักฐาน</span>
+                        <span class="text-xs font-black text-amber-300">${groupPhotosCount} รูป</span>
+                      </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-1.5">
+                      <!-- Toggle Expand Button -->
+                      <button onclick="reportsView.toggleTruckExpand('${group.truckPlate}')" class="px-3.5 py-2 ${isExpanded ? 'bg-blue-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-blue-400'} font-bold rounded-xl text-xs transition flex items-center gap-1.5 border border-slate-700 shadow-sm" title="คลิกเพื่อเปิด/ปิดรายการเที่ยววิ่งและรูปถ่าย">
+                        <span>${isExpanded ? '🔼 ซ่อนรายการ' : `👁️ ดูรายการและรูปถ่าย (${group.trips.length})`}</span>
+                      </button>
+
+                      <!-- Print A4 Voucher Button -->
+                      <button onclick="reportsView.printDisbursementVouchers('${group.truckPlate}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition flex items-center gap-1 border border-slate-700 shadow-sm" title="พิมพ์ใบปะหน้าเบิกจ่ายพร้อมรูปถ่ายคันนี้">
+                        <span>🖨️</span> <span class="hidden sm:inline">พิมพ์ A4</span>
+                      </button>
+
+                      <!-- Excel export for this truck -->
+                      <button onclick="reportsView.exportTruckToExcel('${group.truckPlate}')" class="p-2 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 font-bold rounded-xl text-xs transition border border-emerald-800/60" title="ดาวน์โหลด Excel คันนี้">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+
                   </div>
                 </div>
 
-                <!-- Summary Badges & Action -->
-                <div class="flex items-center gap-2.5 flex-wrap">
-                  <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-right">
-                    <span class="text-[10px] text-slate-400 block font-bold">จำนวนเที่ยว</span>
-                    <span class="text-xs font-black text-white">${group.trips.length} เที่ยว</span>
-                  </div>
+                <!-- Collapsible Grid of Trip Evidence Cards for this Truck -->
+                ${isExpanded ? `
+                  <div class="p-4 md:p-6 space-y-4 border-t border-slate-800 bg-slate-950/50 animate-fade-in">
+                    <div class="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800/60">
+                      <span>📸 รายการรูปถ่ายหลักฐานทุกเที่ยววิ่งของทะเบียน <strong class="text-white">${group.truckPlate}</strong></span>
+                      <span class="text-emerald-400 font-bold">✓ ตรวจสอบผ่านแล้ว ${group.trips.length} เที่ยว</span>
+                    </div>
 
-                  <div class="bg-emerald-950/60 px-3.5 py-1.5 rounded-xl border border-emerald-800/60 text-right">
-                    <span class="text-[10px] text-emerald-400 block font-bold">ยอดขอเบิกจ่าย</span>
-                    <span class="text-sm font-black text-emerald-400">฿${groupTotal.toLocaleString()}</span>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      ${group.trips.map(trip => this.renderTripPhotoEvidenceCard(trip)).join('')}
+                    </div>
                   </div>
+                ` : ''}
 
-                  <div class="bg-amber-950/60 px-3 py-1.5 rounded-xl border border-amber-800/60 text-right">
-                    <span class="text-[10px] text-amber-400 block font-bold">รูปหลักฐาน</span>
-                    <span class="text-xs font-black text-amber-300">${groupPhotosCount}/${groupPhotosCount} รูป</span>
-                  </div>
-
-                  <button onclick="reportsView.printDisbursementVouchers('${group.truckPlate}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition flex items-center gap-1.5 border border-slate-700 shadow-sm" title="พิมพ์ใบแนบเฉพาะคันนี้">
-                    <span>🖨️</span> พิมพ์ใบคันนี้
-                  </button>
-                </div>
               </div>
-
-              <!-- Grid of Trip Evidence Cards for this Truck -->
-              <div class="p-4 md:p-6 space-y-4">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  ${group.trips.map(trip => this.renderTripPhotoEvidenceCard(trip)).join('')}
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('')}
+            `;
+          }).join('')}
+        </div>
       </div>
     `;
   }
@@ -2728,6 +2802,324 @@ class ReportsView {
       </html>
     `);
     printWin.document.close();
+  }
+
+  // ส่งออก Excel เฉพาะคันรถที่เลือก
+  exportTruckToExcel(truckPlate) {
+    const allTrips = window.quarryStore.getTrips();
+    const trips = allTrips.filter(t => {
+      if (t.truckPlate !== truckPlate) return false;
+      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      return true;
+    });
+
+    if (trips.length === 0) {
+      alert(`ไม่พบข้อมูลเที่ยววิ่งสำหรับรถทะเบียน ${truckPlate} ในช่วงเวลาที่เลือก`);
+      return;
+    }
+
+    const rows = trips.map((t, idx) => ({
+      "ลำดับ": idx + 1,
+      "รหัสรอบ (Trip ID)": t.id,
+      "วันที่": t.date,
+      "เวลา": t.timestamp,
+      "เบอร์รถ/ทะเบียน": t.truckPlate,
+      "ขนาดพิกัด (ตัน)": t.capacityTon || 30,
+      "ชื่อคนขับ": t.driverName,
+      "เบอร์โทรศัพท์": t.driverPhone || '-',
+      "ประเภทงานวิ่ง": t.jobTypeName || '-',
+      "รอบที่": t.roundNumber || idx + 1,
+      "ยอดเงิน (บาท)": t.amount || 0,
+      "เวลาขึ้นหิน": t.loadTimestampText || t.timestamp,
+      "เวลาเทหิน": t.dumpTimestampText || t.timestamp,
+      "สถานะเบิกจ่าย": t.disbursementStatus === 'approved' ? 'อนุมัติแล้ว' : 'รอตรวจสอบ'
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, `ทะเบียน_${truckPlate}`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `รายงานเที่ยววิ่ง_${truckPlate}_${dateStr}.xlsx`);
+  }
+
+  // -------------------------------------------------------------
+  // เมนูแยกที่ 1: ประวัติการวิ่ง (Dedicated Trips History View)
+  // -------------------------------------------------------------
+  renderTripsView() {
+    const trips = window.quarryStore.getTrips();
+    const trucks = window.quarryStore.getTrucks();
+    const drivers = window.quarryStore.getDrivers();
+    const jobRates = window.quarryStore.getJobRates();
+
+    let filteredTrips = trips.filter(t => {
+      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      if (this.filterVehicle && t.truckPlate !== this.filterVehicle) return false;
+      if (this.filterDriver && t.driverName !== this.filterDriver) return false;
+      if (this.filterJobType && t.jobTypeId !== this.filterJobType && t.jobTypeName !== this.filterJobType) return false;
+      if (this.disbursementSearchQuery) {
+        const q = this.disbursementSearchQuery.toLowerCase();
+        const matchPlate = (t.truckPlate || '').toLowerCase().includes(q);
+        const matchDriver = (t.driverName || '').toLowerCase().includes(q);
+        const matchId = (t.id || '').toLowerCase().includes(q);
+        const matchJob = (t.jobTypeName || '').toLowerCase().includes(q);
+        if (!matchPlate && !matchDriver && !matchId && !matchJob) return false;
+      }
+      return true;
+    });
+
+    const totalAmount = filteredTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const uniqueTrucks = new Set(filteredTrips.map(t => t.truckPlate)).size;
+    const uniqueDrivers = new Set(filteredTrips.map(t => t.driverName)).size;
+
+    return `
+      <div class="space-y-6">
+        
+        <!-- Header -->
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
+              <span class="p-2 bg-blue-500 text-slate-950 rounded-xl">🚚</span>
+              ประวัติการวิ่งและบันทึกเที่ยวงาน (Trip History & Logs)
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">สืบค้นบันทึกเที่ยววิ่งย้อนหลังทุกคัน ทุกคนขับ พร้อมรูปภาพพิกัด GPS จุดรับและจุดเทหิน</p>
+          </div>
+          
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="reportsView.exportToExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              ส่งออก Excel
+            </button>
+            <button onclick="reportsView.exportToPDF()" class="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+              ส่งออก PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Photo Zoom Lightbox Modal Container -->
+        <div id="photo-zoom-modal-container">
+          ${this.selectedZoomPhoto ? this.renderPhotoZoomModal() : ''}
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          <div class="bg-slate-900 border border-blue-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
+              <span class="text-xl">🚛</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">เที่ยววิ่งตามตัวกรอง</p>
+              <h3 class="text-lg font-black text-white">${filteredTrips.length.toLocaleString()} <span class="text-xs font-normal text-slate-400">เที่ยว</span></h3>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
+              <span class="text-xl">💰</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">มูลค่างานรวม</p>
+              <h3 class="text-lg font-black text-emerald-400">฿${totalAmount.toLocaleString()}</h3>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-indigo-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-indigo-500/20 text-indigo-400 rounded-xl">
+              <span class="text-xl">🚚</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">รถที่บันทึกงาน</p>
+              <h3 class="text-lg font-black text-indigo-300">${uniqueTrucks} <span class="text-xs font-normal text-slate-400">คัน</span></h3>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-teal-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-teal-500/20 text-teal-400 rounded-xl">
+              <span class="text-xl">👤</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">คนขับที่ปฏิบัติงาน</p>
+              <h3 class="text-lg font-black text-teal-300">${uniqueDrivers} <span class="text-xs font-normal text-slate-400">คน</span></h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar with Date Picker -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-sm">🔍</span>
+              <h3 class="text-sm font-black text-white">ค้นหาและกรองประวัติเที่ยววิ่ง (Search & Filters)</h3>
+            </div>
+
+            <!-- Quick Date Presets -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button onclick="reportsView.setQuickDateFilter('today')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition">วันนี้</button>
+              <button onclick="reportsView.setQuickDateFilter('7days')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition">7 วัน</button>
+              <button onclick="reportsView.setQuickDateFilter('thisMonth')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition">เดือนนี้</button>
+              <button onclick="reportsView.setQuickDateFilter('all')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-blue-400 transition">ทั้งหมด</button>
+            </div>
+          </div>
+
+          <!-- Dropdowns & Search Input -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <!-- Search Text -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">ค้นหา (รอบ/ทะเบียน/คนขับ)</label>
+              <input type="text" value="${this.disbursementSearchQuery}" oninput="reportsView.onDisbursementSearch(this.value)" placeholder="พิมพ์คำค้นหา..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+            </div>
+
+            <!-- Filter Truck -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">เลือกรถบรรทุก</label>
+              <select onchange="reportsView.onFilterChange('vehicle', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                <option value="">-- รถทุกคัน (${trucks.length} คัน) --</option>
+                ${trucks.map(t => `<option value="${t.code}" ${this.filterVehicle === t.code ? 'selected' : ''}>${t.code} (${t.capacity_ton || 30} ตัน) ${t.driver_name ? '— ' + t.driver_name : ''}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Filter Driver -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">เลือกคนขับ</label>
+              <select onchange="reportsView.onFilterChange('driver', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                <option value="">-- คนขับทุกคน (${drivers.length} คน) --</option>
+                ${drivers.map(d => `<option value="${d.name}" ${this.filterDriver === d.name ? 'selected' : ''}>${d.name} (${d.phone || ''})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Filter Job Type -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">ประเภทงาน</label>
+              <select onchange="reportsView.onFilterChange('jobType', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                <option value="">-- ทุกประเภทงาน --</option>
+                ${jobRates.map(j => `<option value="${j.id}" ${this.filterJobType === j.id ? 'selected' : ''}>${j.name}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Date Range Inputs -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">ช่วงวันที่</label>
+              <div class="flex items-center gap-1.5">
+                <input type="date" value="${this.filterDateFrom}" onchange="reportsView.onFilterChange('dateFrom', this.value)" class="w-1/2 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-[11px] text-white">
+                <span class="text-slate-500 text-xs">-</span>
+                <input type="date" value="${this.filterDateTo}" onchange="reportsView.onFilterChange('dateTo', this.value)" class="w-1/2 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-[11px] text-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- View Layout Mode Switcher -->
+          <div class="flex items-center justify-between pt-3 border-t border-slate-800">
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800">
+              <button onclick="reportsView.setDisbursementLayout('audit_table')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.disbursementLayout === 'audit_table' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <span>📋</span> ตารางบันทึกเที่ยววิ่ง
+              </button>
+              <button onclick="reportsView.setDisbursementLayout('trip_timeline')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.disbursementLayout === 'trip_timeline' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <span>⏱️</span> ไทม์ไลน์ภาพถ่าย
+              </button>
+            </div>
+
+            <div class="text-xs text-slate-400">
+              พบข้อมูลทั้งหมด <strong class="text-white font-mono">${filteredTrips.length}</strong> รายการ
+            </div>
+          </div>
+        </div>
+
+        <!-- Render Content -->
+        ${filteredTrips.length === 0 ? `
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+            <span class="text-4xl">📭</span>
+            <h3 class="text-base font-bold text-white">ไม่พบบันทึกประวัติเที่ยววิ่งตามเงื่อนไข</h3>
+            <p class="text-xs text-slate-400">ลองเปลี่ยนช่วงวันที่ หรือล้างตัวกรองเพื่อดูข้อมูล</p>
+          </div>
+        ` : (
+          this.disbursementLayout === 'trip_timeline'
+            ? this.renderDisbursementTimeline(filteredTrips)
+            : this.renderDisbursementAuditTable(filteredTrips)
+        )}
+
+      </div>
+    `;
+  }
+
+  // -------------------------------------------------------------
+  // เมนูแยกที่ 2: ตรวจสอบกระทบยอด (Dedicated Reconciliation View)
+  // -------------------------------------------------------------
+  renderReconciliationView() {
+    this.viewMode = 'reconciliation';
+    const trips = window.quarryStore.getTrips();
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    const trucks = window.quarryStore.getTrucks();
+
+    return `
+      <div class="space-y-6">
+        <!-- Dedicated Reconciliation Header -->
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
+              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">⚖️</span>
+              ตรวจสอบกระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Hub)
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">เปรียบเทียบความถูกต้องระหว่างจำนวนเที่ยวที่สิบล้อรายงาน กับบันทึกตักของแม็คโครแบบ Real-time</p>
+          </div>
+          
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="reportsView.exportToExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              ส่งออก Excel
+            </button>
+            <button onclick="reportsView.exportToPDF()" class="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+              ส่งออก PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Render Full Reconciliation Engine -->
+        ${this.renderReconciliationMode(trips, excLogs, trucks)}
+      </div>
+    `;
+  }
+
+  // -------------------------------------------------------------
+  // เมนูแยกที่ 3: ตรวจจับความผิดปกติ & รับรองผล (Dedicated Anomalies View)
+  // -------------------------------------------------------------
+  renderAnomaliesView() {
+    this.viewMode = 'anomalies';
+    const trips = window.quarryStore.getTrips();
+    const excLogs = window.quarryStore.getExcavatorLogs();
+    const trucks = window.quarryStore.getTrucks();
+    const drivers = window.quarryStore.getDrivers();
+
+    return `
+      <div class="space-y-6">
+        <!-- Dedicated Anomalies Header -->
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2.5">
+              <span class="p-2 bg-amber-500 text-slate-950 rounded-xl">⚠️</span>
+              ระบบตรวจจับความผิดปกติ & รับรองผล (Anomaly Detection & Certification Hub)
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">AI ตรวจจับเที่ยววิ่งผิดปกติ, บันทึกผลสอบสวนข้อเท็จจริง และลงลายมือชื่อดิจิทัลรับรองผล</p>
+          </div>
+          
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="reportsView.importFromAIEngine()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              ⚡ นำเข้าจาก AI Engine
+            </button>
+            <button onclick="reportsView.openNewAnomalyModal()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              ➕ แจ้งเหตุผิดปกติใหม่
+            </button>
+          </div>
+        </div>
+
+        <!-- Render Full Anomalies Engine -->
+        ${this.renderAnomaliesMode(trips, excLogs, trucks, drivers)}
+      </div>
+    `;
   }
 }
 
