@@ -2,6 +2,19 @@
  * หน้าจอ AI ผู้ช่วยอัจฉริยะ (AI Copilot Chatbot View)
  */
 class AICopilotView {
+  constructor() {
+    const today = new Date().toISOString().split('T')[0];
+    this.dateFrom = today;
+    this.dateTo = today;
+  }
+
+  setDateRange(from, to) {
+    this.dateFrom = from || this.dateFrom;
+    this.dateTo = to || this.dateTo;
+    if (this.dateFrom > this.dateTo) this.dateTo = this.dateFrom;
+    window.app.render();
+  }
+
   render() {
     const history = window.quarryAI.chatHistory;
 
@@ -19,12 +32,27 @@ class AICopilotView {
                 ผู้ช่วยวิเคราะห์ข้อมูลโรงโม่หิน
                 <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">ตอบจากข้อมูลระบบ</span>
               </h1>
-              <p class="text-xs text-slate-400">รองรับคำถาม 5 กลุ่ม: ยอดวันนี้ อันดับคนขับ รถจอด ความผิดปกติ และเรทราคา</p>
+              <p class="text-xs text-slate-400">เลือกช่วงวันที่แล้วถามจากข้อมูลการปฏิบัติงานจริงในระบบ</p>
             </div>
           </div>
           <button onclick="window.app.navigate('dashboard')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-700">
             <i data-lucide="arrow-left" class="w-4 h-4"></i> กลับแดชบอร์ด
           </button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-end justify-between gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+            <label class="text-xs font-bold text-slate-400">ตั้งแต่วันที่
+              <input type="date" value="${this.dateFrom}" onchange="aiCopilotView.setDateRange(this.value, null)" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+            </label>
+            <label class="text-xs font-bold text-slate-400">ถึงวันที่
+              <input type="date" value="${this.dateTo}" onchange="aiCopilotView.setDateRange(null, this.value)" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+            </label>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="aiCopilotView.exportChat('excel')" class="px-3 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold">📊 Excel</button>
+            <button onclick="aiCopilotView.exportChat('pdf')" class="px-3 py-2 bg-red-700 text-white rounded-xl text-xs font-bold">📄 PDF</button>
+          </div>
         </div>
 
         <!-- Quick Question Prompts -->
@@ -92,7 +120,7 @@ class AICopilotView {
     const text = input ? input.value.trim() : '';
     if (!text) return;
 
-    window.quarryAI.ask(text);
+    window.quarryAI.ask(text, { dateFrom: this.dateFrom, dateTo: this.dateTo });
     input.value = '';
     window.app.render();
 
@@ -104,13 +132,35 @@ class AICopilotView {
   }
 
   sendQuick(text) {
-    window.quarryAI.ask(text);
+    window.quarryAI.ask(text, { dateFrom: this.dateFrom, dateTo: this.dateTo });
     window.app.render();
 
     setTimeout(() => {
       const thread = document.getElementById('ai-chat-thread');
       if (thread) thread.scrollTop = thread.scrollHeight;
     }, 100);
+  }
+
+  exportChat(format) {
+    const history = window.quarryAI.chatHistory || [];
+    const rows = history.map((msg, index) => ({
+      "ลำดับ": index + 1,
+      "ผู้ส่ง": msg.sender === 'user' ? 'ผู้ใช้' : 'AI ผู้ช่วย',
+      "ข้อความ": msg.text.replace(/\*\*/g, ''),
+      "เวลา": msg.time,
+      "ช่วงวันที่": `${this.dateFrom} ถึง ${this.dateTo}`
+    }));
+    const fileBase = `AI_ผู้ช่วย_${this.dateFrom}_ถึง_${this.dateTo}`;
+    if (format === 'excel') {
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      const book = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(book, sheet, 'AI ผู้ช่วย');
+      XLSX.writeFile(book, `${fileBase}.xlsx`);
+      return;
+    }
+    const container = document.createElement('div');
+    container.innerHTML = `<div style="font-family:Tahoma,sans-serif;padding:24px;color:#0f172a"><h1>รายงานการสนทนา AI ผู้ช่วย</h1><p>ช่วงวันที่ ${this.dateFrom} ถึง ${this.dateTo}</p>${rows.map(r => `<div style="margin:12px 0;padding:12px;border:1px solid #cbd5e1;border-radius:8px"><b>${r['ผู้ส่ง']}</b><p style="white-space:pre-line">${r['ข้อความ']}</p><small>${r['เวลา']}</small></div>`).join('')}</div>`;
+    html2pdf().set({ filename: `${fileBase}.pdf`, margin: 8, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(container).save();
   }
 }
 
