@@ -6,7 +6,7 @@
  */
 class ReportsView {
   constructor() {
-    this.viewMode = 'overview'; // 'overview', 'individual', 'reconciliation'
+    this.viewMode = 'overview'; // 'overview', 'individual', 'reconciliation', 'anomalies'
     this.filterDateFrom = '';
     this.filterDateTo = '';
     this.filterVehicle = '';
@@ -14,6 +14,11 @@ class ReportsView {
     
     // สำหรับโหมดเจาะลึกรายคน
     this.selectedDrilldownDriver = '';
+
+    // สำหรับโหมดรายงานความผิดปกติ & การรับรองผล
+    this.filterAnomalyStatus = 'all';
+    this.filterAnomalyCategory = 'all';
+    this.anomalySearchQuery = '';
   }
 
   render() {
@@ -41,7 +46,7 @@ class ReportsView {
           
           <div class="flex flex-wrap items-center gap-2.5">
             <!-- View Mode Switcher -->
-            <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800">
+            <div class="flex flex-wrap bg-slate-950 p-1 rounded-2xl border border-slate-800">
               <button onclick="reportsView.setViewMode('overview')" class="px-3 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 สรุปภาพรวม
               </button>
@@ -50,6 +55,9 @@ class ReportsView {
               </button>
               <button onclick="reportsView.setViewMode('individual')" class="px-3 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'individual' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 👤 เจาะลึกรายคน
+              </button>
+              <button onclick="reportsView.setViewMode('anomalies')" class="px-3 py-2 rounded-xl text-xs font-black transition ${this.viewMode === 'anomalies' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                ⚠️ รายงานความผิดปกติ & รับรองผล
               </button>
             </div>
 
@@ -93,6 +101,7 @@ class ReportsView {
     if (this.viewMode === 'overview') return this.renderOverviewMode(trips, trucks, drivers);
     if (this.viewMode === 'reconciliation') return this.renderReconciliationMode(trips, excLogs, trucks);
     if (this.viewMode === 'individual') return this.renderIndividualMode(trips, drivers);
+    if (this.viewMode === 'anomalies') return this.renderAnomaliesMode(trips, excLogs, trucks, drivers);
     return '';
   }
 
@@ -1092,6 +1101,809 @@ class ReportsView {
       </div>
     `;
   }
+
+  // --------------------------------------------------------------------------
+  // 4. โหมดรายงานความผิดปกติ & การรับรองผล (Anomaly & Certification Audits)
+  // --------------------------------------------------------------------------
+  renderAnomaliesMode(trips, excLogs, trucks, drivers) {
+    const audits = window.quarryStore.getIncidentAudits({
+      status: this.filterAnomalyStatus,
+      dateFrom: this.filterDateFrom,
+      dateTo: this.filterDateTo,
+      vehicle: this.filterVehicle,
+      search: this.anomalySearchQuery
+    });
+
+    const allAudits = window.quarryStore.getIncidentAudits();
+    const totalCount = allAudits.length;
+    const pendingCount = allAudits.filter(a => a.status === 'investigating').length;
+    const certifiedCount = allAudits.filter(a => a.status === 'certified').length;
+    const rejectedCount = allAudits.filter(a => a.status === 'rejected').length;
+
+    return `
+      <div class="space-y-6">
+        
+        <!-- Summary KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-400 uppercase">ตรวจพบทั้งหมด</span>
+              <span class="p-2 bg-blue-950 text-blue-400 rounded-xl text-xs font-black">📋</span>
+            </div>
+            <p class="text-2xl font-black text-white mt-2">${totalCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+          </div>
+
+          <div class="bg-slate-900 border border-amber-900/50 p-4 rounded-2xl shadow">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-400 uppercase">รอตรวจสอบ & เซ็นรับรอง</span>
+              <span class="p-2 bg-amber-950 text-amber-400 rounded-xl text-xs font-black">⏳</span>
+            </div>
+            <p class="text-2xl font-black text-amber-400 mt-2">${pendingCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+          </div>
+
+          <div class="bg-slate-900 border border-emerald-900/50 p-4 rounded-2xl shadow">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-400 uppercase">เซ็นรับรองผลแล้ว</span>
+              <span class="p-2 bg-emerald-950 text-emerald-400 rounded-xl text-xs font-black">✅</span>
+            </div>
+            <p class="text-2xl font-black text-emerald-400 mt-2">${certifiedCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+          </div>
+
+          <div class="bg-slate-900 border border-red-900/50 p-4 rounded-2xl shadow">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-red-400 uppercase">ไม่อนุมัติ / ตัดเที่ยว</span>
+              <span class="p-2 bg-red-950 text-red-400 rounded-xl text-xs font-black">⛔</span>
+            </div>
+            <p class="text-2xl font-black text-red-400 mt-2">${rejectedCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+          </div>
+        </div>
+
+        <!-- Filter & Action Controls -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold text-slate-400 uppercase">สถานะ:</span>
+              ${[
+                { id: 'all', label: 'ทั้งหมด' },
+                { id: 'investigating', label: '⏳ รอตรวจสอบ' },
+                { id: 'certified', label: '✅ เซ็นรับรองแล้ว' },
+                { id: 'rejected', label: '⛔ ไม่อนุมัติ' }
+              ].map(s => `
+                <button onclick="reportsView.setAnomalyStatusFilter('${s.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.filterAnomalyStatus === s.id ? 'bg-amber-500 text-slate-950 font-black shadow' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'}">
+                  ${s.label}
+                </button>
+              `).join('')}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="reportsView.importFromAIEngine()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow" title="สแกนรอบวิ่งและกระทบยอดเพื่อตรวจจับความผิดปกติ">
+                <i data-lucide="zap" class="w-4 h-4 text-yellow-300"></i>
+                ⚡ สแกนดึงจาก AI
+              </button>
+
+              <button onclick="reportsView.openCreateAnomalyModal()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                ➕ บันทึกความผิดปกติใหม่
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
+            <div>
+              <label class="block text-xs text-slate-400 font-bold mb-1">ค้นหา (เรื่อง, ทะเบียนรถ, คนขับ, ข้อเท็จจริง)</label>
+              <input type="text" value="${this.anomalySearchQuery || ''}" oninput="reportsView.handleAnomalySearch(this.value)" placeholder="พิมพ์คำค้นหา..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs text-slate-400 font-bold mb-1">กรองตามรถ</label>
+              <select onchange="reportsView.handleVehicleFilter(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+                <option value="">-- รถทุกคัน --</option>
+                ${trucks.map(t => `<option value="${t.code}" ${this.filterVehicle === t.code ? 'selected' : ''}>${t.code} (${t.capacity_ton} ตัน)</option>`).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
+              <input type="date" value="${this.filterDateFrom}" onchange="reportsView.handleDateFromChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- Incident & Anomaly Cards List -->
+        <div class="space-y-4">
+          ${audits.length === 0 ? `
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-400 space-y-3">
+              <span class="text-4xl">🎉</span>
+              <h3 class="text-base font-bold text-white">ไม่พบรายงานความผิดปกติในเงื่อนไขที่เลือก</h3>
+              <p class="text-xs text-slate-500">คุณสามารถกดปุ่ม "➕ บันทึกความผิดปกติใหม่" หรือ "⚡ สแกนดึงจาก AI" เพื่อสร้างรายงาน</p>
+            </div>
+          ` : audits.map((a) => `
+            <div class="bg-slate-900 border ${a.status === 'certified' ? 'border-emerald-800/80' : (a.status === 'rejected' ? 'border-red-800/80' : 'border-amber-800/80')} rounded-3xl p-5 shadow-lg space-y-4 transition">
+              
+              <!-- Card Top Header -->
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-3">
+                  <span class="px-2.5 py-1 rounded-lg text-[11px] font-mono font-black ${a.status === 'certified' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : (a.status === 'rejected' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-amber-950 text-amber-300 border border-amber-800')}">
+                    #${a.id}
+                  </span>
+                  <div>
+                    <h2 class="text-base font-black text-white flex items-center gap-2">
+                      ${a.title}
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">
+                      📅 วันที่ตรวจพบ: <span class="text-slate-200 font-bold">${a.date}</span>
+                      ${a.targetVehicle ? ` | 🚚 รถ: <span class="text-blue-400 font-bold">${a.targetVehicle}</span>` : ''}
+                      ${a.targetDriver ? ` | 👤 ผู้ปฏิบัติงาน: <span class="text-slate-200 font-bold">${a.targetDriver}</span>` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="px-3 py-1 rounded-full text-xs font-bold ${
+                    a.status === 'certified' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
+                    (a.status === 'rejected' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-amber-950 text-amber-300 border border-amber-800')
+                  }">
+                    ${a.status === 'certified' ? '✅ รับรองผลและเซ็นแล้ว' : (a.status === 'rejected' ? '⛔ ไม่อนุมัติ / ตัดเที่ยว' : '⏳ รอตรวจสอบ & เซ็นรับรอง')}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Details Section -->
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                
+                <!-- Col 1: Anomaly Details & Evidence -->
+                <div class="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2">
+                  <h4 class="text-xs font-black text-amber-400 uppercase flex items-center gap-1.5">
+                    <span>⚠️</span> ข้อเท็จจริงและความผิดปกติที่พบ
+                  </h4>
+                  <p class="text-xs text-slate-300 leading-relaxed">${a.anomalyDetails || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
+                </div>
+
+                <!-- Col 2: Investigation Result & Resolution -->
+                <div class="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2.5">
+                  <div>
+                    <h4 class="text-xs font-black text-blue-400 uppercase flex items-center gap-1.5">
+                      <span>🔍</span> ผลการตรวจสอบ (Investigation Result)
+                    </h4>
+                    <p class="text-xs text-slate-200 mt-1 ${a.investigationResult ? 'font-semibold text-white' : 'text-slate-500 italic'}">
+                      ${a.investigationResult || '(ยังไม่ได้ระบุผลการตรวจสอบ คลิกปุ่ม "เซ็นรับรอง" ด้านล่าง)'}
+                    </p>
+                  </div>
+
+                  <div class="border-t border-slate-800/80 pt-2">
+                    <h4 class="text-xs font-black text-emerald-400 uppercase flex items-center gap-1.5">
+                      <span>⚖️</span> มาตรการ / ข้อสรุปการตัดสิน (Resolution)
+                    </h4>
+                    <p class="text-xs text-slate-200 mt-1 ${a.resolution ? 'font-semibold text-emerald-300' : 'text-slate-500 italic'}">
+                      ${a.resolution || '(ยังไม่ได้ระบุมาตรการ)'}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Col 3: Supervisor Digital Signature & Certification Box -->
+                <div class="bg-slate-950/80 border ${a.supervisorSignature ? 'border-emerald-800/80 bg-emerald-950/10' : 'border-slate-800'} p-4 rounded-2xl flex flex-col justify-between space-y-2">
+                  <div>
+                    <h4 class="text-xs font-black ${a.supervisorSignature ? 'text-emerald-400' : 'text-slate-400'} uppercase flex items-center justify-between">
+                      <span class="flex items-center gap-1.5"><span>✍️</span> ลายเซ็นรับรองของหัวหน้างาน</span>
+                      ${a.supervisorSignature ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">CERTIFIED</span>` : ''}
+                    </h4>
+
+                    ${a.supervisorSignature ? `
+                      <div class="mt-2 p-2 bg-white rounded-xl border border-slate-300 flex items-center justify-center h-20 overflow-hidden shadow-inner">
+                        <img src="${a.supervisorSignature}" alt="ลายเซ็นหัวหน้างาน" class="max-h-full object-contain">
+                      </div>
+                      <div class="mt-2 text-[11px] text-slate-300 space-y-0.5">
+                        <p>👤 <strong>ผู้รับรอง:</strong> ${a.supervisorName || 'หัวหน้างานคุมลาน'}</p>
+                        <p class="text-slate-400">🕒 <strong>วันที่รับรอง:</strong> ${a.certifiedAt ? new Date(a.certifiedAt).toLocaleString('th-TH') : '-'}</p>
+                      </div>
+                    ` : `
+                      <div class="mt-3 p-4 bg-amber-950/20 border border-dashed border-amber-800/80 rounded-xl text-center space-y-1.5">
+                        <span class="text-xl">⏳</span>
+                        <p class="text-xs font-bold text-amber-300">ยังไม่มีการลงลายเซ็นรับรอง</p>
+                        <p class="text-[10px] text-slate-400">หัวหน้างานต้องตรวจสอบข้อเท็จจริงและเซ็นรับรองผล</p>
+                      </div>
+                    `}
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Card Action Buttons -->
+              <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button onclick="reportsView.openCertifyModal('${a.id}')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
+                  <i data-lucide="edit-3" class="w-4 h-4 text-yellow-300"></i>
+                  ${a.supervisorSignature ? '✏️ แก้ไขผลตรวจ & เซ็นใหม่' : '✍️ บันทึกผลตรวจ & เซ็นรับรอง'}
+                </button>
+
+                <button onclick="reportsView.printSingleAnomalyCertificate('${a.id}')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
+                  <i data-lucide="printer" class="w-4 h-4 text-emerald-400"></i>
+                  🖨️ พิมพ์ใบรับรองผล (PDF)
+                </button>
+
+                <button onclick="reportsView.deleteAnomaly('${a.id}')" class="px-3 py-2 bg-red-950/60 hover:bg-red-900 text-red-300 rounded-xl text-xs font-bold transition border border-red-800 flex items-center gap-1">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  ลบ
+                </button>
+              </div>
+
+            </div>
+          `).join('')}
+        </div>
+
+      </div>
+    `;
+  }
+
+  // --------------------------------------------------------------------------
+  // Digital Signature & Certification Modal
+  // --------------------------------------------------------------------------
+  openCertifyModal(auditId) {
+    const audits = window.quarryStore.getIncidentAudits();
+    const audit = audits.find(a => a.id === auditId);
+    if (!audit) return;
+
+    const currentUser = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.CURRENT_USER) || '{}');
+    const defaultSupervisor = currentUser.name || 'หัวหน้างานคุมลาน (Supervisor)';
+
+    const container = document.getElementById('export-modal-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <div>
+              <h3 class="text-base font-black text-white flex items-center gap-2">
+                <i data-lucide="check-square" class="w-5 h-5 text-emerald-400"></i>
+                บันทึกผลตรวจสอบ & เซ็นชื่อรับรอง
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">รหัสเอกสาร: #${audit.id} | ${audit.title}</p>
+            </div>
+            <button onclick="reportsView.closeExportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+          </div>
+
+          <!-- Anomaly Brief -->
+          <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs space-y-1">
+            <p><strong>🚚 รถที่เกี่ยวข้อง:</strong> <span class="text-blue-400 font-bold">${audit.targetVehicle || '-'}</span> | <strong>ผู้ปฏิบัติงาน:</strong> <span class="text-slate-200">${audit.targetDriver || '-'}</span></p>
+            <p class="text-slate-300"><strong>⚠️ ข้อเท็จจริงที่ตรวจพบ:</strong> ${audit.anomalyDetails || '-'}</p>
+          </div>
+
+          <div class="space-y-4 text-xs">
+            
+            <!-- 1. ผลการตรวจสอบ (Investigation Result) -->
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">
+                🔍 ผลการตรวจสอบข้อเท็จจริง (Investigation Findings) <span class="text-red-400">*</span>
+              </label>
+              <textarea id="modal-investigation-result" rows="3" placeholder="ระบุข้อเท็จจริง เช่น จากการตรวจสอบกล้องวงจรปิดพบว่าคนขับมีการวิ่งหินจริง แต่ลืมกดส่งภาพจุดรับ..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">${audit.investigationResult || ''}</textarea>
+              
+              <!-- Quick Suggestions -->
+              <div class="flex flex-wrap gap-1.5 mt-1.5">
+                <button type="button" onclick="document.getElementById('modal-investigation-result').value = 'ตรวจสอบภาพถ่ายและกล้องวงจรปิดพบว่ามีหินเทจริง คนขับลืมกดส่งภาพจุดรับ'" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-semibold">
+                  + กล้องยืนยันว่าวิ่งจริง
+                </button>
+                <button type="button" onclick="document.getElementById('modal-investigation-result').value = 'ตรวจสอบพบว่าเป็นรอบวิ่งซ้ำ กดส่งเบิ้ลเวลาเดียวกัน'" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-semibold">
+                  + เป็นรอบซ้ำ
+                </button>
+                <button type="button" onclick="document.getElementById('modal-investigation-result').value = 'ตรวจสอบแล้วแม็คโครนับยอดตักตกหล่น ได้ประสานปรับยอดตักแล้ว'" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-semibold">
+                  + แม็คโครนับตกหล่น
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. มาตรการ / ข้อสรุปการตัดสิน (Resolution) -->
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">
+                ⚖️ ข้อสรุปการตัดสินและมาตรการแก้ไข (Resolution) <span class="text-red-400">*</span>
+              </label>
+              <input type="text" id="modal-resolution" value="${audit.resolution || 'อนุมัติรับรองเที่ยววิ่งตามปกติ (มีผลงานจริง)'}" placeholder="เช่น อนุมัติรับรองเที่ยววิ่งตามปกติ / หักเที่ยววิ่งออก 1 เที่ยว" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              
+              <div class="flex flex-wrap gap-1.5 mt-1.5">
+                <button type="button" onclick="document.getElementById('modal-resolution').value = 'อนุมัติรับรองเที่ยววิ่งตามปกติ (มีผลงานจริง)'" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded text-[10px] font-semibold">
+                  + อนุมัติรับรองเที่ยวปกติ
+                </button>
+                <button type="button" onclick="document.getElementById('modal-resolution').value = 'ตัดเที่ยววิ่งออก 1 เที่ยว เนื่องจากเป็นเที่ยวซ้ำ'" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-red-400 rounded text-[10px] font-semibold">
+                  + ตัดเที่ยววิ่งออก
+                </button>
+                <button type="button" onclick="document.getElementById('modal-resolution').value = 'ให้วิ่ง/ตักชดเชยในกะถัดไป'" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded text-[10px] font-semibold">
+                  + ให้ตักชดเชย
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">สถานะการตัดสิน</label>
+                <select id="modal-audit-status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
+                  <option value="certified" ${audit.status === 'certified' || audit.status === 'investigating' ? 'selected' : ''}>✅ รับรองผลการตรวจสอบ (Certified)</option>
+                  <option value="rejected" ${audit.status === 'rejected' ? 'selected' : ''}>⛔ ไม่อนุมัติ / ยกเลิกเที่ยว (Rejected)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">ชื่อหัวหน้างานผู้รับรอง</label>
+                <input type="text" id="modal-supervisor-name" value="${audit.supervisorName || defaultSupervisor}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
+              </div>
+            </div>
+
+            <!-- 3. Digital Signature Canvas -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="block font-bold text-slate-300">
+                  ✍️ ลายเซ็นดิจิทัลของหัวหน้างาน (ใช้นิ้วหรือเมาส์เซ็นสด) <span class="text-red-400">*</span>
+                </label>
+                <button type="button" onclick="reportsView.clearSignatureCanvas()" class="text-xs font-bold text-red-400 hover:text-red-300">
+                  🔄 ล้างลายเซ็น
+                </button>
+              </div>
+
+              <div class="border-2 border-dashed border-slate-600 rounded-2xl bg-white overflow-hidden relative touch-none">
+                <canvas id="signature-canvas" class="w-full h-36 cursor-crosshair block" style="touch-action: none;"></canvas>
+                <div class="absolute bottom-2 left-4 text-[10px] text-slate-400 pointer-events-none select-none">
+                  เซ็นชื่อรับรองผลการตรวจสอบลงในกรอบนี้
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Modal Actions -->
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+            <button onclick="reportsView.closeExportModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">
+              ยกเลิก
+            </button>
+            <button onclick="reportsView.saveCertification('${audit.id}')" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black shadow-lg transition flex items-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              💾 บันทึกและเซ็นรับรองผล
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+
+    // Initialize Signature Pad Canvas
+    setTimeout(() => {
+      this.initSignatureCanvas(audit.supervisorSignature);
+    }, 50);
+  }
+
+  initSignatureCanvas(existingSignatureUrl = null) {
+    const canvas = document.getElementById('signature-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    ctx.strokeStyle = '#0f172a'; // Deep crisp ink
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    let isDrawing = false;
+    let hasDrawn = false;
+    this.canvasHasDrawn = false;
+
+    if (existingSignatureUrl) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        this.canvasHasDrawn = true;
+      };
+      img.src = existingSignatureUrl;
+    }
+
+    const getPos = (e) => {
+      const r = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - r.left,
+        y: clientY - r.top
+      };
+    };
+
+    const startDraw = (e) => {
+      e.preventDefault();
+      isDrawing = true;
+      hasDrawn = true;
+      this.canvasHasDrawn = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    };
+
+    const draw = (e) => {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    };
+
+    const stopDraw = (e) => {
+      if (!isDrawing) return;
+      e.preventDefault();
+      isDrawing = false;
+      ctx.closePath();
+    };
+
+    // Mouse events
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+
+    // Touch events
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw, { passive: false });
+  }
+
+  clearSignatureCanvas() {
+    const canvas = document.getElementById('signature-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.canvasHasDrawn = false;
+  }
+
+  async saveCertification(auditId) {
+    const result = document.getElementById('modal-investigation-result')?.value.trim();
+    const resolution = document.getElementById('modal-resolution')?.value.trim();
+    const status = document.getElementById('modal-audit-status')?.value || 'certified';
+    const supervisorName = document.getElementById('modal-supervisor-name')?.value.trim() || 'หัวหน้างานคุมลาน';
+    const canvas = document.getElementById('signature-canvas');
+
+    if (!result) {
+      return alert('กรุณาระบุผลการตรวจสอบข้อเท็จจริง');
+    }
+    if (!resolution) {
+      return alert('กรุณาระบุข้อสรุปการตัดสินหรือมาตรการ');
+    }
+
+    let signatureDataUrl = null;
+    if (canvas && this.canvasHasDrawn) {
+      signatureDataUrl = canvas.toDataURL('image/png');
+    }
+
+    await window.quarryStore.certifyIncidentAudit(auditId, {
+      investigationResult: result,
+      resolution: resolution,
+      status: status,
+      supervisorName: supervisorName,
+      signatureDataUrl: signatureDataUrl
+    });
+
+    this.closeExportModal();
+    alert('✅ บันทึกผลการตรวจสอบและลงนามรับรองเรียบร้อยแล้ว!');
+    window.app.render();
+  }
+
+  openCreateAnomalyModal() {
+    const trucks = window.quarryStore.getTrucks();
+    const drivers = window.quarryStore.getDrivers();
+    const today = new Date().toISOString().split('T')[0];
+
+    const container = document.getElementById('export-modal-container');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+          
+          <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400"></i>
+              บันทึกรายงานความผิดปกติใหม่
+            </h3>
+            <button onclick="reportsView.closeExportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">หัวข้อความผิดปกติ <span class="text-red-400">*</span></label>
+              <input type="text" id="new-ano-title" placeholder="เช่น รอบวิ่งรับ-เทหินเร็วผิดปกติ / ยอดตักแม็คโครไม่ตรง" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">ประเภทความผิดปกติ</label>
+                <select id="new-ano-category" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none">
+                  <option value="trip_speed">⚡ ความเร็วรับ-เทผิดปกติ</option>
+                  <option value="reconciliation_mismatch">⚖️ ยอดตักแม็คโครไม่ตรงกับสิบล้อ</option>
+                  <option value="gps_location">📍 พิกัด GPS ซ้ำ/คลาดเคลื่อน</option>
+                  <option value="photo_discrepancy">📸 ภาพถ่ายไม่ชัดเจน/ผิดประเภท</option>
+                  <option value="machine_breakdown">🔧 รถเสีย / เครื่องจักรขัดข้อง</option>
+                  <option value="other">📋 อื่นๆ</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">ระดับความรุนแรง</label>
+                <select id="new-ano-severity" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none">
+                  <option value="critical">🔴 วิกฤติ / สำคัญมาก</option>
+                  <option value="warning" selected>🟡 แจ้งเตือน</option>
+                  <option value="info">🔵 ทั่วไป</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">รถที่เกี่ยวข้อง</label>
+                <select id="new-ano-vehicle" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none">
+                  <option value="">-- เลือกรถ --</option>
+                  ${trucks.map(t => `<option value="${t.code}">${t.code}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">ผู้ปฏิบัติงาน / คนขับ</label>
+                <select id="new-ano-driver" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none">
+                  <option value="">-- เลือกคนขับ --</option>
+                  ${drivers.map(d => `<option value="${d.name}">${d.name} (${d.nickname || d.role})</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">วันที่ตรวจพบ</label>
+              <input type="date" id="new-ano-date" value="${today}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">ข้อเท็จจริงและความผิดปกติที่พบ <span class="text-red-400">*</span></label>
+              <textarea id="new-ano-details" rows="3" placeholder="ระบุรายละเอียด เช่น ตรวจพบเวลาจากจุดรับถึงจุดเทหินเพียง 1 นาที 15 วินาที..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none"></textarea>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+            <button onclick="reportsView.closeExportModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">
+              ยกเลิก
+            </button>
+            <button onclick="reportsView.saveNewAnomaly()" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black shadow-lg transition flex items-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              บันทึกรายงาน
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  saveNewAnomaly() {
+    const title = document.getElementById('new-ano-title')?.value.trim();
+    const category = document.getElementById('new-ano-category')?.value;
+    const severity = document.getElementById('new-ano-severity')?.value;
+    const vehicle = document.getElementById('new-ano-vehicle')?.value;
+    const driver = document.getElementById('new-ano-driver')?.value;
+    const date = document.getElementById('new-ano-date')?.value;
+    const details = document.getElementById('new-ano-details')?.value.trim();
+
+    if (!title) return alert('กรุณาระบุหัวข้อความผิดปกติ');
+    if (!details) return alert('กรุณาระบุข้อเท็จจริงและความผิดปกติที่พบ');
+
+    window.quarryStore.saveIncidentAudit({
+      id: 'AUD_' + Date.now().toString().slice(-6),
+      title: title,
+      category: category,
+      severity: severity,
+      targetVehicle: vehicle,
+      targetDriver: driver,
+      date: date,
+      anomalyDetails: details,
+      status: 'investigating'
+    });
+
+    this.closeExportModal();
+    alert('✅ บันทึกรายงานความผิดปกติใหม่เรียบร้อยแล้ว');
+    window.app.render();
+  }
+
+  importFromAIEngine() {
+    if (!window.aiEngine) return;
+    const anomalies = window.aiEngine.detectAnomalies();
+    if (!anomalies || anomalies.length === 0) {
+      return alert('🎉 AI สแกนตรวจสอบแล้ว: ขณะนี้ไม่พบความผิดปกติใหม่ในระบบ!');
+    }
+
+    let added = 0;
+    const existingAudits = window.quarryStore.getIncidentAudits();
+
+    anomalies.forEach(ano => {
+      const exists = existingAudits.some(a => a.referenceId === (ano.referenceId || ano.id));
+      if (!exists) {
+        window.quarryStore.saveIncidentAudit({
+          id: 'AUD_AI_' + Date.now().toString().slice(-5) + '_' + Math.random().toString(36).substr(2, 3),
+          title: ano.title,
+          category: ano.type === 'speed_dump_fast' || ano.type === 'speed_consecutive' ? 'trip_speed' : (ano.type === 'gps_same_location' ? 'gps_location' : 'other'),
+          severity: ano.severity || 'warning',
+          targetVehicle: ano.vehicleCode || '',
+          targetDriver: ano.driverName || '',
+          date: ano.date || new Date().toISOString().split('T')[0],
+          referenceId: ano.referenceId || ano.id,
+          anomalyDetails: ano.desc,
+          investigationResult: '',
+          resolution: '',
+          status: 'investigating'
+        });
+        added++;
+      }
+    });
+
+    if (added > 0) {
+      alert(`⚡ AI ได้นำเข้าความผิดปกติที่ตรวจพบใหม่จำนวน ${added} รายการเข้าสู่ระบบตรวจสอบเรียบร้อยแล้ว!`);
+      window.app.render();
+    } else {
+      alert('ℹ️ รายการความผิดปกติที่ AI ตรวจพบถูกนำเข้าสู่ระบบอยู่แล้วครบถ้วน');
+    }
+  }
+
+  deleteAnomaly(auditId) {
+    if (confirm("คุณแน่ใจว่าต้องการลบรายงานความผิดปกตินี้ใช่หรือไม่?")) {
+      window.quarryStore.deleteIncidentAudit(auditId);
+      window.app.render();
+    }
+  }
+
+  // Filter Handlers
+  setAnomalyStatusFilter(status) {
+    this.filterAnomalyStatus = status;
+    window.app.render();
+  }
+
+  handleAnomalySearch(query) {
+    this.anomalySearchQuery = query;
+    window.app.render();
+  }
+
+  handleVehicleFilter(v) {
+    this.filterVehicle = v;
+    window.app.render();
+  }
+
+  handleDateFromChange(d) {
+    this.filterDateFrom = d;
+    window.app.render();
+  }
+
+  // Print Single Incident Certificate (Official A4 Format)
+  printSingleAnomalyCertificate(auditId) {
+    const audits = window.quarryStore.getIncidentAudits();
+    const a = audits.find(x => x.id === auditId);
+    if (!a) return;
+
+    const printWin = window.open('', '_blank');
+    if (!printWin) return alert('กรุณาอนุญาต Pop-up บนเบราว์เซอร์เพื่อพิมพ์เอกสาร');
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html lang="th">
+      <head>
+        <meta charset="UTF-8">
+        <title>ใบรับรองผลการตรวจสอบความผิดปกติ - #${a.id}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800;900&display=swap');
+          * { font-family: 'Sarabun', sans-serif; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body class="bg-white text-slate-900 p-8 max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-center">
+          <div>
+            <h1 class="text-xl font-black">${CONFIG.PLANT_NAME}</h1>
+            <p class="text-sm font-bold text-slate-700">${CONFIG.COMPANY_NAME}</p>
+            <p class="text-xs text-slate-500">${CONFIG.COMPANY_SLOGAN}</p>
+          </div>
+          <div class="text-right">
+            <span class="px-3 py-1 bg-slate-900 text-white font-black text-xs rounded">เอกสารตรวจสอบภายใน</span>
+            <p class="text-xs font-mono font-bold mt-1">เลขที่: #${a.id}</p>
+            <p class="text-xs text-slate-600">วันที่: ${a.date}</p>
+          </div>
+        </div>
+
+        <!-- Document Title -->
+        <div class="text-center my-6">
+          <h2 class="text-lg font-black uppercase underline">ใบรายงานผลการตรวจสอบความผิดปกติและการรับรองผล</h2>
+          <p class="text-xs text-slate-600 mt-1">INCIDENT INVESTIGATION & SUPERVISOR CERTIFICATION AUDIT REPORT</p>
+        </div>
+
+        <!-- Incident Information Table -->
+        <div class="border border-slate-300 rounded-xl overflow-hidden mb-6 text-xs">
+          <div class="bg-slate-100 p-3 font-bold border-b border-slate-300 flex justify-between">
+            <span>หัวข้อ: ${a.title}</span>
+            <span class="uppercase">สถานะ: ${a.status === 'certified' ? '✅ ผ่านการรับรอง' : (a.status === 'rejected' ? '⛔ ไม่อนุมัติ' : '⏳ รอตรวจสอบ')}</span>
+          </div>
+          <div class="p-4 grid grid-cols-2 gap-4 bg-white">
+            <p><strong>🚚 ยานพาหนะที่เกี่ยวข้อง:</strong> ${a.targetVehicle || '-'}</p>
+            <p><strong>👤 พนักงาน/ผู้ควบคุม:</strong> ${a.targetDriver || '-'}</p>
+            <p><strong>📅 วันที่ตรวจพบ:</strong> ${a.date}</p>
+            <p><strong>🕒 เวลาบันทึกในระบบ:</strong> ${a.recordedAt ? new Date(a.recordedAt).toLocaleTimeString('th-TH') : '-'}</p>
+          </div>
+        </div>
+
+        <!-- 1. Facts & Evidence -->
+        <div class="mb-6 border border-slate-300 rounded-xl p-4 bg-slate-50">
+          <h3 class="text-xs font-bold text-slate-800 uppercase mb-2">1. ข้อเท็จจริงและความผิดปกติที่ตรวจพบ (Anomaly Facts & Evidence)</h3>
+          <p class="text-xs text-slate-700 leading-relaxed">${a.anomalyDetails || '-'}</p>
+        </div>
+
+        <!-- 2. Investigation Result -->
+        <div class="mb-6 border border-blue-200 rounded-xl p-4 bg-blue-50/50">
+          <h3 class="text-xs font-bold text-blue-900 uppercase mb-2">2. ผลการตรวจสอบข้อเท็จจริง (Investigation Findings)</h3>
+          <p class="text-xs text-slate-800 font-semibold leading-relaxed">${a.investigationResult || '(ยังไม่มีการระบุผลการตรวจสอบ)'}</p>
+        </div>
+
+        <!-- 3. Resolution & Action -->
+        <div class="mb-8 border border-emerald-200 rounded-xl p-4 bg-emerald-50/50">
+          <h3 class="text-xs font-bold text-emerald-900 uppercase mb-2">3. มติ / ข้อสรุปการตัดสินและมาตรการแก้ไข (Resolution & Corrective Actions)</h3>
+          <p class="text-xs text-emerald-950 font-bold leading-relaxed">${a.resolution || '(ยังไม่มีการระบุมาตรการ)'}</p>
+        </div>
+
+        <!-- 4. Certification & Signature Block -->
+        <div class="border border-slate-300 rounded-2xl p-6 bg-slate-50 grid grid-cols-2 gap-8 text-center text-xs">
+          
+          <!-- Supervisor Signature -->
+          <div class="flex flex-col justify-between items-center h-48 border-r border-slate-300 pr-4">
+            <p class="font-bold text-slate-800">หัวหน้างานผู้ตรวจสอบและรับรองผล</p>
+            
+            <div class="h-24 w-48 flex items-center justify-center border-b border-dashed border-slate-400">
+              ${a.supervisorSignature ? `
+                <img src="${a.supervisorSignature}" alt="ลายเซ็นหัวหน้างาน" class="max-h-full max-w-full object-contain">
+              ` : `
+                <span class="text-[10px] text-slate-400">(ลงลายมือชื่อดิจิทัล)</span>
+              `}
+            </div>
+
+            <div>
+              <p class="font-bold">(${a.supervisorName || 'หัวหน้างานคุมลาน'})</p>
+              <p class="text-[10px] text-slate-500">วันที่ ${a.certifiedAt ? new Date(a.certifiedAt).toLocaleString('th-TH') : '...........................................'}</p>
+            </div>
+          </div>
+
+          <!-- Management Acknowledgment -->
+          <div class="flex flex-col justify-between items-center h-48 pl-4">
+            <p class="font-bold text-slate-800">ผู้บริหาร / ผู้รับทราบผลการตัดสิน</p>
+            
+            <div class="h-24 w-48 flex items-center justify-center border-b border-dashed border-slate-400">
+              <span class="text-[10px] text-slate-400">(ลงลายมือชื่อ)</span>
+            </div>
+
+            <div>
+              <p class="font-bold">(ผู้บริหารโรงโม่ ป.ศรีวิไลลักษณ์)</p>
+              <p class="text-[10px] text-slate-500">วันที่ ...........................................</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="mt-8 text-center text-[10px] text-slate-400">
+          เอกสารนี้ออกโดยระบบบริหารจัดการโรงโม่หิน ป.ศรีวิไลลักษณ์ • ${new Date().toLocaleString('th-TH')}
+        </div>
+
+        <script>
+          setTimeout(() => { window.print(); }, 400);
+        <\/script>
+      </body>
+      </html>
+    `);
+    printWin.document.close();
+  }
 }
 
 window.reportsView = new ReportsView();
+

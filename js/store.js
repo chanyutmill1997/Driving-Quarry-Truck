@@ -7,6 +7,7 @@ class QuarryStore {
     this.masterData = null;
     this.trips = [];
     this.excavatorLogs = [];
+    this.incidentAudits = [];
     this.pendingSyncQueue = [];
     this.listeners = [];
     this.isSyncing = false;
@@ -113,6 +114,55 @@ class QuarryStore {
     }));
 
     this.excavatorLogs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS) || '[]');
+    this.incidentAudits = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS) || '[]');
+
+    if (!this.incidentAudits || this.incidentAudits.length === 0) {
+      const today = new Date().toISOString().split('T')[0];
+      this.incidentAudits = [
+        {
+          id: 'AUD_20260929_001',
+          date: today,
+          recordedAt: new Date(Date.now() - 3600000).toISOString(),
+          title: 'รอบวิ่งรับ-เทหินเร็วผิดปกติ (ต่ำกว่า 3 นาที)',
+          category: 'trip_speed',
+          severity: 'critical',
+          targetVehicle: 'C2-38 HINO VICTOR 500',
+          targetDriver: 'นาย ประเสริฐ ใสทอง อุดรัตน์',
+          referenceId: 'T_SAMPLE_1',
+          anomalyDetails: 'ตรวจพบเวลาจากจุดรับถึงจุดเทหินเพียง 1 นาที 15 วินาที ซึ่งต่ำกว่าเกณฑ์มาตรฐานโรงโม่ (อย่างน้อย 3-5 นาที)',
+          investigationResult: 'หัวหน้างานได้ตรวจสอบภาพถ่ายและกล้องวงจรปิดลานโม่ พบว่าคนขับวิ่งหินจริง แต่ลืมกดส่งภาพจุดรับ จึงมากดส่งภาพรับและเทพร้อมกัน',
+          resolution: 'อนุมัติรับรองเที่ยววิ่งตามปกติ และได้กำชับให้คนขับกดส่งภาพจุดรับทันทีก่อนออกรถ',
+          status: 'certified',
+          supervisorName: 'หัวหน้างานคุมลาน (Supervisor)',
+          supervisorSignature: null,
+          certifiedAt: new Date().toISOString(),
+          notes: 'ตรวจสอบแล้ว ข้อเท็จจริงถูกต้อง'
+        },
+        {
+          id: 'AUD_20260929_002',
+          date: today,
+          recordedAt: new Date(Date.now() - 7200000).toISOString(),
+          title: 'ยอดเที่ยวสิบล้อไม่ตรงกับจำนวนตักของแม็คโคร',
+          category: 'reconciliation_mismatch',
+          severity: 'warning',
+          targetVehicle: 'C2-45 XCMG ดั้มใหญ่',
+          targetDriver: 'นาย วิจิตร พิลาคุณ',
+          referenceId: 'REC_SAMPLE_2',
+          anomalyDetails: 'สิบล้อ C2-45 บันทึกวิ่ง 8 เที่ยว แต่แม็คโคร C1-49 บันทึกตักให้เพียง 7 คัน (ผลต่าง 1 เที่ยว)',
+          investigationResult: '',
+          resolution: '',
+          status: 'investigating',
+          supervisorName: '',
+          supervisorSignature: null,
+          certifiedAt: null,
+          notes: 'รอตรวจสอบภาพถ่ายรอบที่ 5'
+        }
+      ];
+      try {
+        localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits));
+      } catch (e) {}
+    }
+
     this.pendingSyncQueue = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.PENDING_SYNC) || '[]');
 
     // แสดงหน้าจอจาก cache ทันที แล้วค่อยดึงข้อมูลจาก Supabase Cloud เบื้องหลัง
@@ -313,6 +363,45 @@ class QuarryStore {
           console.warn("Storage quota:", e);
         }
       }
+
+      // ดึง Incident Audits ล่าสุดจาก Supabase
+      try {
+        const { data: cloudAudits, error: auditErr } = await this.supabase
+          .from('incident_audits')
+          .select('*')
+          .order('recorded_at', { ascending: false })
+          .limit(100);
+
+        if (!auditErr && cloudAudits && cloudAudits.length > 0) {
+          const auditMap = new Map(this.incidentAudits.map(a => [a.id, a]));
+          cloudAudits.forEach(ca => {
+            auditMap.set(ca.id, {
+              id: ca.id,
+              date: ca.audit_date,
+              recordedAt: ca.recorded_at,
+              title: ca.title,
+              category: ca.category,
+              targetVehicle: ca.target_vehicle,
+              targetDriver: ca.target_driver,
+              referenceId: ca.reference_id,
+              anomalyDetails: ca.anomaly_details,
+              investigationResult: ca.investigation_result,
+              resolution: ca.resolution,
+              status: ca.status,
+              supervisorName: ca.supervisor_name,
+              supervisorSignature: ca.supervisor_signature,
+              certifiedAt: ca.certified_at,
+              notes: ca.notes
+            });
+          });
+          this.incidentAudits = Array.from(auditMap.values()).sort((a, b) => (b.date + ' ' + (b.recordedAt || '')).localeCompare(a.date + ' ' + (a.recordedAt || '')));
+          try {
+            localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits.slice(0, 200)));
+          } catch (e) {}
+        }
+      } catch (err) {
+        // Table might not exist yet
+      }
     } catch (e) {
       console.warn("Failed to fetch recent cloud data:", e);
     }
@@ -512,6 +601,8 @@ class QuarryStore {
           await this.syncTripToSupabase(item.payload);
         } else if (item.action === 'saveExcavatorLog') {
           await this.syncExcavatorLogToSupabase(item.payload);
+        } else if (item.action === 'saveIncidentAudit') {
+          await this.syncIncidentAuditToSupabase(item.payload);
         }
 
         // ลบออกจากคิวเมื่อสำเร็จ
@@ -642,6 +733,128 @@ class QuarryStore {
     if (localLog && photoUrl) {
       localLog.photoUrl = photoUrl;
       try { localStorage.setItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS, JSON.stringify(this.excavatorLogs)); } catch (e) {}
+    }
+  }
+
+  // -------------------------------------------------------------
+  // Incident & Anomaly Audits Methods (รายงานความผิดปกติ & การรับรองผล)
+  // -------------------------------------------------------------
+  getIncidentAudits(filter = {}) {
+    let result = [...this.incidentAudits];
+    if (filter.status && filter.status !== 'all') {
+      result = result.filter(a => a.status === filter.status);
+    }
+    if (filter.dateFrom) {
+      result = result.filter(a => a.date >= filter.dateFrom);
+    }
+    if (filter.dateTo) {
+      result = result.filter(a => a.date <= filter.dateTo);
+    }
+    if (filter.vehicle) {
+      result = result.filter(a => (a.targetVehicle || '').includes(filter.vehicle));
+    }
+    if (filter.search) {
+      const q = filter.search.toLowerCase();
+      result = result.filter(a => 
+        (a.title || '').toLowerCase().includes(q) ||
+        (a.targetDriver || '').toLowerCase().includes(q) ||
+        (a.targetVehicle || '').toLowerCase().includes(q) ||
+        (a.investigationResult || '').toLowerCase().includes(q) ||
+        (a.anomalyDetails || '').toLowerCase().includes(q)
+      );
+    }
+    return result.sort((a, b) => (b.date + ' ' + (b.recordedAt || '')).localeCompare(a.date + ' ' + (a.recordedAt || '')));
+  }
+
+  saveIncidentAudit(auditData) {
+    if (!auditData.id) {
+      auditData.id = 'AUD_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    }
+    if (!auditData.date) {
+      auditData.date = new Date().toISOString().split('T')[0];
+    }
+    if (!auditData.recordedAt) {
+      auditData.recordedAt = new Date().toISOString();
+    }
+    if (!auditData.status) {
+      auditData.status = 'investigating';
+    }
+
+    const idx = this.incidentAudits.findIndex(a => a.id === auditData.id);
+    if (idx >= 0) {
+      this.incidentAudits[idx] = { ...this.incidentAudits[idx], ...auditData };
+    } else {
+      this.incidentAudits.unshift(auditData);
+    }
+
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits.slice(0, 200)));
+    } catch (e) {
+      console.warn("Incident storage warning:", e);
+    }
+
+    this.queueSync('saveIncidentAudit', auditData);
+    this.notify();
+    return auditData;
+  }
+
+  certifyIncidentAudit(auditId, { investigationResult, resolution, supervisorName, signatureDataUrl, status = 'certified' }) {
+    const audit = this.incidentAudits.find(a => a.id === auditId);
+    if (!audit) return null;
+
+    audit.investigationResult = investigationResult;
+    audit.resolution = resolution;
+    audit.supervisorName = supervisorName;
+    audit.supervisorSignature = signatureDataUrl;
+    audit.status = status;
+    audit.certifiedAt = new Date().toISOString();
+
+    return this.saveIncidentAudit(audit);
+  }
+
+  deleteIncidentAudit(auditId) {
+    this.incidentAudits = this.incidentAudits.filter(a => a.id !== auditId);
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits));
+    } catch (e) {}
+
+    if (this.supabase && navigator.onLine) {
+      this.supabase.from('incident_audits').delete().eq('id', auditId).then(() => {}).catch(err => console.warn(err));
+    }
+    this.notify();
+  }
+
+  async syncIncidentAuditToSupabase(audit) {
+    if (!this.supabase || !navigator.onLine) return;
+    try {
+      const record = {
+        id: audit.id,
+        audit_date: audit.date || new Date().toISOString().split('T')[0],
+        recorded_at: audit.recordedAt || new Date().toISOString(),
+        title: audit.title,
+        category: audit.category || 'other',
+        target_vehicle: audit.targetVehicle || null,
+        target_driver: audit.targetDriver || null,
+        reference_id: audit.referenceId || null,
+        anomaly_details: audit.anomalyDetails || '',
+        investigation_result: audit.investigationResult || '',
+        resolution: audit.resolution || '',
+        status: audit.status || 'investigating',
+        supervisor_name: audit.supervisorName || null,
+        supervisor_signature: audit.supervisorSignature || null,
+        certified_at: audit.certifiedAt || null,
+        notes: audit.notes || ''
+      };
+
+      const { error } = await this.supabase
+        .from('incident_audits')
+        .upsert(record, { onConflict: 'id' });
+
+      if (error) {
+        console.warn("Supabase incident_audits upsert warning:", error.message);
+      }
+    } catch (err) {
+      console.warn("syncIncidentAuditToSupabase warning:", err);
     }
   }
 

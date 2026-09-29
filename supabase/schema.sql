@@ -99,12 +99,35 @@ CREATE TABLE IF NOT EXISTS public.excavator_logs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. ตารางรายงานความผิดปกติและการรับรองผลของหัวหน้างาน (Incident & Anomaly Audits)
+CREATE TABLE IF NOT EXISTS public.incident_audits (
+    id TEXT PRIMARY KEY,
+    audit_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    title TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'other',
+    target_vehicle TEXT,
+    target_driver TEXT,
+    reference_id TEXT,
+    anomaly_details TEXT,
+    investigation_result TEXT,
+    resolution TEXT,
+    status TEXT NOT NULL DEFAULT 'investigating', -- 'investigating', 'certified', 'rejected'
+    supervisor_name TEXT,
+    supervisor_signature TEXT,
+    certified_at TIMESTAMPTZ,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- =========================================================================
 -- เปิดใช้งาน Realtime สำหรับ Dashboard สด
 -- =========================================================================
 ALTER PUBLICATION supabase_realtime ADD TABLE public.trips;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.excavator_logs;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.trucks;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.incident_audits;
 
 -- =========================================================================
 -- Row Level Security (RLS) Policies
@@ -115,6 +138,10 @@ ALTER TABLE public.job_rates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.drivers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trips ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.excavator_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.incident_audits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read access incident_audits" ON public.incident_audits FOR SELECT USING (true);
+CREATE POLICY "Allow public all incident_audits" ON public.incident_audits FOR ALL USING (true);
 
 -- อนุญาตให้เว็บแอปอ่านและเขียนข้อมูลได้
 CREATE POLICY "Allow public read access trucks" ON public.trucks FOR SELECT USING (true);
