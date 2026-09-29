@@ -161,7 +161,7 @@ class QuarryAIEngine {
     // กฎที่ 5: ตรวจจับรถจอดไม่ได้วิ่งเกินเกณฑ์ (Fleet Idleness)
     const activePlates = new Set(todayTrips.map(t => t.truckPlate));
     const idleTrucks = trucks.filter(t => !activePlates.has(t.code));
-    if (idleTrucks.length >= 8) {
+    if (todayTrips.length > 0 && idleTrucks.length >= 8) {
       anomalies.push({
         id: 'ANO_FLEET_IDLE',
         type: 'fleet',
@@ -376,3 +376,4 @@ class QuarryAIEngine {
 }
 
 window.quarryAI = new QuarryAIEngine();
+window.aiEngine = window.quarryAI;

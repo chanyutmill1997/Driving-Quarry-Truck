@@ -2804,8 +2804,9 @@ class ReportsView {
   }
 
   importFromAIEngine() {
-    if (!window.aiEngine) return;
-    const anomalies = window.aiEngine.detectAnomalies();
+    const ai = window.quarryAI || window.aiEngine;
+    if (!ai) return;
+    const anomalies = ai.detectAnomalies();
     if (!anomalies || anomalies.length === 0) {
       return alert('🎉 AI สแกนตรวจสอบแล้ว: ขณะนี้ไม่พบความผิดปกติใหม่ในระบบ!');
     }

@@ -447,6 +447,51 @@ class SettingsView {
             ตั้งค่า Supabase Anon Key
           </button>
         </div>
+
+        <!-- Data Management & Pre-Handover Testing Reset Section -->
+        <div class="border-t border-slate-800 pt-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <span class="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl">🧹</span>
+              การจัดการข้อมูลและเตรียมทดสอบระบบ (Pre-Handover Testing)
+            </h3>
+          </div>
+
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">สถานะข้อมูลหลัก (Master Data):</span>
+              <span class="text-emerald-400 font-bold">🟢 สมบูรณ์ (รถ 28, แม็คโคร 20, ผู้ใช้ 38, เรท 11)</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-900 text-center">
+              <div class="p-2.5 bg-slate-900/80 rounded-xl">
+                <span class="text-[10px] text-slate-400 block font-bold">รอบวิ่งสิบล้อ</span>
+                <span class="text-lg font-black text-white font-mono">${window.quarryStore.getTrips().length}</span>
+              </div>
+              <div class="p-2.5 bg-slate-900/80 rounded-xl">
+                <span class="text-[10px] text-slate-400 block font-bold">ตักหินแม็คโคร</span>
+                <span class="text-lg font-black text-cyan-400 font-mono">${window.quarryStore.getExcavatorLogs().length}</span>
+              </div>
+              <div class="p-2.5 bg-slate-900/80 rounded-xl">
+                <span class="text-[10px] text-slate-400 block font-bold">ความผิดปกติ</span>
+                <span class="text-lg font-black text-amber-400 font-mono">${window.quarryStore.getIncidentAudits().length}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button onclick="settingsView.confirmClearTransactionalData()" class="py-3.5 px-4 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/80 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow">
+              <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i>
+              ล้างข้อมูลธุรกรรมทั้งหมด (รีเซ็ตพร้อมทดสอบ)
+            </button>
+            <button onclick="settingsView.seedDemoDataAction()" class="py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95">
+              <i data-lucide="database-backup" class="w-4 h-4 text-blue-400"></i>
+              สร้างข้อมูลจำลองทดสอบ (Seed Demo)
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            * การล้างข้อมูลธุรกรรมจะลบเฉพาะรอบวิ่ง บันทึกตัก และการตรวจจับความผิดปกติ เพื่อให้ท่านทดสอบบันทึกข้อมูลสดได้สะอาด 100% โดย <strong>ข้อมูลหลัก (รถ 28 คัน, แมคโคร 20 คัน, พนักงาน 38 คน, เรทราคา 11 รายการ) จะยังคงอยู่ครบถ้วน</strong>
+          </p>
+        </div>
       </div>
     `;
   }
@@ -891,6 +936,34 @@ class SettingsView {
     if (newKey !== null && newKey.trim() !== '') {
       window.quarryStore.setSupabaseKey(newKey.trim());
       alert("✅ บันทึก Supabase Key เรียบร้อยแล้ว ระบบจะเริ่มเชื่อมต่อใหม่อัตโนมัติ");
+      window.app.render();
+    }
+  }
+
+  confirmClearTransactionalData() {
+    const tripCount = window.quarryStore.getTrips().length;
+    const excCount = window.quarryStore.getExcavatorLogs().length;
+    const auditCount = window.quarryStore.getIncidentAudits().length;
+
+    const msg = `⚠️ ยืนยันการล้างข้อมูลธุรกรรมทั้งหมดเพื่อเตรียมทดสอบระบบ?\n\n` +
+      `ระบบจะลบข้อมูลธุรกรรมดังนี้:\n` +
+      `- รายการรอบวิ่งสิบล้อ: ${tripCount} รายการ\n` +
+      `- รายการตักหินแม็คโคร: ${excCount} รายการ\n` +
+      `- รายงานความผิดปกติ: ${auditCount} รายการ\n` +
+      `- กะการทำงานที่เปิดค้างอยู่\n\n` +
+      `✅ ข้อมูลหลัก (รถ 28 คัน, แม็คโคร 20 คัน, พนักงาน 38 คน, เรทราคา 11 รายการ) จะยังคงอยู่ครบถ้วน 100%`;
+
+    if (confirm(msg)) {
+      window.quarryStore.clearTransactionalData(false);
+      alert("✅ ล้างข้อมูลธุรกรรมทั้งหมดเรียบร้อยแล้ว!\nระบบสะอาดพร้อมสำหรับการทดสอบบันทึกข้อมูลสดรอบใหม่");
+      window.app.render();
+    }
+  }
+
+  seedDemoDataAction() {
+    if (confirm("ต้องการสร้างข้อมูลจำลองรอบวิ่งและบันทึกตักเพื่อการสาธิตระบบใช่หรือไม่?")) {
+      window.quarryStore.seedDemoData();
+      alert("✅ สร้างข้อมูลจำลองสำหรับการสาธิตเรียบร้อยแล้ว!");
       window.app.render();
     }
   }

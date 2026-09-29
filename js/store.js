@@ -111,60 +111,17 @@ class QuarryStore {
       };
     });
 
-    // หากยังไม่มีข้อมูลรอบวิ่งหรือมีน้อย ให้สร้างชุดข้อมูลจริงของรถทุกคันพร้อมรูปถ่ายหลักฐาน
-    if (this.trips.length < 5) {
-      this.seedSampleTrips();
+    // ล้างข้อมูลธุรกรรมเก่าครั้งแรกเมื่อเข้าเวอร์ชันใหม่ เพื่อความสะอาดพร้อมทดสอบจริง (Master Data ยังอยู่ครบ 100%)
+    const TX_RESET_FLAG = 'quarry_tx_v290_clean_reset';
+    if (!localStorage.getItem(TX_RESET_FLAG)) {
+      this.clearTransactionalData(true);
+      localStorage.setItem(TX_RESET_FLAG, 'true');
+      console.log('🧹 [v2.9.0] Transactional data reset cleanly for final pre-handover test.');
     }
 
     this.excavatorLogs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS) || '[]');
     this.incidentAudits = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS) || '[]');
 
-    if (!this.incidentAudits || this.incidentAudits.length === 0) {
-      const today = new Date().toISOString().split('T')[0];
-      this.incidentAudits = [
-        {
-          id: 'AUD_20260929_001',
-          date: today,
-          recordedAt: new Date(Date.now() - 3600000).toISOString(),
-          title: 'รอบวิ่งรับ-เทหินเร็วผิดปกติ (ต่ำกว่า 3 นาที)',
-          category: 'trip_speed',
-          severity: 'critical',
-          targetVehicle: 'C2-38 HINO VICTOR 500',
-          targetDriver: 'นาย ประเสริฐ ใสทอง อุดรัตน์',
-          referenceId: 'T_SAMPLE_1',
-          anomalyDetails: 'ตรวจพบเวลาจากจุดรับถึงจุดเทหินเพียง 1 นาที 15 วินาที ซึ่งต่ำกว่าเกณฑ์มาตรฐานโรงโม่ (อย่างน้อย 3-5 นาที)',
-          investigationResult: 'หัวหน้างานได้ตรวจสอบภาพถ่ายและกล้องวงจรปิดลานโม่ พบว่าคนขับวิ่งหินจริง แต่ลืมกดส่งภาพจุดรับ จึงมากดส่งภาพรับและเทพร้อมกัน',
-          resolution: 'อนุมัติรับรองเที่ยววิ่งตามปกติ และได้กำชับให้คนขับกดส่งภาพจุดรับทันทีก่อนออกรถ',
-          status: 'certified',
-          supervisorName: 'หัวหน้างานคุมลาน (Supervisor)',
-          supervisorSignature: null,
-          certifiedAt: new Date().toISOString(),
-          notes: 'ตรวจสอบแล้ว ข้อเท็จจริงถูกต้อง'
-        },
-        {
-          id: 'AUD_20260929_002',
-          date: today,
-          recordedAt: new Date(Date.now() - 7200000).toISOString(),
-          title: 'ยอดเที่ยวสิบล้อไม่ตรงกับจำนวนตักของแม็คโคร',
-          category: 'reconciliation_mismatch',
-          severity: 'warning',
-          targetVehicle: 'C2-45 XCMG ดั้มใหญ่',
-          targetDriver: 'นาย วิจิตร พิลาคุณ',
-          referenceId: 'REC_SAMPLE_2',
-          anomalyDetails: 'สิบล้อ C2-45 บันทึกวิ่ง 8 เที่ยว แต่แม็คโคร C1-49 บันทึกตักให้เพียง 7 คัน (ผลต่าง 1 เที่ยว)',
-          investigationResult: '',
-          resolution: '',
-          status: 'investigating',
-          supervisorName: '',
-          supervisorSignature: null,
-          certifiedAt: null,
-          notes: 'รอตรวจสอบภาพถ่ายรอบที่ 5'
-        }
-      ];
-      try {
-        localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits));
-      } catch (e) {}
-    }
 
     this.pendingSyncQueue = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.PENDING_SYNC) || '[]');
 
@@ -524,6 +481,63 @@ class QuarryStore {
       return true;
     }
     return false;
+  }
+
+  // ล้างข้อมูลธุรกรรมทั้งหมด (Trips, Excavator Logs, Incident Audits, Active Shifts)
+  // เพื่อเตรียมทดสอบระบบก่อนส่งมอบ โดยข้อมูล Master Data (รถ 28 คัน, แมคโคร 20 คัน, พนักงาน 38 คน, เรทราคา 11 รายการ) ยังคงอยู่ครบ 100%
+  clearTransactionalData(silent = false) {
+    this.trips = [];
+    this.excavatorLogs = [];
+    this.incidentAudits = [];
+    this.pendingSyncQueue = [];
+
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, '[]');
+      localStorage.setItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS, '[]');
+      localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, '[]');
+      localStorage.setItem(CONFIG.STORAGE_KEYS.PENDING_SYNC, '[]');
+      localStorage.removeItem(CONFIG.STORAGE_KEYS.CURRENT_SHIFT);
+      localStorage.removeItem('quarry_excavator_shift');
+    } catch (e) {
+      console.warn("Storage reset error:", e);
+    }
+
+    if (!silent) {
+      this.notify();
+    }
+    return true;
+  }
+
+  // สร้างข้อมูลจำลองสำหรับการสาธิต (เมื่อผู้ดูแลระบบต้องการเปิดดูตัวอย่าง)
+  seedDemoData() {
+    this.seedSampleTrips();
+    const today = new Date().toISOString().split('T')[0];
+    this.incidentAudits = [
+      {
+        id: 'AUD_' + Date.now() + '_001',
+        date: today,
+        recordedAt: new Date(Date.now() - 3600000).toISOString(),
+        title: 'รอบวิ่งรับ-เทหินเร็วผิดปกติ (ต่ำกว่า 3 นาที)',
+        category: 'trip_speed',
+        severity: 'critical',
+        targetVehicle: 'C2-38 HINO VICTOR 500',
+        targetDriver: 'นาย ประเสริฐ ใสทอง อุดรัตน์',
+        referenceId: 'T_SAMPLE_1',
+        anomalyDetails: 'ตรวจพบเวลาจากจุดรับถึงจุดเทหินเพียง 1 นาที 15 วินาที ซึ่งต่ำกว่าเกณฑ์มาตรฐานโรงโม่ (อย่างน้อย 3-5 นาที)',
+        investigationResult: 'หัวหน้างานได้ตรวจสอบภาพถ่ายและกล้องวงจรปิดลานโม่ พบว่าคนขับวิ่งหินจริง แต่ลืมกดส่งภาพจุดรับ จึงมากดส่งภาพรับและเทพร้อมกัน',
+        resolution: 'อนุมัติรับรองเที่ยววิ่งตามปกติ และได้กำชับให้คนขับกดส่งภาพจุดรับทันทีก่อนออกรถ',
+        status: 'certified',
+        supervisorName: 'หัวหน้างานคุมลาน (Supervisor)',
+        supervisorSignature: null,
+        certifiedAt: new Date().toISOString(),
+        notes: 'ตรวจสอบแล้ว ข้อเท็จจริงถูกต้อง'
+      }
+    ];
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits));
+    } catch (e) {}
+    this.notify();
+    return true;
   }
 
   seedSampleTrips() {
