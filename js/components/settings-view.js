@@ -257,9 +257,15 @@ class SettingsView {
             </p>
           </div>
 
-          <button onclick="settingsView.openAddUserModal()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center justify-center gap-2 shadow-lg transition">
-            <i data-lucide="user-plus" class="w-4 h-4"></i> เพิ่มบัญชีผู้ใช้ใหม่
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="settingsView.exportCredentialsPDF()" class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition" title="พิมพ์หรือดาวน์โหลดเอกสาร PDF รายชื่อและรหัสผ่าน">
+              <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+              📄 พิมพ์/ส่งออก PDF
+            </button>
+            <button onclick="settingsView.openAddUserModal()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl flex items-center justify-center gap-2 shadow-lg transition">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> เพิ่มบัญชีผู้ใช้ใหม่
+            </button>
+          </div>
         </div>
 
         <!-- Filter & Search Controls -->
@@ -872,6 +878,10 @@ class SettingsView {
       alert("รีเซ็ตข้อมูลสำเร็จ");
       window.app.render();
     }
+  }
+
+  exportCredentialsPDF() {
+    window.open('exports/user_credentials.html', '_blank');
   }
 }
 
