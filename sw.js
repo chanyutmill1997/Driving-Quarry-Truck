@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quarry-chanyuth-v2.4';
+const CACHE_NAME = 'quarry-chanyuth-v2.4.1';
 const ASSETS = [
   './',
   './index.html',

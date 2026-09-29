@@ -16,10 +16,10 @@ class AICopilotView {
             </div>
             <div>
               <h1 class="text-xl font-black text-white flex items-center gap-2">
-                AI ผู้ช่วยโรงโม่หิน (Quarry AI Copilot)
-                <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">พร้อมตอบ Real-time</span>
+                ผู้ช่วยวิเคราะห์ข้อมูลโรงโม่หิน
+                <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">ตอบจากข้อมูลระบบ</span>
               </h1>
-              <p class="text-xs text-slate-400">ถาม-ตอบ สรุปยอด วิเคราะห์แนวโน้ม และค้นหาความผิดปกติของข้อมูล</p>
+              <p class="text-xs text-slate-400">รองรับคำถาม 5 กลุ่ม: ยอดวันนี้ อันดับคนขับ รถจอด ความผิดปกติ และเรทราคา</p>
             </div>
           </div>
           <button onclick="window.app.navigate('dashboard')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-700">

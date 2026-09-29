@@ -290,10 +290,10 @@ class AdminDashboard {
                 ✅ ระบบตรวจสอบแล้ว ไม่พบพฤติกรรมผิดปกติในการวิ่งงาน ข้อมูลความเร็วและ GPS สอดคล้องสมบูรณ์
               </div>
             ` : anomalies.map(a => `
-              <div class="bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/70 bg-red-950/20' : (a.severity === 'warning' ? 'border-amber-500/50 bg-amber-950/20' : 'border-slate-800')} rounded-2xl p-4 space-y-3">
+              <div class="anomaly-card bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/70 bg-red-950/20' : (a.severity === 'warning' ? 'border-amber-500/50 bg-amber-950/20' : 'border-slate-800')} rounded-2xl p-4 space-y-3">
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex items-center gap-2">
-                    <span class="text-xs font-black ${a.severity === 'critical' ? 'bg-red-900/80 text-red-200 border border-red-700' : 'bg-amber-900/80 text-amber-200 border border-amber-700'} px-2 py-0.5 rounded-md">
+                    <span class="text-sm font-black ${a.severity === 'critical' ? 'bg-red-900/80 text-red-200 border border-red-700' : 'bg-amber-900/80 text-amber-200 border border-amber-700'} px-2.5 py-1 rounded-md">
                       ${a.severity === 'critical' ? '🚨 ตรวจสอบด่วน' : '⚠️ ข้อสังเกต'}
                     </span>
                     <h3 class="font-bold text-sm text-white">${a.title}</h3>
@@ -305,9 +305,9 @@ class AdminDashboard {
                   ` : ''}
                 </div>
 
-                <p class="text-xs text-slate-300 leading-relaxed">${a.desc}</p>
+                <p class="text-sm text-slate-300 leading-6">${a.desc}</p>
 
-                <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-blue-300 space-y-1">
+                <div class="anomaly-recommendation p-3.5 bg-slate-900/90 rounded-xl border border-slate-800 text-sm text-blue-300 space-y-1.5">
                   <p class="font-bold flex items-center gap-1 text-slate-200">
                     💡 คำแนะนำที่ควรทำ:
                   </p>
@@ -394,13 +394,13 @@ class AdminDashboard {
           </div>
 
           <!-- Right Col: Excavators Status (20 Machines) -->
-          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+          <div class="excavator-panel bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
               <div class="flex items-center gap-2">
                 <i data-lucide="wrench" class="w-5 h-5 text-blue-400"></i>
                 <h2 class="font-black text-lg text-white">รถขุด / แม็คโคร (20 คัน)</h2>
               </div>
-              <span class="text-xs font-bold text-slate-400">วันนี้ตัก ${todayExcLogs.length} คัน</span>
+              <span class="text-sm font-bold text-slate-400">วันนี้ตัก ${todayExcLogs.length} คัน</span>
             </div>
 
             <div class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
@@ -409,22 +409,22 @@ class AdminDashboard {
                 const hasWork = logsForExc.length > 0;
 
                 return `
-                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="p-3 bg-slate-950 rounded-2xl border ${hasWork ? 'border-blue-500/40' : 'border-slate-800'} flex items-center justify-between cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
+                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="excavator-status-card min-h-[76px] p-3.5 bg-slate-950 rounded-2xl border ${hasWork ? 'border-blue-500/40' : 'border-slate-800'} flex items-center justify-between cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
                     <div>
                       <div class="flex items-center gap-1.5">
-                        <p class="font-black text-xs text-white">${e.code}</p>
-                        <span class="text-[9px] px-1.5 py-0.2 rounded font-bold ${e.is_contractor ? 'bg-purple-950 text-purple-300' : 'bg-slate-800 text-slate-300'}">
+                        <p class="excavator-code font-black text-sm text-white">${e.code}</p>
+                        <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${e.is_contractor ? 'bg-purple-950 text-purple-300' : 'bg-slate-800 text-slate-300'}">
                           ${e.is_contractor ? 'ผรม.' : 'ประจำ'}
                         </span>
                       </div>
-                      <p class="text-[10px] text-slate-400 mt-0.5">ผู้ควบคุม: <b class="text-slate-300 font-semibold">${e.nickname || e.driver_name || '-'}</b></p>
+                      <p class="excavator-operator text-xs text-slate-400 mt-1">ผู้ควบคุม: <b class="text-slate-300 font-semibold">${e.nickname || e.driver_name || '-'}</b></p>
                     </div>
 
                     <div class="text-right">
-                      <span class="text-xs font-black ${hasWork ? 'text-emerald-400' : 'text-slate-500'}">
+                      <span class="excavator-count text-sm font-black ${hasWork ? 'text-emerald-400' : 'text-slate-500'}">
                         ${logsForExc.length} คัน
                       </span>
-                      <p class="text-[9px] text-slate-500 font-bold">฿${e.rate_per_scoop || 5}/คัน</p>
+                      <p class="excavator-rate text-[11px] text-slate-500 font-bold mt-0.5">฿${e.rate_per_scoop || 5}/คัน</p>
                     </div>
                   </div>
                 `;

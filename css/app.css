@@ -690,6 +690,12 @@ html.light .app-header .text-blue-400,
 html.light .app-header .text-blue-300 { color: #93c5fd !important; }
 html.light .app-header .text-emerald-300,
 html.light .app-header .text-emerald-400 { color: #6ee7b7 !important; }
+html.light .app-header .app-brand .bg-emerald-500\/20 {
+  background: #d9fbe8 !important;
+  border-color: #6fcf9c !important;
+  color: #075f42 !important;
+  text-shadow: none !important;
+}
 html.light .app-header button.bg-slate-800 {
   background: rgba(255,255,255,.075) !important;
   border-color: rgba(255,255,255,.14) !important;
@@ -727,6 +733,7 @@ html.light .app-main .text-slate-500 { color: var(--light-text-muted) !important
 
 /* Surfaces: clear layers without excessive shadow */
 html.light .app-main .bg-slate-900,
+html.light .app-main .bg-slate-900\/90,
 html.light .app-main .bg-slate-800,
 html.light .app-main .glass-card,
 html.light .app-main [class*="bg-gradient-to-br"] {
@@ -759,6 +766,28 @@ html.light .app-main .text-red-300,
 html.light .app-main .text-red-400 { color: #b42335 !important; }
 html.light .app-main .text-purple-300,
 html.light .app-main .text-purple-400 { color: #6d3cb5 !important; }
+
+/* Readability-critical operational content */
+html.light .app-main .anomaly-card {
+  background: #fff !important;
+  border-width: 2px !important;
+  box-shadow: 0 6px 18px rgba(15,31,54,.07) !important;
+}
+html.light .app-main .anomaly-recommendation {
+  background: #eef4ff !important;
+  border-color: #9fbcf4 !important;
+  color: #172033 !important;
+}
+html.light .app-main .anomaly-recommendation p,
+html.light .app-main .anomaly-recommendation b { color: #172033 !important; }
+html.light .app-main .excavator-status-card {
+  background: #fff !important;
+  border-color: #cbd6e3 !important;
+}
+html.light .app-main .excavator-code { color: #101c30 !important; font-size: .95rem !important; }
+html.light .app-main .excavator-operator { color: #485a70 !important; font-size: .78rem !important; }
+html.light .app-main .excavator-count { color: #334155 !important; font-size: .9rem !important; }
+html.light .app-main .excavator-rate { color: #52647a !important; font-size: .72rem !important; }
 
 /* Buttons */
 html.light .app-main button.bg-blue-500,
