@@ -31,8 +31,16 @@ class AdminDashboard {
     const activeTrucksCount = activeTruckPlates.size;
     const parkedTrucksCount = Math.max(0, trucks.length - activeTrucksCount);
 
-    const totalPayoutToday = todayTrips.reduce((sum, t) => sum + (t.amount || 0), 0) +
-                            todayExcLogs.reduce((sum, l) => sum + (l.amount || 5), 0);
+    const getExcavatorLogAmount = (l) => {
+      if (l.amount && Number(l.amount) > 0) return Number(l.amount);
+      const trk = trucks.find(t => t.code === l.targetTruckPlate);
+      const cap = trk ? (Number(trk.capacity_ton) || 30) : 30;
+      return 5 * cap;
+    };
+
+    const totalTruckPayoutToday = todayTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const totalExcavatorPayoutToday = todayExcLogs.reduce((sum, l) => sum + getExcavatorLogAmount(l), 0);
+    const totalPayoutToday = totalTruckPayoutToday + totalExcavatorPayoutToday;
 
     // 1. ตรวจสอบการกระทบยอดสิบล้อ vs แม็คโคร (Reconciliation Audit)
     const recon = window.quarryAI ? window.quarryAI.getReconciliationReport(currentDate) : {
@@ -242,34 +250,61 @@ class AdminDashboard {
                   <p class="text-xs text-slate-400">คลิกเพื่อดูบันทึกการตัก</p>
                 </div>
               </div>
-              <span class="text-xs font-black text-cyan-400 bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-800/60">
-                ตักรวม ${todayExcLogs.length} คัน
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-cyan-400 bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-800/60">
+                  ตักรวม ${todayExcLogs.length} คัน
+                </span>
+                <span class="text-xs font-black text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-800/60 font-mono">
+                  ฿${totalExcavatorPayoutToday.toLocaleString()}
+                </span>
+              </div>
             </div>
 
             <div class="space-y-3 max-h-[520px] overflow-y-auto pr-1.5">
               ${excavators.map(e => {
                 const logsForExc = todayExcLogs.filter(l => l.excavatorCode === e.code);
                 const hasWork = logsForExc.length > 0;
+                const totalEarnExc = logsForExc.reduce((sum, l) => sum + getExcavatorLogAmount(l), 0);
 
                 return `
-                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="excavator-status-card p-3.5 bg-slate-950 rounded-2xl border ${hasWork ? 'border-cyan-500/50 shadow-md ring-1 ring-cyan-500/20' : 'border-slate-800'} flex items-center justify-between cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
-                    <div>
+                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="excavator-status-card p-3.5 bg-slate-950 rounded-2xl border ${hasWork ? 'border-cyan-500/50 shadow-md ring-1 ring-cyan-500/20' : 'border-slate-800'} space-y-2.5 cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
+                    
+                    <!-- Top Line: Code, Role badge, Status badge -->
+                    <div class="flex items-center justify-between">
                       <div class="flex items-center gap-2">
-                        <p class="excavator-code font-black text-base text-white">${e.code}</p>
+                        <p class="excavator-code font-black text-base text-white tracking-wide">${e.code}</p>
                         <span class="text-[11px] px-2 py-0.5 rounded-md font-bold ${e.is_contractor ? 'bg-purple-950 text-purple-300 border border-purple-800' : 'bg-slate-800 text-slate-300 border border-slate-700'}">
                           ${e.is_contractor ? 'ผรม.' : 'ประจำ'}
                         </span>
                       </div>
-                      <p class="excavator-operator text-xs text-slate-300 mt-1">ผู้ควบคุม: <b class="text-white font-bold text-xs">${e.nickname || e.driver_name || '-'}</b></p>
+                      ${hasWork ? `
+                        <span class="flex items-center gap-1.5 px-2.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-black rounded-full border border-cyan-500/40">
+                          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> กำลังตัก
+                        </span>
+                      ` : `
+                        <span class="px-2.5 py-0.5 bg-slate-800 text-slate-400 text-xs font-bold rounded-full border border-slate-700">
+                          ว่าง
+                        </span>
+                      `}
                     </div>
 
-                    <div class="text-right">
-                      <span class="excavator-count text-base font-black ${hasWork ? 'text-emerald-400' : 'text-slate-500'}">
-                        ${logsForExc.length} คัน
-                      </span>
-                      <p class="excavator-rate text-xs text-slate-400 font-bold mt-0.5">฿${e.rate_per_scoop || 5}/คัน</p>
+                    <!-- Middle Line: Operator and count -->
+                    <div class="text-sm text-slate-300 flex items-center justify-between pt-1 border-t border-slate-800/70">
+                      <span class="truncate max-w-[150px]">👤 ผู้ควบคุม: <strong class="text-white font-bold">${e.nickname || e.driver_name || '-'}</strong></span>
+                      <span class="font-black text-sm ${hasWork ? 'text-blue-400' : 'text-slate-500'} font-mono">${logsForExc.length} คัน</span>
                     </div>
+
+                    <!-- Bottom Line: ยอดเงินสะสม (Accumulated Earnings) -->
+                    ${hasWork ? `
+                      <div class="text-xs text-emerald-400 font-black flex justify-between items-center bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-800/50">
+                        <span class="text-[11px] text-slate-300 font-bold">ยอดเงินสะสม</span>
+                        <span class="text-sm font-mono font-black">฿${totalEarnExc.toLocaleString()}</span>
+                      </div>
+                    ` : `
+                      <div class="text-[11px] text-slate-500 text-center py-0.5">
+                        ยังไม่มีรายการตักในวันนี้
+                      </div>
+                    `}
                   </div>
                 `;
               }).join('')}
@@ -782,17 +817,23 @@ class AdminDashboard {
     if (!excavator) return;
     const allLogs = window.quarryStore.getExcavatorLogs({ excavatorCode: code });
     const today = this.selectedDate || new Date().toISOString().split('T')[0];
-    const todayLogs = allLogs.filter(l => l.date === today);
-    const totalToday = todayLogs.reduce((sum, l) => sum + Number(l.amount || excavator.rate_per_scoop || 0), 0);
-    const totalAll = allLogs.reduce((sum, l) => sum + Number(l.amount || excavator.rate_per_scoop || 0), 0);
+    const trucks = window.quarryStore.getTrucks();
+    const getAmt = (l) => {
+      if (l.amount && Number(l.amount) > 0) return Number(l.amount);
+      const trk = trucks.find(t => t.code === l.targetTruckPlate);
+      const cap = trk ? (Number(trk.capacity_ton) || 30) : 30;
+      return 5 * cap;
+    };
+    const totalToday = todayLogs.reduce((sum, l) => sum + getAmt(l), 0);
+    const totalAll = allLogs.reduce((sum, l) => sum + getAmt(l), 0);
     this.showVehicleModal(
       `🚜 ${excavator.code}`,
       `
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
           ${this.detailMetric('สถานะ', excavator.status === 'repair' ? '🔴 ซ่อม' : (todayLogs.length ? '🟢 ทำงาน' : '⚪ ว่าง'), excavator.status === 'repair' ? 'text-red-400' : 'text-emerald-400')}
           ${this.detailMetric('ตักวันนี้', `${todayLogs.length} คัน`, 'text-blue-400')}
-          ${this.detailMetric('เรทต่อตัก', `฿${excavator.rate_per_scoop || 0}`, 'text-white')}
-          ${this.detailMetric('รายได้วันนี้', `฿${totalToday.toLocaleString()}`, 'text-emerald-400')}
+          ${this.detailMetric('อัตราค่าตัก', '5 บาท/ตัน', 'text-amber-400')}
+          ${this.detailMetric('ยอดเงินสะสมวันนี้', `฿${totalToday.toLocaleString()}`, 'text-emerald-400')}
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5 text-sm">
           <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><p class="text-xs text-slate-500">ผู้ควบคุมประจำ</p><p class="font-bold text-white mt-1">${excavator.driver_name || 'ยังไม่กำหนด'}</p><p class="text-xs text-blue-300 mt-1">ชื่อเรียก: ${excavator.nickname || '-'}</p></div>
