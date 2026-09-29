@@ -104,8 +104,8 @@ class SettingsView {
                   <td class="p-3 text-center font-semibold text-blue-400">${r.rate_60_ton ? '฿' + r.rate_60_ton : '-'}</td>
                   <td class="p-3 text-center font-semibold text-purple-400">฿${r.excavator_rate || 5}</td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.promptEditRate('${r.id}')" class="text-blue-400 hover:underline font-bold mr-2">แก้ไข</button>
-                    <button onclick="settingsView.deleteRate('${r.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                    <button onclick="settingsView.promptEditRate('${r.id}')" class="btn-action-edit px-2.5 py-1 rounded-lg font-bold text-xs mr-1.5 transition">แก้ไข</button>
+                    <button onclick="settingsView.deleteRate('${r.id}')" class="btn-action-delete px-2.5 py-1 rounded-lg font-bold text-xs transition">ลบ</button>
                   </td>
                 </tr>
               `).join('')}
@@ -145,15 +145,15 @@ class SettingsView {
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${t.code}</td>
                   <td class="p-3 text-center font-bold text-blue-400">${t.capacity_ton} ตัน</td>
-                  <td class="p-3">${t.nickname ? 'น้า' + t.nickname + ' ' : ''}${t.driver_name || '-'}</td>
-                  <td class="p-3 text-slate-400">${t.phone || '-'}</td>
+                  <td class="p-3 font-semibold text-slate-200">${t.nickname ? 'น้า' + t.nickname + ' ' : ''}${t.driver_name || '-'}</td>
+                  <td class="p-3 font-mono font-semibold text-slate-300">${t.phone || '-'}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'active' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}">
+                    <span class="status-badge px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'active' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-800 text-slate-400'}">
                       ${t.status === 'active' ? 'พร้อมใช้' : 'ว่าง'}
                     </span>
                   </td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.deleteTruck('${t.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                    <button onclick="settingsView.deleteTruck('${t.id}')" class="btn-action-delete px-2.5 py-1 rounded-lg font-bold text-xs transition">ลบ</button>
                   </td>
                 </tr>
               `).join('')}
@@ -192,21 +192,21 @@ class SettingsView {
               ${excavators.map(e => `
                 <tr class="hover:bg-slate-800/50">
                   <td class="p-3 font-bold text-white">${e.code}</td>
-                  <td class="p-3">${e.nickname ? 'ช่าง' + e.nickname + ' ' : ''}${e.driver_name || '-'}</td>
+                  <td class="p-3 font-semibold text-slate-200">${e.nickname ? 'ช่าง' + e.nickname + ' ' : ''}${e.driver_name || '-'}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.is_contractor ? 'bg-purple-900/60 text-purple-200' : 'bg-slate-800 text-slate-300'}">
+                    <span class="role-badge px-2 py-0.5 rounded text-[10px] font-bold ${e.is_contractor ? 'bg-purple-900/60 text-purple-200 border border-purple-700' : 'bg-slate-800 text-slate-300'}">
                       ${e.is_contractor ? 'ทีม ผรม.' : 'ประจำโรงโม่'}
                     </span>
                   </td>
                   <td class="p-3 text-center font-bold text-emerald-400">฿${e.rate_per_scoop || 5}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${e.status === 'repair' ? 'bg-red-950 text-red-300' : 'bg-emerald-950 text-emerald-300'}">
+                    <span class="status-badge px-2 py-0.5 rounded text-[10px] font-bold ${e.status === 'repair' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'}">
                       ${e.status === 'repair' ? 'ซ่อม' : 'พร้อมใช้'}
                     </span>
                   </td>
                   <td class="p-3 text-right">
-                    <button onclick="settingsView.promptEditExcRate('${e.id}')" class="text-blue-400 hover:underline font-bold mr-2">ปรับเรท</button>
-                    <button onclick="settingsView.deleteExcavator('${e.id}')" class="text-red-400 hover:underline font-bold">ลบ</button>
+                    <button onclick="settingsView.promptEditExcRate('${e.id}')" class="btn-action-edit px-2.5 py-1 rounded-lg font-bold text-xs mr-1.5 transition">ปรับเรท</button>
+                    <button onclick="settingsView.deleteExcavator('${e.id}')" class="btn-action-delete px-2.5 py-1 rounded-lg font-bold text-xs transition">ลบ</button>
                   </td>
                 </tr>
               `).join('')}
@@ -318,28 +318,32 @@ class SettingsView {
                 <tr class="hover:bg-slate-800/50 transition">
                   <td class="p-3">
                     <span class="font-bold text-white text-sm">${d.name}</span>
-                    ${d.nickname ? `<span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-blue-300 border border-slate-700">(${d.nickname})</span>` : ''}
+                    ${d.nickname ? `<span class="nickname-badge ml-1.5 px-2 py-0.5 rounded-md text-[11px] font-black bg-blue-950/80 text-blue-300 border border-blue-700">(${d.nickname})</span>` : ''}
                   </td>
-                  <td class="p-3 font-mono font-bold text-slate-300">${d.phone || '-'}</td>
-                  <td class="p-3 text-slate-400">${d.assigned_vehicle || '-'}</td>
+                  <td class="p-3 font-mono font-bold text-slate-200">${d.phone || '-'}</td>
+                  <td class="p-3 font-semibold text-slate-300">${d.assigned_vehicle || '-'}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-black ${
-                      d.role === 'admin' ? 'bg-amber-500 text-slate-950 shadow-sm' :
-                      d.role === 'supervisor' ? 'bg-blue-600 text-white shadow-sm' :
-                      d.role === 'excavator_operator' ? 'bg-cyan-900/80 text-cyan-200 border border-cyan-700' :
-                      'bg-slate-800 text-slate-300'
+                    <span class="role-badge px-2.5 py-1 rounded-xl text-[11px] font-black ${
+                      d.role === 'admin' ? 'bg-amber-500 text-slate-950 shadow-sm border border-amber-400' :
+                      d.role === 'supervisor' ? 'bg-blue-600 text-white shadow-sm border border-blue-500' :
+                      d.role === 'excavator_operator' ? 'bg-cyan-900 text-cyan-200 border border-cyan-600' :
+                      'bg-slate-800 text-slate-200 border border-slate-700'
                     }">
                       ${
-                        d.role === 'admin' ? '👑 ผู้บริหาร / แอดมิน' :
+                        d.role === 'admin' ? '👑 ผู้บริหาร' :
                         d.role === 'supervisor' ? '📋 หัวหน้างาน' :
                         d.role === 'excavator_operator' ? '🚜 แม็คโคร' :
                         '🚚 พนักงานขับสิบล้อ'
                       }
                     </span>
                   </td>
-                  <td class="p-3 text-center font-mono font-bold text-blue-400">${d.pin || '123456'}</td>
                   <td class="p-3 text-center">
-                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                    <span class="pin-badge inline-block px-2.5 py-0.5 rounded-lg font-mono font-black text-xs bg-blue-950 text-blue-300 border border-blue-800">
+                      ${d.pin || '123456'}
+                    </span>
+                  </td>
+                  <td class="p-3 text-center">
+                    <span class="status-badge px-2.5 py-1 rounded-full text-[10px] font-black ${
                       d.status === 'suspended' ? 'bg-red-950 text-red-300 border border-red-800' :
                       d.status === 'pending' ? 'bg-amber-950 text-amber-300 border border-amber-800' :
                       'bg-emerald-950 text-emerald-300 border border-emerald-800'
@@ -353,13 +357,13 @@ class SettingsView {
                   </td>
                   <td class="p-3 text-right">
                     <div class="flex items-center justify-end gap-1.5">
-                      <button onclick="settingsView.openEditUserModal('${d.id}')" class="px-2.5 py-1 bg-blue-950 hover:bg-blue-900 text-blue-300 rounded-lg font-bold border border-blue-800 text-[11px] transition" title="แก้ไขข้อมูล">
+                      <button onclick="settingsView.openEditUserModal('${d.id}')" class="btn-action-edit px-2.5 py-1 bg-blue-950 hover:bg-blue-900 text-blue-300 rounded-lg font-black border border-blue-800 text-[11px] transition shadow-sm" title="แก้ไขข้อมูล">
                         ✏️ แก้ไข
                       </button>
-                      <button onclick="settingsView.toggleUserStatus('${d.id}')" class="px-2.5 py-1 ${d.status === 'suspended' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-amber-950 text-amber-300 border-amber-800'} rounded-lg font-bold border text-[11px] transition" title="${d.status === 'suspended' ? 'ปลดระงับสิทธิ์' : 'ระงับสิทธิ์ชั่วคราว'}">
+                      <button onclick="settingsView.toggleUserStatus('${d.id}')" class="btn-action-toggle px-2.5 py-1 ${d.status === 'suspended' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-amber-950 text-amber-300 border-amber-800'} rounded-lg font-black border text-[11px] transition shadow-sm" title="${d.status === 'suspended' ? 'ปลดระงับสิทธิ์' : 'ระงับสิทธิ์ชั่วคราว'}">
                         ${d.status === 'suspended' ? '🔓 ปลดระงับ' : '🔒 ระงับ'}
                       </button>
-                      <button onclick="settingsView.deleteDriver('${d.id}')" class="px-2.5 py-1 bg-red-950/60 hover:bg-red-900 text-red-300 rounded-lg font-bold border border-red-800 text-[11px] transition" title="ลบบัญชี">
+                      <button onclick="settingsView.deleteDriver('${d.id}')" class="btn-action-delete px-2.5 py-1 bg-red-950 hover:bg-red-900 text-red-300 rounded-lg font-black border border-red-800 text-[11px] transition shadow-sm" title="ลบบัญชี">
                         🗑️ ลบ
                       </button>
                     </div>
