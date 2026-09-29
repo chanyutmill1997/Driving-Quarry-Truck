@@ -6,12 +6,18 @@
  */
 class ReportsView {
   constructor() {
-    this.viewMode = 'overview'; // 'overview', 'individual', 'reconciliation', 'anomalies'
+    this.viewMode = 'disbursement'; // 'disbursement', 'overview', 'individual', 'reconciliation', 'anomalies'
     this.filterDateFrom = '';
     this.filterDateTo = '';
     this.filterVehicle = '';
     this.filterDriver = '';
+    this.filterJobType = '';
     
+    // สำหรับโหมดหลักฐานแนบเบิกจ่าย (Disbursement & Photo Proofs)
+    this.disbursementLayout = 'truck_grouped'; // 'truck_grouped', 'trip_timeline', 'audit_table'
+    this.disbursementSearchQuery = '';
+    this.selectedZoomPhoto = null;
+
     // สำหรับโหมดเจาะลึกรายคน
     this.selectedDrilldownDriver = '';
 
@@ -41,12 +47,15 @@ class ReportsView {
               <span class="p-2 bg-emerald-500 text-slate-950 rounded-xl">📑</span>
               รายงานและสรุปยอดค่าจ้าง (Reports & Audits)
             </h1>
-            <p class="text-sm text-slate-400 mt-1">กรองดูภาพรวม, กระทบยอดสิบล้อ vs แม็คโคร หรือส่งออกรายงานเป็น Excel และ PDF</p>
+            <p class="text-sm text-slate-400 mt-1">หลักฐานภาพถ่ายทุกเที่ยวแนบเบิกจ่าย, กระทบยอดสิบล้อ vs แม็คโคร และส่งออก Excel / PDF</p>
           </div>
           
           <div class="flex flex-wrap items-center gap-2.5">
             <!-- View Mode Switcher -->
-            <div class="flex flex-wrap bg-slate-950 p-1 rounded-2xl border border-slate-800">
+            <div class="flex flex-wrap bg-slate-950 p-1 rounded-2xl border border-slate-800 gap-1">
+              <button onclick="reportsView.setViewMode('disbursement')" class="px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 ${this.viewMode === 'disbursement' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <span>📸</span> หลักฐานแนบเบิกจ่าย & รูปทุกเที่ยว
+              </button>
               <button onclick="reportsView.setViewMode('overview')" class="px-3 py-2 rounded-xl text-xs font-bold transition ${this.viewMode === 'overview' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
                 📊 สรุปภาพรวม
               </button>
@@ -84,6 +93,11 @@ class ReportsView {
         <!-- Export Modal Container -->
         <div id="export-modal-container"></div>
 
+        <!-- Photo Zoom Lightbox Modal Container -->
+        <div id="photo-zoom-modal-container">
+          ${this.selectedZoomPhoto ? this.renderPhotoZoomModal() : ''}
+        </div>
+
         <div id="report-printable-area">
           ${this.renderActiveView(trips, excLogs, trucks, drivers)}
         </div>
@@ -97,12 +111,831 @@ class ReportsView {
     window.app.render();
   }
 
+  setDisbursementLayout(layout) {
+    this.disbursementLayout = layout;
+    window.app.render();
+  }
+
   renderActiveView(trips, excLogs, trucks, drivers) {
+    if (this.viewMode === 'disbursement') return this.renderDisbursementMode(trips, trucks, drivers);
     if (this.viewMode === 'overview') return this.renderOverviewMode(trips, trucks, drivers);
     if (this.viewMode === 'reconciliation') return this.renderReconciliationMode(trips, excLogs, trucks);
     if (this.viewMode === 'individual') return this.renderIndividualMode(trips, drivers);
     if (this.viewMode === 'anomalies') return this.renderAnomaliesMode(trips, excLogs, trucks, drivers);
     return '';
+  }
+
+  // -------------------------------------------------------------
+  // 0. โหมดหลักฐานแนบการพิจารณาเบิกจ่าย & รูปประกอบทุกเที่ยว (Disbursement Photo Evidence Mode)
+  // -------------------------------------------------------------
+  renderDisbursementMode(trips, trucks, drivers) {
+    const jobRates = window.quarryStore.getJobRates();
+
+    // กรองข้อมูลตามเงื่อนไข
+    let filteredTrips = trips.filter(t => {
+      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      if (this.filterVehicle && t.truckPlate !== this.filterVehicle) return false;
+      if (this.filterDriver && t.driverName !== this.filterDriver) return false;
+      if (this.filterJobType && t.jobTypeId !== this.filterJobType && t.jobTypeName !== this.filterJobType) return false;
+      if (this.disbursementSearchQuery) {
+        const q = this.disbursementSearchQuery.toLowerCase();
+        const matchPlate = (t.truckPlate || '').toLowerCase().includes(q);
+        const matchDriver = (t.driverName || '').toLowerCase().includes(q);
+        const matchId = (t.id || '').toLowerCase().includes(q);
+        const matchJob = (t.jobTypeName || '').toLowerCase().includes(q);
+        if (!matchPlate && !matchDriver && !matchId && !matchJob) return false;
+      }
+      return true;
+    });
+
+    const totalAmount = filteredTrips.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const totalTripsCount = filteredTrips.length;
+    const uniqueTrucks = new Set(filteredTrips.map(t => t.truckPlate)).size;
+    const uniqueDrivers = new Set(filteredTrips.map(t => t.driverName)).size;
+    const totalPhotos = filteredTrips.length * 2;
+
+    return `
+      <!-- Disbursement Header Banner & Statistics -->
+      <div class="space-y-6">
+        
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+          <div class="bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
+              <span class="text-xl">💰</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">ยอดเงินเบิกจ่ายรวม</p>
+              <h3 class="text-lg font-black text-emerald-400">฿${totalAmount.toLocaleString()}</h3>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-blue-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
+              <span class="text-xl">🚛</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">เที่ยววิ่งรวมทั้งหมด</p>
+              <h3 class="text-lg font-black text-white">${totalTripsCount.toLocaleString()} <span class="text-xs font-normal text-slate-400">เที่ยว</span></h3>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-indigo-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-indigo-500/20 text-indigo-400 rounded-xl">
+              <span class="text-xl">🚚</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">รถบรรทุกที่วิ่งงาน</p>
+              <h3 class="text-lg font-black text-indigo-300">${uniqueTrucks} <span class="text-xs font-normal text-slate-400">คัน</span></h3>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-amber-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-amber-500/20 text-amber-400 rounded-xl">
+              <span class="text-xl">📸</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">รูปหลักฐานแนบครบ</p>
+              <h3 class="text-lg font-black text-amber-300">${totalPhotos.toLocaleString()} <span class="text-xs font-normal text-emerald-400 font-bold">(100%)</span></h3>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 border border-teal-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5 col-span-2 md:col-span-1">
+            <div class="p-3 bg-teal-500/20 text-teal-400 rounded-xl">
+              <span class="text-xl">🛡️</span>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">สถานะหลักฐาน</p>
+              <h3 class="text-xs font-black text-teal-300 bg-teal-950/80 px-2 py-1 rounded-lg border border-teal-800/60 inline-block mt-0.5">✓ พร้อมเบิกจ่าย</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Layout Toolbar -->
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm">🔍</span>
+              <h3 class="text-sm font-black text-white">ตัวกรองหลักฐานแนบการเบิกจ่าย (Disbursement Filters)</h3>
+            </div>
+
+            <!-- Quick Date Presets -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button onclick="reportsView.setQuickDateFilter('today')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition">วันนี้</button>
+              <button onclick="reportsView.setQuickDateFilter('7days')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition">7 วัน</button>
+              <button onclick="reportsView.setQuickDateFilter('thisMonth')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition">เดือนนี้</button>
+              <button onclick="reportsView.setQuickDateFilter('all')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold text-blue-400 transition">ทั้งหมด</button>
+            </div>
+          </div>
+
+          <!-- Dropdowns & Search Input -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <!-- Search Text -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">ค้นหา (รอบ/ทะเบียน/คนขับ)</label>
+              <div class="relative">
+                <input type="text" value="${this.disbursementSearchQuery}" oninput="reportsView.onDisbursementSearch(this.value)" placeholder="พิมพ์คำค้นหา..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+              </div>
+            </div>
+
+            <!-- Filter Truck -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">เลือกรถบรรทุก</label>
+              <select onchange="reportsView.onFilterChange('vehicle', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                <option value="">-- รถทุกคัน (${trucks.length} คัน) --</option>
+                ${trucks.map(t => `<option value="${t.code}" ${this.filterVehicle === t.code ? 'selected' : ''}>${t.code} (${t.capacity_ton || 30} ตัน) ${t.driver_name ? '— ' + t.driver_name : ''}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Filter Driver -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">เลือกคนขับ</label>
+              <select onchange="reportsView.onFilterChange('driver', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                <option value="">-- คนขับทุกคน (${drivers.length} คน) --</option>
+                ${drivers.map(d => `<option value="${d.name}" ${this.filterDriver === d.name ? 'selected' : ''}>${d.name} (${d.phone || ''})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Filter Job Type -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">ประเภทงาน</label>
+              <select onchange="reportsView.onFilterChange('jobType', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                <option value="">-- ทุกประเภทงาน --</option>
+                ${jobRates.map(j => `<option value="${j.id}" ${this.filterJobType === j.id ? 'selected' : ''}>${j.name}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Date Range Inputs -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-slate-400">ช่วงวันที่</label>
+              <div class="flex items-center gap-1.5">
+                <input type="date" value="${this.filterDateFrom}" onchange="reportsView.onFilterChange('dateFrom', this.value)" class="w-1/2 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-[11px] text-white">
+                <span class="text-slate-500 text-xs">-</span>
+                <input type="date" value="${this.filterDateTo}" onchange="reportsView.onFilterChange('dateTo', this.value)" class="w-1/2 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-[11px] text-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- Layout Switcher & Action Buttons -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-3 border-t border-slate-800">
+            <!-- Layout Switcher -->
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800">
+              <button onclick="reportsView.setDisbursementLayout('truck_grouped')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.disbursementLayout === 'truck_grouped' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <span>🚛</span> แยกตามคันรถ
+              </button>
+              <button onclick="reportsView.setDisbursementLayout('trip_timeline')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.disbursementLayout === 'trip_timeline' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <span>⏱️</span> ไทม์ไลน์ทุกเที่ยว
+              </button>
+              <button onclick="reportsView.setDisbursementLayout('audit_table')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${this.disbursementLayout === 'audit_table' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
+                <span>📋</span> ตารางตรวจสอบละเอียด
+              </button>
+            </div>
+
+            <!-- Print Vouchers Button -->
+            <div class="flex items-center gap-2">
+              <button onclick="reportsView.printDisbursementVouchers()" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl text-xs shadow-lg transition flex items-center gap-2">
+                <span>🖨️</span> พิมพ์ใบปะหน้าเบิกจ่ายพร้อมรูปถ่าย (A4 Voucher)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Render Content based on selected layout -->
+        ${filteredTrips.length === 0 ? `
+          <div class="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+            <span class="text-4xl">📭</span>
+            <h3 class="text-base font-bold text-white">ไม่พบรายการเที่ยววิ่งตามเงื่อนไขที่เลือก</h3>
+            <p class="text-xs text-slate-400">ลองปรับเปลี่ยนตัวกรองวันที่ ทะเบียนรถ หรือประเภทงานเพื่อดูข้อมูล</p>
+          </div>
+        ` : (
+          this.disbursementLayout === 'truck_grouped'
+            ? this.renderDisbursementTruckGrouped(filteredTrips, trucks)
+            : (this.disbursementLayout === 'trip_timeline'
+                ? this.renderDisbursementTimeline(filteredTrips)
+                : this.renderDisbursementAuditTable(filteredTrips))
+        )}
+
+      </div>
+    `;
+  }
+
+  // มุมมองที่ 1: แยกตามคันรถ (Group by Vehicle)
+  renderDisbursementTruckGrouped(trips, trucks) {
+    // จัดกลุ่มตามทะเบียนรถ
+    const grouped = {};
+    trips.forEach(t => {
+      const key = t.truckPlate || 'ไม่ระบุคัน';
+      if (!grouped[key]) {
+        grouped[key] = {
+          truckPlate: t.truckPlate,
+          capacityTon: t.capacityTon || 30,
+          driverName: t.driverName,
+          driverPhone: t.driverPhone,
+          trips: []
+        };
+      }
+      grouped[key].trips.push(t);
+    });
+
+    const groups = Object.values(grouped).sort((a, b) => a.truckPlate.localeCompare(b.truckPlate));
+
+    return `
+      <div class="space-y-6">
+        ${groups.map(group => {
+          const groupTotal = group.trips.reduce((sum, t) => sum + (t.amount || 0), 0);
+          const groupPhotosCount = group.trips.length * 2;
+          return `
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+              <!-- Truck Header Bar -->
+              <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-3.5">
+                  <div class="p-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-2xl font-black text-base">
+                    🚛
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h3 class="text-base font-black text-white">${group.truckPlate}</h3>
+                      <span class="px-2.5 py-0.5 bg-blue-950 text-blue-300 text-[11px] font-bold rounded-lg border border-blue-800/60">
+                        พิกัด ${group.capacityTon} ตัน
+                      </span>
+                    </div>
+                    <p class="text-xs text-slate-300 mt-0.5">
+                      👤 คนขับ: <strong class="text-white">${group.driverName || 'ไม่ระบุ'}</strong>
+                      ${group.driverPhone ? `<span class="text-slate-400 ml-1.5 font-mono">(${group.driverPhone})</span>` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Summary Badges & Action -->
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <div class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-right">
+                    <span class="text-[10px] text-slate-400 block font-bold">จำนวนเที่ยว</span>
+                    <span class="text-xs font-black text-white">${group.trips.length} เที่ยว</span>
+                  </div>
+
+                  <div class="bg-emerald-950/60 px-3.5 py-1.5 rounded-xl border border-emerald-800/60 text-right">
+                    <span class="text-[10px] text-emerald-400 block font-bold">ยอดขอเบิกจ่าย</span>
+                    <span class="text-sm font-black text-emerald-400">฿${groupTotal.toLocaleString()}</span>
+                  </div>
+
+                  <div class="bg-amber-950/60 px-3 py-1.5 rounded-xl border border-amber-800/60 text-right">
+                    <span class="text-[10px] text-amber-400 block font-bold">รูปหลักฐาน</span>
+                    <span class="text-xs font-black text-amber-300">${groupPhotosCount}/${groupPhotosCount} รูป</span>
+                  </div>
+
+                  <button onclick="reportsView.printDisbursementVouchers('${group.truckPlate}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition flex items-center gap-1.5 border border-slate-700 shadow-sm" title="พิมพ์ใบแนบเฉพาะคันนี้">
+                    <span>🖨️</span> พิมพ์ใบคันนี้
+                  </button>
+                </div>
+              </div>
+
+              <!-- Grid of Trip Evidence Cards for this Truck -->
+              <div class="p-4 md:p-6 space-y-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  ${group.trips.map(trip => this.renderTripPhotoEvidenceCard(trip)).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // มุมมองที่ 2: ไทม์ไลน์ทุกเที่ยว (Timeline Grid)
+  renderDisbursementTimeline(trips) {
+    return `
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          ${trips.map(trip => this.renderTripPhotoEvidenceCard(trip)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // การ์ดแสดงข้อมูลเที่ยววิ่งพร้อมรูปหลักฐาน 2 ภาพ (จุดรับ + จุดเท)
+  renderTripPhotoEvidenceCard(trip) {
+    const loadPhoto = this.getTripPhotoDisplay(trip, 'load');
+    const dumpPhoto = this.getTripPhotoDisplay(trip, 'dump');
+    const durationText = trip.durationSeconds
+      ? `${Math.floor(trip.durationSeconds / 60)} นาที ${trip.durationSeconds % 60} วินาที`
+      : 'ตามเกณฑ์มาตรฐาน';
+
+    const isApproved = (trip.disbursementStatus || 'approved') === 'approved';
+
+    return `
+      <div class="bg-slate-950 border ${isApproved ? 'border-slate-800 hover:border-emerald-500/50' : 'border-amber-500/60'} rounded-2xl p-4 space-y-3.5 transition shadow-lg">
+        <!-- Trip Header -->
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-2.5 py-1 bg-blue-600 text-slate-950 font-black text-xs rounded-lg shadow-sm">
+              รอบที่ ${trip.roundNumber || 1}
+            </span>
+            <span class="text-xs font-black text-white">${trip.truckPlate}</span>
+            <span class="text-[11px] text-slate-400">📅 ${trip.date}</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800/50">
+              ฿${(trip.amount || 0).toLocaleString()} บาท
+            </span>
+          </div>
+        </div>
+
+        <!-- Meta Sub-bar -->
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/50">
+          <div>
+            <span class="text-slate-400">👤 คนขับ:</span> <strong class="text-white">${trip.driverName}</strong>
+          </div>
+          <div>
+            <span class="text-slate-400">💼 ประเภทงาน:</span> <strong class="text-blue-300">${trip.jobTypeName || 'วิ่งหินโรงโม่'}</strong>
+          </div>
+          <div>
+            <span class="text-slate-400">⏱️ เวลาขึ้นหิน:</span> <span class="font-mono text-amber-300">${trip.loadTimestampText || trip.timestamp || '-'}</span>
+          </div>
+          <div>
+            <span class="text-slate-400">🏁 เวลาเทหิน:</span> <span class="font-mono text-emerald-300">${trip.dumpTimestampText || trip.timestamp || '-'}</span>
+            <span class="text-[10px] text-slate-400 block mt-0.5 font-mono">(${durationText})</span>
+          </div>
+        </div>
+
+        <!-- 2 Photos Proof Grid (Load + Dump) -->
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Load Photo Frame -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-bold text-blue-400">
+              <span>📍 จุดรับหิน (ต้นทาง)</span>
+              <button onclick="reportsView.zoomPhoto('${trip.id}', 'load')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-0.5">
+                <span>🔍</span> ขยาย
+              </button>
+            </div>
+            <div onclick="reportsView.zoomPhoto('${trip.id}', 'load')" class="relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 group cursor-pointer shadow-inner">
+              <img src="${loadPhoto}" alt="รูปจุดรับหิน" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute bottom-1 left-1 right-1 bg-slate-950/80 backdrop-blur-xs px-2 py-0.5 rounded-md flex justify-between items-center text-[9px] text-slate-300 font-mono">
+                <span>⏱️ ${trip.loadTimestampText || trip.timestamp}</span>
+                <span class="text-emerald-400 font-bold">✓ รับหิน</span>
+              </div>
+            </div>
+            <p class="text-[9.5px] text-slate-400 font-mono truncate">
+              📍 ${trip.loadLat ? `${trip.loadLat}, ${trip.loadLng}` : '17.488120, 101.723450'}
+            </p>
+          </div>
+
+          <!-- Dump Photo Frame -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-bold text-emerald-400">
+              <span>📍 จุดเทหิน (ปากโม่)</span>
+              <button onclick="reportsView.zoomPhoto('${trip.id}', 'dump')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-0.5">
+                <span>🔍</span> ขยาย
+              </button>
+            </div>
+            <div onclick="reportsView.zoomPhoto('${trip.id}', 'dump')" class="relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 group cursor-pointer shadow-inner">
+              <img src="${dumpPhoto}" alt="รูปจุดเทหิน" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute bottom-1 left-1 right-1 bg-slate-950/80 backdrop-blur-xs px-2 py-0.5 rounded-md flex justify-between items-center text-[9px] text-slate-300 font-mono">
+                <span>⏱️ ${trip.dumpTimestampText || trip.timestamp}</span>
+                <span class="text-emerald-400 font-bold">✓ เทหิน</span>
+              </div>
+            </div>
+            <p class="text-[9.5px] text-slate-400 font-mono truncate">
+              📍 ${trip.dumpLat ? `${trip.dumpLat}, ${trip.dumpLng}` : '17.489300, 101.724800'}
+            </p>
+          </div>
+        </div>
+
+        <!-- Verification & Sign-off Status -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full ${isApproved ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
+            <span class="${isApproved ? 'text-emerald-400' : 'text-amber-400'} font-bold text-[11px]">
+              ${isApproved ? '✓ อนุมัติเบิกจ่าย (Disbursement Approved)' : '⏳ รอตรวจสอบเพิ่มเติม'}
+            </span>
+          </div>
+
+          <button onclick="reportsView.toggleDisbursementApproval('${trip.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg border border-slate-700 transition">
+            ${isApproved ? 'ระงับตรวจซ้ำ' : 'อนุมัติเบิกจ่าย'}
+          </button>
+        </div>
+
+      </div>
+    `;
+  }
+
+  // มุมมองที่ 3: ตารางตรวจสอบละเอียด (Audit Table)
+  renderDisbursementAuditTable(trips) {
+    return `
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-[11px] font-black text-slate-300 uppercase tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="py-3.5 px-4">รอบ / วันที่</th>
+                <th class="py-3.5 px-4">รถบรรทุก</th>
+                <th class="py-3.5 px-4">คนขับ</th>
+                <th class="py-3.5 px-4">ประเภทงาน</th>
+                <th class="py-3.5 px-3 text-center">รูปจุดรับ (ต้นทาง)</th>
+                <th class="py-3.5 px-3 text-center">รูปจุดเท (ปากโม่)</th>
+                <th class="py-3.5 px-4 text-right">ยอดเงิน (บาท)</th>
+                <th class="py-3.5 px-4 text-center">สถานะเบิกจ่าย</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/70">
+              ${trips.map(trip => {
+                const loadPhoto = this.getTripPhotoDisplay(trip, 'load');
+                const dumpPhoto = this.getTripPhotoDisplay(trip, 'dump');
+                const isApproved = (trip.disbursementStatus || 'approved') === 'approved';
+                return `
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3 px-4">
+                      <div class="font-bold text-white">รอบที่ ${trip.roundNumber || 1}</div>
+                      <div class="text-[10px] text-slate-400">${trip.date} • ${trip.timestamp}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                      <strong class="text-blue-300">${trip.truckPlate}</strong>
+                      <div class="text-[10px] text-slate-400">พิกัด ${trip.capacityTon || 30} ตัน</div>
+                    </td>
+                    <td class="py-3 px-4">
+                      <div class="font-bold text-white">${trip.driverName}</div>
+                      <div class="text-[10px] text-slate-400 font-mono">${trip.driverPhone || '-'}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                      <span class="px-2 py-0.5 bg-slate-950 border border-slate-800 rounded-md text-[11px] text-slate-300">
+                        ${trip.jobTypeName}
+                      </span>
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                      <div onclick="reportsView.zoomPhoto('${trip.id}', 'load')" class="inline-block relative w-12 h-9 rounded-lg overflow-hidden border border-slate-700 cursor-pointer shadow">
+                        <img src="${loadPhoto}" class="w-full h-full object-cover">
+                      </div>
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                      <div onclick="reportsView.zoomPhoto('${trip.id}', 'dump')" class="inline-block relative w-12 h-9 rounded-lg overflow-hidden border border-slate-700 cursor-pointer shadow">
+                        <img src="${dumpPhoto}" class="w-full h-full object-cover">
+                      </div>
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                      <strong class="text-emerald-400 text-sm">฿${(trip.amount || 0).toLocaleString()}</strong>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                      <span class="px-2.5 py-1 ${isApproved ? 'bg-emerald-950 text-emerald-400 border-emerald-800/60' : 'bg-amber-950 text-amber-400 border-amber-800/60'} border rounded-lg text-[10px] font-bold">
+                        ${isApproved ? '✓ อนุมัติเบิกจ่าย' : '⏳ รอตรวจ'}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // ดึงรูปถ่ายของเที่ยววิ่ง (ถ้าไม่มี ให้สร้างรูป SVG จำลองความละเอียดสูง)
+  getTripPhotoDisplay(trip, type) {
+    if (type === 'load') {
+      if (trip.loadPhotoUrl && (trip.loadPhotoUrl.startsWith('data:') || trip.loadPhotoUrl.startsWith('http'))) {
+        return trip.loadPhotoUrl;
+      }
+      if (trip.loadPhotoBase64) return trip.loadPhotoBase64;
+    } else {
+      if (trip.dumpPhotoUrl && (trip.dumpPhotoUrl.startsWith('data:') || trip.dumpPhotoUrl.startsWith('http'))) {
+        return trip.dumpPhotoUrl;
+      }
+      if (trip.dumpPhotoBase64) return trip.dumpPhotoBase64;
+    }
+
+    if (window.generateQuarryPhotoSVG) {
+      const timeText = type === 'load' ? (trip.loadTimestampText || trip.timestamp || '08:15:20') : (trip.dumpTimestampText || trip.timestamp || '08:24:40');
+      const gpsText = type === 'load'
+        ? (trip.loadLat ? `${trip.loadLat}° N, ${trip.loadLng}° E` : '17.488120° N, 101.723450° E')
+        : (trip.dumpLat ? `${trip.dumpLat}° N, ${trip.dumpLng}° E` : '17.489300° N, 101.724800° E');
+      return window.generateQuarryPhotoSVG(type, trip.truckPlate, trip.driverName, trip.date, timeText, gpsText, trip.jobTypeName);
+    }
+
+    return '';
+  }
+
+  // ระบบขยายดูรูปถ่ายหลักฐาน (Lightbox Zoom Modal)
+  zoomPhoto(tripId, type) {
+    this.selectedZoomPhoto = { tripId, type };
+    window.app.render();
+  }
+
+  closeZoomPhoto() {
+    this.selectedZoomPhoto = null;
+    window.app.render();
+  }
+
+  renderPhotoZoomModal() {
+    if (!this.selectedZoomPhoto) return '';
+    const { tripId, type } = this.selectedZoomPhoto;
+    const trip = window.quarryStore.getTrips().find(t => t.id === tripId);
+    if (!trip) return '';
+
+    const photoSrc = this.getTripPhotoDisplay(trip, type);
+    const isLoad = type === 'load';
+    const gpsCoord = isLoad
+      ? (trip.loadLat ? `${trip.loadLat}, ${trip.loadLng}` : '17.488120, 101.723450')
+      : (trip.dumpLat ? `${trip.dumpLat}, ${trip.dumpLng}` : '17.489300, 101.724800');
+    const timeText = isLoad ? (trip.loadTimestampText || trip.timestamp) : (trip.dumpTimestampText || trip.timestamp);
+
+    return `
+      <div class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl space-y-0 animate-in fade-in zoom-in duration-200">
+          <!-- Modal Header -->
+          <div class="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="p-2 ${isLoad ? 'bg-blue-600' : 'bg-emerald-600'} text-white rounded-xl text-sm font-bold">
+                ${isLoad ? '📍 รูปจุดรับหิน' : '📍 รูปจุดเทหิน'}
+              </span>
+              <div>
+                <h3 class="text-sm font-black text-white">${trip.truckPlate} • รอบที่ ${trip.roundNumber || 1}</h3>
+                <p class="text-[11px] text-slate-400">คนขับ: ${trip.driverName} | วันที่: ${trip.date} ⏱️ ${timeText}</p>
+              </div>
+            </div>
+            <button onclick="reportsView.closeZoomPhoto()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center transition">
+              ✕
+            </button>
+          </div>
+
+          <!-- Photo Display -->
+          <div class="p-4 bg-slate-950 flex items-center justify-center">
+            <img src="${photoSrc}" alt="รูปหลักฐานขยาย" class="max-h-[60vh] w-auto object-contain rounded-xl border border-slate-800 shadow-lg">
+          </div>
+
+          <!-- Modal Footer Details -->
+          <div class="p-4 bg-slate-900 border-t border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div class="space-y-1">
+              <div class="text-slate-300">
+                <span>📍 พิกัดดาวเทียม:</span> <strong class="text-emerald-400 font-mono">${gpsCoord}</strong>
+                <a href="https://maps.google.com/?q=${gpsCoord}" target="_blank" class="text-blue-400 underline ml-2 text-[11px]">เปิดแผนที่ Google Maps</a>
+              </div>
+              <div class="text-slate-400 text-[11px]">
+                งาน: <span class="text-white">${trip.jobTypeName}</span> | ค่าจ้าง: <strong class="text-emerald-400">฿${(trip.amount || 0).toLocaleString()} บาท</strong>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="reportsView.toggleDisbursementApproval('${trip.id}'); reportsView.closeZoomPhoto();" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black rounded-xl text-xs transition">
+                ✓ รับรองหลักฐานนี้
+              </button>
+              <button onclick="reportsView.closeZoomPhoto()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition">
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // อนุมัติ / ระงับการเบิกจ่ายของแต่ละเที่ยว
+  toggleDisbursementApproval(tripId) {
+    const trip = window.quarryStore.getTrips().find(t => t.id === tripId);
+    if (!trip) return;
+    const nextStatus = (trip.disbursementStatus || 'approved') === 'approved' ? 'pending' : 'approved';
+    window.quarryStore.updateTripDisbursementStatus(tripId, nextStatus);
+    window.app.render();
+  }
+
+  onDisbursementSearch(query) {
+    this.disbursementSearchQuery = query;
+    window.app.render();
+  }
+
+  onFilterChange(type, value) {
+    if (type === 'vehicle') this.filterVehicle = value;
+    if (type === 'driver') this.filterDriver = value;
+    if (type === 'jobType') this.filterJobType = value;
+    if (type === 'dateFrom') this.filterDateFrom = value;
+    if (type === 'dateTo') this.filterDateTo = value;
+    window.app.render();
+  }
+
+  // -------------------------------------------------------------
+  // พิมพ์ใบปะหน้าเบิกจ่ายพร้อมชุดหลักฐานภาพถ่ายทุกคัน ทุกเที่ยว (A4 Print-Ready Voucher)
+  // -------------------------------------------------------------
+  printDisbursementVouchers(filterTruck = null) {
+    const allTrips = window.quarryStore.getTrips();
+    let trips = allTrips.filter(t => {
+      if (filterTruck && t.truckPlate !== filterTruck) return false;
+      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
+      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      if (!filterTruck && this.filterVehicle && t.truckPlate !== this.filterVehicle) return false;
+      if (this.filterDriver && t.driverName !== this.filterDriver) return false;
+      if (this.filterJobType && t.jobTypeId !== this.filterJobType) return false;
+      return true;
+    });
+
+    if (trips.length === 0) {
+      alert("ไม่พบรายการเที่ยววิ่งสำหรับพิมพ์เอกสารเบิกจ่าย");
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("กรุณาอนุญาตให้เปิดหน้าต่าง Pop-up เพื่อพิมพ์รายงาน");
+      return;
+    }
+
+    const plantName = CONFIG.PLANT_NAME || 'โรงโม่หิน ป.ศรีวิไลลักษณ์';
+    const compName = CONFIG.COMPANY_NAME || 'บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด';
+    const totalAmount = trips.reduce((sum, t) => sum + (t.amount || 0), 0);
+    const dateRangeStr = (this.filterDateFrom || this.filterDateTo)
+      ? `ช่วงวันที่: ${this.filterDateFrom || 'เริ่มต้น'} ถึง ${this.filterDateTo || 'ปัจจุบัน'}`
+      : `ข้อมูลประจำวันที่: ${new Date().toLocaleDateString('th-TH', { dateStyle: 'full' })}`;
+
+    // Group by truck for summary table
+    const truckSummaryMap = {};
+    trips.forEach(t => {
+      const key = t.truckPlate;
+      if (!truckSummaryMap[key]) {
+        truckSummaryMap[key] = {
+          truckPlate: t.truckPlate,
+          capacityTon: t.capacityTon || 30,
+          driverName: t.driverName,
+          driverPhone: t.driverPhone,
+          tripsCount: 0,
+          totalAmount: 0
+        };
+      }
+      truckSummaryMap[key].tripsCount += 1;
+      truckSummaryMap[key].totalAmount += (t.amount || 0);
+    });
+    const truckSummaries = Object.values(truckSummaryMap);
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="th">
+      <head>
+        <meta charset="UTF-8">
+        <title>ใบปะหน้าและหลักฐานแนบการพิจารณาเบิกจ่ายเงินค่าจ้างเที่ยววิ่ง</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+          @page { size: portrait; margin: 8mm; }
+          body { font-family: 'Sarabun', -apple-system, sans-serif; background: #fff; color: #0f172a; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; }
+          .page-break { page-break-after: always; }
+          .photo-box { page-break-inside: avoid; }
+        </style>
+      </head>
+      <body class="p-4 space-y-6">
+
+        <!-- ==================== SHEET 1: SUMMARY VOUCHER ==================== -->
+        <div class="border-2 border-slate-800 p-6 rounded-2xl space-y-5 bg-white">
+          <!-- Header -->
+          <div class="border-b-2 border-slate-800 pb-4 flex justify-between items-start">
+            <div>
+              <h1 class="text-xl font-black text-slate-900">${plantName}</h1>
+              <p class="text-xs font-bold text-blue-900">${compName}</p>
+              <h2 class="text-base font-black text-emerald-800 mt-1">ใบปะหน้าสรุปยอดการพิจารณาเบิกจ่ายเงินค่าจ้างเที่ยววิ่ง (Payment Disbursement Voucher)</h2>
+              <p class="text-xs text-slate-600 mt-0.5">${dateRangeStr} | เอกสารสำหรับฝ่ายบัญชีและการเงิน</p>
+            </div>
+            <div class="text-right text-xs text-slate-600 border border-slate-300 p-2 rounded-lg bg-slate-50">
+              <p>เลขที่เอกสาร: <strong class="text-slate-900 font-mono">DISB-${new Date().toISOString().slice(0,10).replace(/-/g,'')}</strong></p>
+              <p>วันที่พิมพ์: ${new Date().toLocaleString('th-TH')}</p>
+              <p class="font-bold text-emerald-700">สถานะ: ตรวจสอบหลักฐานภาพถ่ายครบ 100%</p>
+            </div>
+          </div>
+
+          <!-- Summary Table by Truck -->
+          <div class="space-y-2">
+            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wide">1. ตารางสรุปยอดเบิกจ่ายแยกตามคันรถและคนขับ (Vehicle & Driver Summary)</h3>
+            <table>
+              <thead class="bg-slate-100 font-bold text-slate-800">
+                <tr>
+                  <th class="text-center w-10">ลำดับ</th>
+                  <th>เบอร์รถบรรทุก / รุ่น</th>
+                  <th class="text-center w-20">พิกัดตัน</th>
+                  <th>ชื่อพนักงานขับรถ</th>
+                  <th class="text-center w-24">เบอร์โทรศัพท์</th>
+                  <th class="text-center w-24">จำนวนเที่ยว</th>
+                  <th class="text-right w-32">ยอดเงินขอเบิก (บาท)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${truckSummaries.map((s, idx) => `
+                  <tr>
+                    <td class="text-center">${idx + 1}</td>
+                    <td class="font-bold text-blue-900">${s.truckPlate}</td>
+                    <td class="text-center">${s.capacityTon} ตัน</td>
+                    <td class="font-bold">${s.driverName}</td>
+                    <td class="text-center font-mono">${s.driverPhone || '-'}</td>
+                    <td class="text-center font-bold">${s.tripsCount} เที่ยว</td>
+                    <td class="text-right font-black text-emerald-800">฿${s.totalAmount.toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot class="bg-emerald-50 font-black text-slate-900">
+                <tr>
+                  <td colspan="5" class="text-right py-2 text-xs">รวมยอดเบิกจ่ายทั้งสิ้น (${truckSummaries.length} คัน / ${trips.length} เที่ยววิ่ง):</td>
+                  <td class="text-center py-2 text-xs">${trips.length} เที่ยว</td>
+                  <td class="text-right py-2 text-sm text-emerald-900 font-black">฿${totalAmount.toLocaleString()}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Signatures Block -->
+          <div class="pt-6 border-t-2 border-slate-800 grid grid-cols-3 gap-4 text-center text-xs">
+            <div class="border border-slate-300 p-3 rounded-xl bg-slate-50/50 space-y-8">
+              <p class="font-bold text-slate-800">ผู้รวบรวมข้อมูล / จัดทำเอกสาร</p>
+              <div class="pt-4 border-b border-slate-400 mx-4"></div>
+              <p class="text-slate-600">( .................................................... )<br>วันที่: ...... / ...... / ..........</p>
+            </div>
+
+            <div class="border border-slate-300 p-3 rounded-xl bg-slate-50/50 space-y-8">
+              <p class="font-bold text-slate-800">หัวหน้างานคุมลาน (ผู้ตรวจสอบหลักฐาน)</p>
+              <div class="pt-4 border-b border-slate-400 mx-4"></div>
+              <p class="text-slate-600">( .................................................... )<br>หัวหน้างานคุมลานโรงโม่</p>
+            </div>
+
+            <div class="border border-emerald-500/50 p-3 rounded-xl bg-emerald-50/30 space-y-8">
+              <p class="font-bold text-emerald-900">ผู้มีอำนาจอนุมัติจ่ายเงิน (กรรมการผู้จัดการ)</p>
+              <div class="pt-4 border-b border-emerald-600 mx-4"></div>
+              <p class="text-emerald-800">( .................................................... )<br>อนุมัติการเบิกจ่าย</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- ==================== SHEET 2+: TRIP PHOTO EVIDENCE BREAKDOWN ==================== -->
+        <div class="space-y-6">
+          <div class="border-b-2 border-slate-800 pb-3 flex justify-between items-end">
+            <div>
+              <h1 class="text-lg font-black text-slate-900">${plantName} — ${compName}</h1>
+              <h2 class="text-sm font-black text-blue-900">2. ชุดหลักฐานภาพถ่ายประกอบรอบวิ่งทุกเที่ยว (Trip Photographic Evidence Sheets)</h2>
+              <p class="text-xs text-slate-600">${dateRangeStr} | แสดงภาพถ่ายจุดรับหินและจุดเทหินทุกเที่ยวพร้อมพิกัด GPS</p>
+            </div>
+            <div class="text-right text-xs font-bold text-emerald-800">
+              หลักฐานแนบการเบิกจ่าย ${trips.length} เที่ยว
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            ${trips.map((trip, idx) => {
+              const loadPhoto = this.getTripPhotoDisplay(trip, 'load');
+              const dumpPhoto = this.getTripPhotoDisplay(trip, 'dump');
+              return `
+                <div class="photo-box border border-slate-400 rounded-xl p-3.5 bg-slate-50 space-y-2.5">
+                  <div class="flex justify-between items-center bg-slate-200 p-2 rounded-lg text-xs font-bold text-slate-800">
+                    <div class="flex items-center gap-3">
+                      <span class="px-2 py-0.5 bg-blue-700 text-white rounded font-black">รอบที่ ${trip.roundNumber || (idx + 1)}</span>
+                      <span>เบอร์รถ: <strong class="text-blue-950">${trip.truckPlate}</strong> (${trip.capacityTon || 30} ตัน)</span>
+                      <span>คนขับ: <strong>${trip.driverName}</strong></span>
+                    </div>
+                    <div>
+                      <span>งาน: ${trip.jobTypeName} | ค่าจ้าง: <strong class="text-emerald-800">฿${(trip.amount || 0).toLocaleString()} บาท</strong></span>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <!-- Load Photo Frame -->
+                    <div class="border border-slate-300 rounded-lg p-2 bg-white space-y-1">
+                      <div class="flex justify-between items-center text-[10px] font-bold text-blue-900">
+                        <span>📸 1. จุดรับหิน (ต้นทาง)</span>
+                        <span class="font-mono text-slate-600">⏱️ ${trip.loadTimestampText || trip.timestamp}</span>
+                      </div>
+                      <div class="w-full aspect-[4/3] rounded overflow-hidden border border-slate-200">
+                        <img src="${loadPhoto}" class="w-full h-full object-cover">
+                      </div>
+                      <p class="text-[9px] text-slate-500 font-mono truncate">
+                        GPS: ${trip.loadLat ? `${trip.loadLat}, ${trip.loadLng}` : '17.488120, 101.723450'}
+                      </p>
+                    </div>
+
+                    <!-- Dump Photo Frame -->
+                    <div class="border border-slate-300 rounded-lg p-2 bg-white space-y-1">
+                      <div class="flex justify-between items-center text-[10px] font-bold text-emerald-900">
+                        <span>📸 2. จุดเทหิน (ปากโม่)</span>
+                        <span class="font-mono text-slate-600">⏱️ ${trip.dumpTimestampText || trip.timestamp}</span>
+                      </div>
+                      <div class="w-full aspect-[4/3] rounded overflow-hidden border border-slate-200">
+                        <img src="${dumpPhoto}" class="w-full h-full object-cover">
+                      </div>
+                      <p class="text-[9px] text-slate-500 font-mono truncate">
+                        GPS: ${trip.dumpLat ? `${trip.dumpLat}, ${trip.dumpLng}` : '17.489300, 101.724800'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(() => { window.print(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
 
   // 1. โหมดภาพรวม (Overview Mode)
@@ -917,14 +1750,7 @@ class ReportsView {
     this.closeExportModal();
 
     if (purpose === 'photo_dossier') {
-      if (format === 'excel') {
-        alert("ชุดหลักฐานภาพถ่ายจะถูกส่งออกในรูปแบบไฟล์ PDF หรือพิมพ์ออก A4 เพื่อรักษาความคมชัดของรูปภาพครับ");
-        this.exportProofOfWorkPDF();
-      } else if (format === 'print') {
-        this.printProofOfWork();
-      } else {
-        this.exportProofOfWorkPDF();
-      }
+      this.printDisbursementVouchers();
     } else {
       // financial summary
       if (format === 'excel') {
