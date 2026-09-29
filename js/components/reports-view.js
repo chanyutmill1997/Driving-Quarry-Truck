@@ -2003,7 +2003,7 @@ class ReportsView {
   }
 
   // --------------------------------------------------------------------------
-  // 4. โหมดรายงานความผิดปกติ & การรับรองผล (Anomaly & Certification Audits)
+  // 4. โหมดรายงานความผิดปกติ & การรับรองผล (Anomaly & Certification Audits - จัดระเบียบใหม่ สะอาดตา ไม่รก)
   // --------------------------------------------------------------------------
   renderAnomaliesMode(trips, excLogs, trucks, drivers) {
     const audits = window.quarryStore.getIncidentAudits({
@@ -2016,66 +2016,83 @@ class ReportsView {
 
     const allAudits = window.quarryStore.getIncidentAudits();
     const totalCount = allAudits.length;
+    const criticalCount = allAudits.filter(a => a.severity === 'critical').length;
     const pendingCount = allAudits.filter(a => a.status === 'investigating').length;
     const certifiedCount = allAudits.filter(a => a.status === 'certified').length;
-    const rejectedCount = allAudits.filter(a => a.status === 'rejected').length;
 
     return `
       <div class="space-y-6">
         
         <!-- Summary KPI Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-400 uppercase">ตรวจพบทั้งหมด</span>
-              <span class="p-2 bg-blue-950 text-blue-400 rounded-xl text-xs font-black">📋</span>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div class="bg-slate-900 border border-blue-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
+              <span class="text-xl">📋</span>
             </div>
-            <p class="text-2xl font-black text-white mt-2">${totalCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">ตรวจพบทั้งหมด</p>
+              <h3 class="text-xl font-black text-white">${totalCount} <span class="text-xs font-normal text-slate-400">เรื่อง</span></h3>
+            </div>
           </div>
 
-          <div class="bg-slate-900 border border-amber-900/50 p-4 rounded-2xl shadow">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-amber-400 uppercase">รอตรวจสอบ & เซ็นรับรอง</span>
-              <span class="p-2 bg-amber-950 text-amber-400 rounded-xl text-xs font-black">⏳</span>
+          <div class="bg-slate-900 border border-red-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-red-500/20 text-red-400 rounded-xl">
+              <span class="text-xl">🚨</span>
             </div>
-            <p class="text-2xl font-black text-amber-400 mt-2">${pendingCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">ระดับวิกฤต / ด่วน</p>
+              <h3 class="text-xl font-black text-red-400">${criticalCount} <span class="text-xs font-normal text-slate-400">เรื่อง</span></h3>
+            </div>
           </div>
 
-          <div class="bg-slate-900 border border-emerald-900/50 p-4 rounded-2xl shadow">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-emerald-400 uppercase">เซ็นรับรองผลแล้ว</span>
-              <span class="p-2 bg-emerald-950 text-emerald-400 rounded-xl text-xs font-black">✅</span>
+          <div class="bg-slate-900 border border-amber-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-amber-500/20 text-amber-400 rounded-xl">
+              <span class="text-xl">⏳</span>
             </div>
-            <p class="text-2xl font-black text-emerald-400 mt-2">${certifiedCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">รอตรวจสอบ & เซ็นรับรอง</p>
+              <h3 class="text-xl font-black text-amber-400">${pendingCount} <span class="text-xs font-normal text-slate-400">เรื่อง</span></h3>
+            </div>
           </div>
 
-          <div class="bg-slate-900 border border-red-900/50 p-4 rounded-2xl shadow">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-red-400 uppercase">ไม่อนุมัติ / ตัดเที่ยว</span>
-              <span class="p-2 bg-red-950 text-red-400 rounded-xl text-xs font-black">⛔</span>
+          <div class="bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow-md flex items-center gap-3.5">
+            <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
+              <span class="text-xl">✅</span>
             </div>
-            <p class="text-2xl font-black text-red-400 mt-2">${rejectedCount} <span class="text-xs text-slate-400 font-normal">เรื่อง</span></p>
+            <div>
+              <p class="text-[11px] font-bold text-slate-400">เซ็นรับรองผลแล้ว</p>
+              <h3 class="text-xl font-black text-emerald-400">${certifiedCount} <span class="text-xs font-normal text-slate-400">เรื่อง</span></h3>
+            </div>
           </div>
         </div>
 
-        <!-- Filter & Action Controls -->
+        <!-- Filter & Action Controls Toolbar -->
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg space-y-4">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-xs font-bold text-slate-400 uppercase">สถานะ:</span>
+          
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+            <!-- Status Tabs -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800">
               ${[
                 { id: 'all', label: 'ทั้งหมด' },
                 { id: 'investigating', label: '⏳ รอตรวจสอบ' },
                 { id: 'certified', label: '✅ เซ็นรับรองแล้ว' },
                 { id: 'rejected', label: '⛔ ไม่อนุมัติ' }
               ].map(s => `
-                <button onclick="reportsView.setAnomalyStatusFilter('${s.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.filterAnomalyStatus === s.id ? 'bg-amber-500 text-slate-950 font-black shadow' : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'}">
+                <button onclick="reportsView.setAnomalyStatusFilter('${s.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${this.filterAnomalyStatus === s.id ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-slate-400 hover:text-white'}">
                   ${s.label}
                 </button>
               `).join('')}
             </div>
 
+            <!-- Date Presets & Import Action -->
             <div class="flex flex-wrap items-center gap-2">
+              <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button onclick="reportsView.setQuickDateFilter('today')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[11px] font-bold text-slate-300">วันนี้</button>
+                <button onclick="reportsView.setQuickDateFilter('7days')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[11px] font-bold text-slate-300">7 วัน</button>
+                <button onclick="reportsView.setQuickDateFilter('thisMonth')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[11px] font-bold text-slate-300">เดือนนี้</button>
+                <button onclick="reportsView.setQuickDateFilter('all')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-[11px] font-bold text-blue-400">ทั้งหมด</button>
+              </div>
+
               <button onclick="reportsView.importFromAIEngine()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow" title="สแกนรอบวิ่งและกระทบยอดเพื่อตรวจจับความผิดปกติ">
                 <i data-lucide="zap" class="w-4 h-4 text-yellow-300"></i>
                 ⚡ สแกนดึงจาก AI
@@ -2083,151 +2100,151 @@ class ReportsView {
 
               <button onclick="reportsView.openCreateAnomalyModal()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow">
                 <i data-lucide="plus" class="w-4 h-4"></i>
-                ➕ บันทึกความผิดปกติใหม่
+                ➕ แจ้งเหตุใหม่
               </button>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
+          <!-- Filter Inputs Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label class="block text-xs text-slate-400 font-bold mb-1">ค้นหา (เรื่อง, ทะเบียนรถ, คนขับ, ข้อเท็จจริง)</label>
+              <label class="block text-[11px] text-slate-400 font-bold mb-1">ค้นหา (เรื่อง, ทะเบียน, คนขับ)</label>
               <input type="text" value="${this.anomalySearchQuery || ''}" oninput="reportsView.handleAnomalySearch(this.value)" placeholder="พิมพ์คำค้นหา..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
             </div>
 
             <div>
-              <label class="block text-xs text-slate-400 font-bold mb-1">กรองตามรถ</label>
+              <label class="block text-[11px] text-slate-400 font-bold mb-1">กรองตามรถ</label>
               <select onchange="reportsView.handleVehicleFilter(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
                 <option value="">-- รถทุกคัน --</option>
                 ${trucks.map(t => `<option value="${t.code}" ${this.filterVehicle === t.code ? 'selected' : ''}>${t.code} (${t.capacity_ton} ตัน)</option>`).join('')}
               </select>
             </div>
 
-            <div>
-              <label class="block text-xs text-slate-400 font-bold mb-1">ตั้งแต่วันที่</label>
-              <input type="date" value="${this.filterDateFrom}" onchange="reportsView.handleDateFromChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] text-slate-400 font-bold mb-1">ช่วงวันที่ตรวจพบ</label>
+              <div class="flex items-center gap-2">
+                <input type="date" value="${this.filterDateFrom}" onchange="reportsView.handleDateFromChange(this.value)" class="w-1/2 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+                <span class="text-slate-500 text-xs">-</span>
+                <input type="date" value="${this.filterDateTo}" onchange="reportsView.onFilterChange('dateTo', this.value)" class="w-1/2 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+              </div>
             </div>
           </div>
+
         </div>
 
-        <!-- Incident & Anomaly Cards List -->
-        <div class="space-y-4">
+        <!-- Incident & Anomaly Cards List (จัดระเบียบเรียบร้อย สวยงาม อ่านง่าย) -->
+        <div class="space-y-3.5">
           ${audits.length === 0 ? `
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-400 space-y-3">
               <span class="text-4xl">🎉</span>
               <h3 class="text-base font-bold text-white">ไม่พบรายงานความผิดปกติในเงื่อนไขที่เลือก</h3>
-              <p class="text-xs text-slate-500">คุณสามารถกดปุ่ม "➕ บันทึกความผิดปกติใหม่" หรือ "⚡ สแกนดึงจาก AI" เพื่อสร้างรายงาน</p>
+              <p class="text-xs text-slate-500">ข้อมูลรอบวิ่งทั้งหมดถูกต้อง หรือคุณสามารถกดปุ่ม "⚡ สแกนดึงจาก AI" เพื่อตรวจเช็คใหม่อีกครั้ง</p>
             </div>
-          ` : audits.map((a) => `
-            <div class="bg-slate-900 border ${a.status === 'certified' ? 'border-emerald-800/80' : (a.status === 'rejected' ? 'border-red-800/80' : 'border-amber-800/80')} rounded-3xl p-5 shadow-lg space-y-4 transition">
-              
-              <!-- Card Top Header -->
-              <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                <div class="flex items-center gap-3">
-                  <span class="px-2.5 py-1 rounded-lg text-[11px] font-mono font-black ${a.status === 'certified' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : (a.status === 'rejected' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-amber-950 text-amber-300 border border-amber-800')}">
-                    #${a.id}
-                  </span>
-                  <div>
-                    <h2 class="text-base font-black text-white flex items-center gap-2">
-                      ${a.title}
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-0.5">
-                      📅 วันที่ตรวจพบ: <span class="text-slate-200 font-bold">${a.date}</span>
-                      ${a.targetVehicle ? ` | 🚚 รถ: <span class="text-blue-400 font-bold">${a.targetVehicle}</span>` : ''}
-                      ${a.targetDriver ? ` | 👤 ผู้ปฏิบัติงาน: <span class="text-slate-200 font-bold">${a.targetDriver}</span>` : ''}
-                    </p>
-                  </div>
-                </div>
+          ` : audits.map((a) => {
+            const isCertified = a.status === 'certified';
+            const isRejected = a.status === 'rejected';
+            const isCritical = a.severity === 'critical';
 
-                <div class="flex items-center gap-2">
-                  <span class="px-3 py-1 rounded-full text-xs font-bold ${
-                    a.status === 'certified' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
-                    (a.status === 'rejected' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-amber-950 text-amber-300 border border-amber-800')
-                  }">
-                    ${a.status === 'certified' ? '✅ รับรองผลและเซ็นแล้ว' : (a.status === 'rejected' ? '⛔ ไม่อนุมัติ / ตัดเที่ยว' : '⏳ รอตรวจสอบ & เซ็นรับรอง')}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Details Section -->
-              <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            return `
+              <div class="bg-slate-900 border ${isCertified ? 'border-emerald-500/40' : (isRejected ? 'border-red-500/50' : (isCritical ? 'border-red-500/70 shadow-red-500/5 shadow-lg' : 'border-amber-500/50'))} rounded-2xl p-4 sm:p-5 shadow-md space-y-3.5 transition hover:border-blue-400">
                 
-                <!-- Col 1: Anomaly Details & Evidence -->
-                <div class="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2">
-                  <h4 class="text-xs font-black text-amber-400 uppercase flex items-center gap-1.5">
-                    <span>⚠️</span> ข้อเท็จจริงและความผิดปกติที่พบ
-                  </h4>
-                  <p class="text-xs text-slate-300 leading-relaxed">${a.anomalyDetails || 'ไม่มีรายละเอียดเพิ่มเติม'}</p>
-                </div>
+                <!-- Card Header Line -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-800/80 pb-3">
+                  
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <!-- Severity Pill -->
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-black ${isCritical ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}">
+                      ${isCritical ? '🚨 วิกฤต / ด่วน' : '⚠️ ข้อสังเกต'}
+                    </span>
 
-                <!-- Col 2: Investigation Result & Resolution -->
-                <div class="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2.5">
-                  <div>
-                    <h4 class="text-xs font-black text-blue-400 uppercase flex items-center gap-1.5">
-                      <span>🔍</span> ผลการตรวจสอบ (Investigation Result)
-                    </h4>
-                    <p class="text-xs text-slate-200 mt-1 ${a.investigationResult ? 'font-semibold text-white' : 'text-slate-500 italic'}">
-                      ${a.investigationResult || '(ยังไม่ได้ระบุผลการตรวจสอบ คลิกปุ่ม "เซ็นรับรอง" ด้านล่าง)'}
-                    </p>
+                    <!-- ID Tag -->
+                    <span class="px-2 py-1 bg-slate-950 text-slate-400 border border-slate-800 rounded-lg text-xs font-mono font-bold">
+                      #${a.id}
+                    </span>
+
+                    <!-- Title -->
+                    <h3 class="text-sm sm:text-base font-black text-white">
+                      ${a.title}
+                    </h3>
                   </div>
 
-                  <div class="border-t border-slate-800/80 pt-2">
-                    <h4 class="text-xs font-black text-emerald-400 uppercase flex items-center gap-1.5">
-                      <span>⚖️</span> มาตรการ / ข้อสรุปการตัดสิน (Resolution)
-                    </h4>
-                    <p class="text-xs text-slate-200 mt-1 ${a.resolution ? 'font-semibold text-emerald-300' : 'text-slate-500 italic'}">
-                      ${a.resolution || '(ยังไม่ได้ระบุมาตรการ)'}
-                    </p>
+                  <!-- Status Badge -->
+                  <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-full text-xs font-black ${
+                      isCertified ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
+                      (isRejected ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse')
+                    }">
+                      ${isCertified ? '✅ เซ็นรับรองแล้ว' : (isRejected ? '⛔ ไม่อนุมัติ' : '⏳ รอตรวจสอบ & เซ็น')}
+                    </span>
                   </div>
                 </div>
 
-                <!-- Col 3: Supervisor Digital Signature & Certification Box -->
-                <div class="bg-slate-950/80 border ${a.supervisorSignature ? 'border-emerald-800/80 bg-emerald-950/10' : 'border-slate-800'} p-4 rounded-2xl flex flex-col justify-between space-y-2">
-                  <div>
-                    <h4 class="text-xs font-black ${a.supervisorSignature ? 'text-emerald-400' : 'text-slate-400'} uppercase flex items-center justify-between">
-                      <span class="flex items-center gap-1.5"><span>✍️</span> ลายเซ็นรับรองของหัวหน้างาน</span>
-                      ${a.supervisorSignature ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">CERTIFIED</span>` : ''}
-                    </h4>
+                <!-- Meta Line (Vehicle, Driver, Date) -->
+                <div class="flex flex-wrap items-center gap-3 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                  <span class="text-slate-300">📅 วันที่: <strong class="text-white">${a.date}</strong></span>
+                  ${a.targetVehicle ? `<span class="text-blue-400 font-bold">🚚 รถ: <strong class="text-white">${a.targetVehicle}</strong></span>` : ''}
+                  ${a.targetDriver ? `<span class="text-slate-300">👤 คนขับ: <strong class="text-white">${a.targetDriver}</strong></span>` : ''}
+                  ${a.category ? `<span class="text-slate-400">หมวดหมู่: <strong class="text-slate-200">${a.category === 'trip_speed' ? '⏱️ เวลาวิ่ง' : (a.category === 'reconciliation' ? '⚖️ กระทบยอด' : '📍 พิกัด GPS')}</strong></span>` : ''}
+                </div>
+
+                <!-- Anomaly Facts -->
+                <div class="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                  <strong class="text-amber-400 block mb-1">📝 ข้อเท็จจริงที่ตรวจพบ:</strong>
+                  ${a.anomalyDetails || 'ไม่มีรายละเอียดเพิ่มเติม'}
+                </div>
+
+                <!-- Investigation Result & Supervisor Signature Block (if available) -->
+                ${a.investigationResult || a.supervisorSignature ? `
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    ${a.investigationResult ? `
+                      <div class="bg-blue-950/30 border border-blue-800/50 p-3 rounded-xl">
+                        <strong class="text-blue-400 block mb-0.5">🔍 ผลการสอบสวน:</strong>
+                        <p class="text-slate-200">${a.investigationResult}</p>
+                        ${a.resolution ? `<p class="text-emerald-300 font-semibold mt-1">มติ: ${a.resolution}</p>` : ''}
+                      </div>
+                    ` : ''}
 
                     ${a.supervisorSignature ? `
-                      <div class="mt-2 p-2 bg-white rounded-xl border border-slate-300 flex items-center justify-center h-20 overflow-hidden shadow-inner">
-                        <img src="${a.supervisorSignature}" alt="ลายเซ็นหัวหน้างาน" class="max-h-full object-contain">
+                      <div class="bg-emerald-950/30 border border-emerald-800/50 p-3 rounded-xl flex items-center justify-between gap-3">
+                        <div>
+                          <strong class="text-emerald-400 block mb-0.5">✍️ รับรองโดย:</strong>
+                          <p class="text-white font-bold">${a.supervisorName || 'หัวหน้างานคุมลาน'}</p>
+                          <p class="text-[10px] text-slate-400">${a.certifiedAt ? new Date(a.certifiedAt).toLocaleString('th-TH') : ''}</p>
+                        </div>
+                        <div class="h-12 w-28 bg-white rounded-lg p-1 flex items-center justify-center border border-slate-300">
+                          <img src="${a.supervisorSignature}" alt="ลายเซ็น" class="max-h-full max-w-full object-contain">
+                        </div>
                       </div>
-                      <div class="mt-2 text-[11px] text-slate-300 space-y-0.5">
-                        <p>👤 <strong>ผู้รับรอง:</strong> ${a.supervisorName || 'หัวหน้างานคุมลาน'}</p>
-                        <p class="text-slate-400">🕒 <strong>วันที่รับรอง:</strong> ${a.certifiedAt ? new Date(a.certifiedAt).toLocaleString('th-TH') : '-'}</p>
-                      </div>
-                    ` : `
-                      <div class="mt-3 p-4 bg-amber-950/20 border border-dashed border-amber-800/80 rounded-xl text-center space-y-1.5">
-                        <span class="text-xl">⏳</span>
-                        <p class="text-xs font-bold text-amber-300">ยังไม่มีการลงลายเซ็นรับรอง</p>
-                        <p class="text-[10px] text-slate-400">หัวหน้างานต้องตรวจสอบข้อเท็จจริงและเซ็นรับรองผล</p>
-                      </div>
-                    `}
+                    ` : ''}
+                  </div>
+                ` : ''}
+
+                <!-- Action Toolbar -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                  <span class="text-[11px] text-slate-400 font-mono">
+                    บันทึกเมื่อ ${a.recordedAt ? new Date(a.recordedAt).toLocaleTimeString('th-TH') : a.date}
+                  </span>
+
+                  <div class="flex items-center gap-2">
+                    <button onclick="reportsView.openCertifyModal('${a.id}')" class="px-3.5 py-2 ${isCertified ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-400 text-white font-black'} rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
+                      <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                      ${isCertified ? '✏️ แก้ไขผล & เซ็นใหม่' : '✍️ บันทึกผลสอบ & เซ็นรับรอง'}
+                    </button>
+
+                    <button onclick="reportsView.printSingleAnomalyCertificate('${a.id}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
+                      <i data-lucide="printer" class="w-3.5 h-3.5 text-emerald-400"></i>
+                      <span class="hidden sm:inline">พิมพ์ใบรับรอง A4</span>
+                    </button>
+
+                    <button onclick="reportsView.deleteAnomaly('${a.id}')" class="p-2 bg-red-950/60 hover:bg-red-900 text-red-300 rounded-xl text-xs font-bold transition border border-red-800" title="ลบรายงานนี้">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
                   </div>
                 </div>
 
               </div>
-
-              <!-- Card Action Buttons -->
-              <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                <button onclick="reportsView.openCertifyModal('${a.id}')" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
-                  <i data-lucide="edit-3" class="w-4 h-4 text-yellow-300"></i>
-                  ${a.supervisorSignature ? '✏️ แก้ไขผลตรวจ & เซ็นใหม่' : '✍️ บันทึกผลตรวจ & เซ็นรับรอง'}
-                </button>
-
-                <button onclick="reportsView.printSingleAnomalyCertificate('${a.id}')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-700">
-                  <i data-lucide="printer" class="w-4 h-4 text-emerald-400"></i>
-                  🖨️ พิมพ์ใบรับรองผล (PDF)
-                </button>
-
-                <button onclick="reportsView.deleteAnomaly('${a.id}')" class="px-3 py-2 bg-red-950/60 hover:bg-red-900 text-red-300 rounded-xl text-xs font-bold transition border border-red-800 flex items-center gap-1">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  ลบ
-                </button>
-              </div>
-
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
 
       </div>

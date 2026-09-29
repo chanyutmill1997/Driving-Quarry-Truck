@@ -155,63 +155,75 @@ class AdminDashboard {
           </div>
         </div>
 
-        <!-- 🚚 Fleet Real-time Matrix Section (28 Trucks & 20 Excavators) - ON TOP -->
+        <!-- 🚚 Fleet Real-time Matrix Section (28 Trucks & 20 Excavators) - ON TOP (ตัวหนังสือใหญ่ ชัดเจน สวยงาม) -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           <!-- Left 2 Cols: Real-time Fleet Status Matrix (28 Trucks) -->
-          <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div class="flex items-center gap-2">
-                <i data-lucide="truck" class="w-5 h-5 text-blue-400"></i>
-                <h2 class="font-black text-lg text-white">สถานะรถบรรทุกแบบ Real-time (${trucks.length} คัน)</h2>
+          <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3.5">
+              <div class="flex items-center gap-2.5">
+                <div class="p-2 bg-blue-500/20 text-blue-400 rounded-xl border border-blue-500/30">
+                  <i data-lucide="truck" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h2 class="font-black text-xl text-white tracking-tight">สถานะรถบรรทุกแบบ Real-time (${trucks.length} คัน)</h2>
+                  <p class="text-xs text-slate-400">คลิกที่การ์ดรถเพื่อดูประวัติเที่ยววิ่งและรูปถ่ายของแต่ละคัน</p>
+                </div>
               </div>
               <div class="flex items-center gap-2 text-xs">
-                <span class="inline-flex items-center gap-1 text-emerald-400 font-bold">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> วิ่ง (${activeTrucksCount})
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 font-black rounded-full border border-emerald-500/30">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> กำลังวิ่ง (${activeTrucksCount})
                 </span>
-                <span class="inline-flex items-center gap-1 text-slate-400 font-bold">
-                  <span class="w-2 h-2 rounded-full bg-slate-500"></span> จอด (${parkedTrucksCount})
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 text-slate-400 font-bold rounded-full border border-slate-700">
+                  <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> จอด (${parkedTrucksCount})
                 </span>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[460px] overflow-y-auto pr-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 max-h-[520px] overflow-y-auto pr-1.5">
               ${trucks.map(t => {
                 const tripsForTruck = todayTrips.filter(tr => tr.truckPlate === t.code);
                 const isRunning = tripsForTruck.length > 0;
                 const totalEarn = tripsForTruck.reduce((sum, tr) => sum + (tr.amount || 0), 0);
 
                 return `
-                  <div role="button" tabindex="0" onclick="adminDashboard.openTruckDetail('${t.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openTruckDetail('${t.code}')" class="p-3.5 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/50 shadow-md' : 'bg-slate-950/60 border-slate-800'} space-y-2 cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
-                    <div class="flex items-start justify-between">
-                      <div>
-                        <p class="font-black text-sm text-white">${t.code}</p>
-                        <span class="text-[10px] bg-slate-800 text-slate-300 font-bold px-1.5 py-0.5 rounded">
+                  <div role="button" tabindex="0" onclick="adminDashboard.openTruckDetail('${t.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openTruckDetail('${t.code}')" class="p-4 rounded-2xl border ${isRunning ? 'bg-slate-950 border-emerald-500/60 shadow-lg ring-1 ring-emerald-500/20' : 'bg-slate-950/60 border-slate-800'} space-y-3 cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
+                    <!-- Top Plate & Status -->
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <p class="font-black text-xl text-white tracking-wide">${t.code}</p>
+                        <span class="text-xs bg-slate-800 text-slate-200 font-black px-2 py-0.5 rounded-md border border-slate-700">
                           ${t.capacity_ton} ตัน
                         </span>
                       </div>
                       ${isRunning ? `
-                        <span class="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-black rounded-full border border-emerald-500/30">
-                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> วิ่ง
+                        <span class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-black rounded-full border border-emerald-500/40">
+                          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> วิ่ง
                         </span>
                       ` : `
-                        <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">
+                        <span class="px-2.5 py-1 bg-slate-800 text-slate-400 text-xs font-bold rounded-full border border-slate-700">
                           จอด
                         </span>
                       `}
                     </div>
 
-                    <div class="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/60">
-                      <span>คนขับ: <b class="text-slate-300 font-semibold">${t.nickname || t.driver_name || '-'}</b></span>
-                      <span class="font-black text-blue-400">${tripsForTruck.length} เที่ยว</span>
+                    <!-- Driver & Trips Count -->
+                    <div class="text-sm text-slate-300 flex items-center justify-between pt-2 border-t border-slate-800/70">
+                      <span class="truncate max-w-[120px]">👤 <strong class="text-white font-bold text-sm">${t.nickname || t.driver_name || '-'}</strong></span>
+                      <span class="font-black text-base ${isRunning ? 'text-blue-400' : 'text-slate-500'}">${tripsForTruck.length} เที่ยว</span>
                     </div>
 
+                    <!-- Money Badge -->
                     ${isRunning ? `
-                      <div class="text-[11px] text-emerald-400 font-bold flex justify-between items-center">
-                        <span>ยอดรวม</span>
-                        <span>฿${totalEarn.toLocaleString()}</span>
+                      <div class="text-xs text-emerald-400 font-black flex justify-between items-center bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-800/50">
+                        <span class="text-[11px] text-slate-300 font-bold">ยอดเงินสะสม</span>
+                        <span class="text-sm">฿${totalEarn.toLocaleString()}</span>
                       </div>
-                    ` : ''}
+                    ` : `
+                      <div class="text-[11px] text-slate-500 text-center py-1">
+                        ยังไม่มีรอบวิ่งในวันนี้
+                      </div>
+                    `}
                   </div>
                 `;
               }).join('')}
@@ -219,37 +231,44 @@ class AdminDashboard {
           </div>
 
           <!-- Right Col: Excavators Status (20 Machines) -->
-          <div class="excavator-panel bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div class="flex items-center gap-2">
-                <i data-lucide="wrench" class="w-5 h-5 text-blue-400"></i>
-                <h2 class="font-black text-lg text-white">รถขุด / แม็คโคร (20 คัน)</h2>
+          <div class="excavator-panel bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3.5">
+              <div class="flex items-center gap-2.5">
+                <div class="p-2 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30">
+                  <i data-lucide="wrench" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h2 class="font-black text-xl text-white tracking-tight">รถขุด / แม็คโคร (20 คัน)</h2>
+                  <p class="text-xs text-slate-400">คลิกเพื่อดูบันทึกการตัก</p>
+                </div>
               </div>
-              <span class="text-sm font-bold text-slate-400">วันนี้ตัก ${todayExcLogs.length} คัน</span>
+              <span class="text-xs font-black text-cyan-400 bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-800/60">
+                ตักรวม ${todayExcLogs.length} คัน
+              </span>
             </div>
 
-            <div class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+            <div class="space-y-3 max-h-[520px] overflow-y-auto pr-1.5">
               ${excavators.map(e => {
                 const logsForExc = todayExcLogs.filter(l => l.excavatorCode === e.code);
                 const hasWork = logsForExc.length > 0;
 
                 return `
-                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="excavator-status-card min-h-[76px] p-3.5 bg-slate-950 rounded-2xl border ${hasWork ? 'border-blue-500/40' : 'border-slate-800'} flex items-center justify-between cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
+                  <div role="button" tabindex="0" onclick="adminDashboard.openExcavatorDetail('${e.code}')" onkeydown="if(event.key==='Enter') adminDashboard.openExcavatorDetail('${e.code}')" class="excavator-status-card p-3.5 bg-slate-950 rounded-2xl border ${hasWork ? 'border-cyan-500/50 shadow-md ring-1 ring-cyan-500/20' : 'border-slate-800'} flex items-center justify-between cursor-pointer hover:border-blue-400 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all">
                     <div>
-                      <div class="flex items-center gap-1.5">
-                        <p class="excavator-code font-black text-sm text-white">${e.code}</p>
-                        <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${e.is_contractor ? 'bg-purple-950 text-purple-300' : 'bg-slate-800 text-slate-300'}">
+                      <div class="flex items-center gap-2">
+                        <p class="excavator-code font-black text-base text-white">${e.code}</p>
+                        <span class="text-[11px] px-2 py-0.5 rounded-md font-bold ${e.is_contractor ? 'bg-purple-950 text-purple-300 border border-purple-800' : 'bg-slate-800 text-slate-300 border border-slate-700'}">
                           ${e.is_contractor ? 'ผรม.' : 'ประจำ'}
                         </span>
                       </div>
-                      <p class="excavator-operator text-xs text-slate-400 mt-1">ผู้ควบคุม: <b class="text-slate-300 font-semibold">${e.nickname || e.driver_name || '-'}</b></p>
+                      <p class="excavator-operator text-xs text-slate-300 mt-1">ผู้ควบคุม: <b class="text-white font-bold text-xs">${e.nickname || e.driver_name || '-'}</b></p>
                     </div>
 
                     <div class="text-right">
-                      <span class="excavator-count text-sm font-black ${hasWork ? 'text-emerald-400' : 'text-slate-500'}">
+                      <span class="excavator-count text-base font-black ${hasWork ? 'text-emerald-400' : 'text-slate-500'}">
                         ${logsForExc.length} คัน
                       </span>
-                      <p class="excavator-rate text-[11px] text-slate-500 font-bold mt-0.5">฿${e.rate_per_scoop || 5}/คัน</p>
+                      <p class="excavator-rate text-xs text-slate-400 font-bold mt-0.5">฿${e.rate_per_scoop || 5}/คัน</p>
                     </div>
                   </div>
                 `;
@@ -259,243 +278,97 @@ class AdminDashboard {
 
         </div>
 
-        <!-- ⚖️ NEW: Truck vs Excavator Reconciliation Matrix Section (ระบบตรวจสอบกระทบยอด) -->
-        <div class="bg-slate-900 border ${recon.diff !== 0 ? 'border-amber-500/80 shadow-amber-500/10 shadow-2xl' : 'border-emerald-500/50'} rounded-3xl p-5 shadow-lg space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-            <div class="flex items-center gap-2.5">
-              <div class="p-2.5 ${recon.diff !== 0 ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-slate-950'} rounded-2xl shadow">
-                <i data-lucide="scale" class="w-5 h-5"></i>
+        <!-- 🚀 Executive Summary Insight Hub (เชื่อมโยงเมนูเฉพาะทางแบบไม่ซ้ำซ้อน) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Card 1: Reconciliation Status Summary -->
+          <div class="bg-slate-900 border ${recon.diff !== 0 ? 'border-amber-500/70 shadow-amber-500/10 shadow-xl' : 'border-emerald-500/50'} rounded-3xl p-6 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-3">
+                <div class="p-3 ${recon.diff !== 0 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'} rounded-2xl">
+                  <i data-lucide="scale" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    ตรวจสอบกระทบยอด: สิบล้อ VS แม็คโคร
+                  </h3>
+                  <p class="text-xs text-slate-400">เปรียบเทียบยอดรอบวิ่งจริงกับบันทึกตัก ป้องกันการทุจริต</p>
+                </div>
               </div>
-              <div>
-                <h2 class="font-black text-lg text-white flex items-center gap-2">
-                  ตรวจสอบการกระทบยอด: เที่ยวรับสิบล้อ VS เที่ยวตักแม็คโคร
-                  <span class="text-xs px-2.5 py-0.5 rounded-full font-black ${recon.diff === 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500 text-slate-950 animate-pulse'}">
-                    ${recon.diff === 0 ? '✓ ยอดตรงกันสมบูรณ์ 100%' : `⚠️ ผลต่าง ${Math.abs(recon.diff)} เที่ยว (${recon.matchRate}% Match)`}
-                  </span>
-                </h2>
-                <p class="text-xs text-slate-400">ตรวจนับยอดรอบวิ่งที่สิบล้อกดรับ เทียบกับยอดที่คนขับแม็คโครกดบันทึกตัก เพื่อป้องกันการคลาดเคลื่อนและการทุจริต</p>
-              </div>
-            </div>
 
-            <button onclick="adminDashboard.openFullReconModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1.5 border border-slate-700 self-start sm:self-auto">
-              <i data-lucide="search" class="w-4 h-4 text-blue-400"></i>
-              ดูตารางกระทบยอดละเอียด
-            </button>
-          </div>
-
-          <!-- Reconciliation Top KPI Strip -->
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-            <div class="bg-slate-950 p-3.5 rounded-2xl border border-blue-500/30 space-y-1">
-              <span class="text-slate-400 font-bold flex items-center gap-1.5">
-                🚚 สิบล้อรายงานรับหิน:
+              <span class="text-xs px-3 py-1 rounded-full font-black ${recon.diff === 0 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500 text-slate-950 font-black animate-pulse'}">
+                ${recon.diff === 0 ? '✓ ยอดตรงกัน 100%' : `⚠️ ผลต่าง ${Math.abs(recon.diff)} เที่ยว`}
               </span>
-              <p class="text-xl font-black text-blue-400">${recon.totalTruckTrips} <span class="text-xs text-slate-400 font-normal">เที่ยว</span></p>
             </div>
 
-            <div class="bg-slate-950 p-3.5 rounded-2xl border border-purple-500/30 space-y-1">
-              <span class="text-slate-400 font-bold flex items-center gap-1.5">
-                🚜 แม็คโครบันทึกตัก:
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 font-bold block">สิบล้อแจ้งวิ่ง</span>
+                <p class="text-xl font-black text-blue-400 mt-1">${recon.totalTruckTrips} <span class="text-xs font-normal text-slate-400">เที่ยว</span></p>
+              </div>
+              <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 font-bold block">แม็คโครตักให้</span>
+                <p class="text-xl font-black text-purple-400 mt-1">${recon.totalExcavatorScoops} <span class="text-xs font-normal text-slate-400">คัน</span></p>
+              </div>
+              <div class="bg-slate-950 p-3.5 rounded-2xl border ${recon.diff !== 0 ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800'}">
+                <span class="text-[11px] text-slate-400 font-bold block">ผลต่าง (Variance)</span>
+                <p class="text-xl font-black ${recon.diff === 0 ? 'text-emerald-400' : 'text-amber-400'} mt-1 font-mono">
+                  ${recon.diff > 0 ? `+${recon.diff}` : (recon.diff < 0 ? `${recon.diff}` : '0')}
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button onclick="window.app.navigate('reconciliation')" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-2xl text-xs transition flex items-center justify-center gap-2 shadow-lg">
+                <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
+                เปิดหน้าตรวจสอบกระทบยอดฉบับเต็ม (Reconciliation Hub) ➔
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2: AI Anomaly Detection Alert Summary -->
+          <div class="bg-slate-900 border ${anomalies.length > 0 ? 'border-red-500/70 shadow-red-500/10 shadow-xl' : 'border-slate-800'} rounded-3xl p-6 shadow-lg space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-3">
+                <div class="p-3 ${anomalies.length > 0 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'} rounded-2xl">
+                  <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    ระบบตรวจจับความผิดปกติ (AI Anomaly Alerts)
+                  </h3>
+                  <p class="text-xs text-slate-400">AI ตรวจจับเวลาวิ่งเร็วผิดปกติ, พิกัด GPS และยอดไม่สอดคล้อง</p>
+                </div>
+              </div>
+
+              <span class="text-xs px-3 py-1 rounded-full font-black ${anomalies.length > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}">
+                ${anomalies.length > 0 ? `พบ ${anomalies.length} เรื่อง` : '✓ ปกติสมบูรณ์'}
               </span>
-              <p class="text-xl font-black text-purple-400">${recon.totalExcavatorScoops} <span class="text-xs text-slate-400 font-normal">คัน</span></p>
             </div>
 
-            <div class="bg-slate-950 p-3.5 rounded-2xl border ${recon.diff !== 0 ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800'} space-y-1">
-              <span class="text-slate-400 font-bold flex items-center gap-1.5">
-                ⚖️ ผลต่างสุทธิ (Variance):
-              </span>
-              <p class="text-xl font-black ${recon.diff === 0 ? 'text-emerald-400' : (recon.diff > 0 ? 'text-amber-400' : 'text-purple-400')} font-mono">
-                ${recon.diff > 0 ? `+${recon.diff} เที่ยว` : (recon.diff < 0 ? `${recon.diff} คัน` : '0 (ตรงกัน)')}
-              </p>
-            </div>
-
-            <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1">
-              <span class="text-slate-400 font-bold">🎯 อัตราความสอดคล้อง:</span>
-              <div class="flex items-center gap-2">
-                <span class="text-xl font-black ${recon.matchRate >= 90 ? 'text-emerald-400' : (recon.matchRate >= 70 ? 'text-amber-400' : 'text-red-400')}">${recon.matchRate}%</span>
-                <span class="text-[10px] text-slate-400">(${recon.perTruckList.filter(x => x.status === 'match').length}/${recon.perTruckList.length} คัน)</span>
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 font-bold block">ตรวจพบวันนี้</span>
+                <p class="text-xl font-black ${anomalies.length > 0 ? 'text-red-400' : 'text-slate-300'} mt-1">${anomalies.length} <span class="text-xs font-normal text-slate-400">เรื่อง</span></p>
               </div>
+              <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 font-bold block">🔴 วิ่งเร็วผิดปกติ</span>
+                <p class="text-xl font-black text-red-400 mt-1">${speedAnomaliesCount} <span class="text-xs font-normal text-slate-400">เรื่อง</span></p>
+              </div>
+              <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 font-bold block">⚠️ ยอดไม่ตรง</span>
+                <p class="text-xl font-black text-amber-400 mt-1">${reconAnomaliesCount} <span class="text-xs font-normal text-slate-400">เรื่อง</span></p>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button onclick="window.app.navigate('anomalies')" class="w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white font-black rounded-2xl text-xs transition flex items-center justify-center gap-2 shadow-lg">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                เปิดหน้าตรวจจับความผิดปกติ & รับรองผล (Anomaly Hub) ➔
+              </button>
             </div>
           </div>
 
-          <!-- Per-Truck Summary Table -->
-          ${recon.perTruckList.length === 0 ? `
-            <div class="text-center py-6 text-slate-500 text-xs bg-slate-950/40 rounded-2xl border border-slate-800">
-              ยังไม่มีการบันทึกงานของสิบล้อหรือแม็คโครในวันที่ ${currentDate}
-            </div>
-          ` : `
-            <div class="overflow-x-auto max-h-64 overflow-y-auto">
-              <table class="w-full text-left text-xs text-slate-300">
-                <thead class="bg-slate-950 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800 sticky top-0">
-                  <tr>
-                    <th class="p-3">เบอร์รถสิบล้อ</th>
-                    <th class="p-3">คนขับประจำ</th>
-                    <th class="p-3 text-center">สิบล้อแจ้งวิ่ง</th>
-                    <th class="p-3 text-center">แม็คโครตักให้</th>
-                    <th class="p-3 text-center">ผลต่าง (Diff)</th>
-                    <th class="p-3 text-center">สถานะความถูกต้อง</th>
-                    <th class="p-3 text-right">เจาะลึก</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-800">
-                  ${recon.perTruckList.slice(0, 10).map(item => `
-                    <tr class="hover:bg-slate-800/50 ${item.variance !== 0 ? 'bg-amber-950/10' : ''}">
-                      <td class="p-3 font-bold text-white">🚚 ${item.code}</td>
-                      <td class="p-3 text-slate-400">${item.driverName || '-'}</td>
-                      <td class="p-3 text-center font-bold text-blue-400">${item.truckReported} เที่ยว</td>
-                      <td class="p-3 text-center font-bold text-purple-400">${item.excavatorRecorded} คัน</td>
-                      <td class="p-3 text-center font-mono font-bold ${item.variance === 0 ? 'text-emerald-400' : (item.variance > 0 ? 'text-amber-400' : 'text-purple-400')}">
-                        ${item.variance > 0 ? `+${item.variance}` : (item.variance < 0 ? `${item.variance}` : '0')}
-                      </td>
-                      <td class="p-3 text-center">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${item.status === 'match' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : (item.status === 'truck_over' ? 'bg-amber-950 text-amber-300 border border-amber-800 animate-pulse' : 'bg-purple-950 text-purple-300 border border-purple-800')}">
-                          ${item.status === 'match' ? '✓ ตรงกัน' : (item.status === 'truck_over' ? `⚠️ สิบล้อแจ้งเกิน ${item.variance}` : `แม็คโครตักเกิน ${Math.abs(item.variance)}`)}
-                        </span>
-                      </td>
-                      <td class="p-3 text-right">
-                        <button onclick="adminDashboard.openTruckReconDetail('${item.code}')" class="text-blue-400 hover:underline font-bold">
-                          เทียบเวลา ➔
-                        </button>
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          `}
-        </div>
-
-        <!-- AI Anomaly Detection Alert Section -->
-        <div class="bg-slate-900 border ${speedAnomaliesCount > 0 || reconAnomaliesCount > 0 ? 'border-red-500/80 shadow-red-500/10 shadow-2xl' : 'border-slate-800'} rounded-3xl p-5 shadow-lg space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-            <div class="flex items-center gap-2.5">
-              <div class="p-2 ${speedAnomaliesCount > 0 || reconAnomaliesCount > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-slate-950'} rounded-xl">
-                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-              </div>
-              <div>
-                <h2 class="font-black text-lg text-white flex items-center gap-2">
-                  ระบบตรวจจับความผิดปกติ & เที่ยววิ่งต้องสงสัย (AI Anomaly Alerts)
-                  <span class="text-xs ${speedAnomaliesCount > 0 || reconAnomaliesCount > 0 ? 'bg-red-500 text-white animate-pulse' : 'bg-blue-500 text-slate-950'} px-2.5 py-0.5 rounded-full font-black">
-                    ${anomalies.length} รายการ ${speedAnomaliesCount > 0 ? `(🔴 ถ่ายเร็ว ${speedAnomaliesCount})` : ''} ${reconAnomaliesCount > 0 ? `(⚠️ ยอดไม่ตรง ${reconAnomaliesCount})` : ''}
-                  </span>
-                </h2>
-                <p class="text-xs text-slate-400">ตรวจจับการถ่ายรูปจุดรับ-จุดเทเร็วผิดปกติ, พิกัด GPS ซ้ำซ้อน และความไม่สอดคล้องระหว่างสิบล้อกับแม็คโคร</p>
-              </div>
-            </div>
-
-            <button onclick="window.app.navigate('ai-copilot')" class="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
-              เปิด AI Copilot <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </button>
-          </div>
-
-          <!-- Anomalies Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            ${anomalies.length === 0 ? `
-              <div class="col-span-2 text-center py-6 bg-slate-950/60 rounded-2xl border border-slate-800 text-slate-400 text-xs">
-                ✅ ระบบตรวจสอบแล้ว ไม่พบพฤติกรรมผิดปกติในการวิ่งงาน ข้อมูลความเร็วและ GPS สอดคล้องสมบูรณ์
-              </div>
-            ` : anomalies.map(a => `
-              <div class="anomaly-card bg-slate-950 border ${a.severity === 'critical' ? 'border-red-500/70 bg-red-950/20' : (a.severity === 'warning' ? 'border-amber-500/50 bg-amber-950/20' : 'border-slate-800')} rounded-2xl p-4 space-y-3">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-black ${a.severity === 'critical' ? 'bg-red-900/80 text-red-200 border border-red-700' : 'bg-amber-900/80 text-amber-200 border border-amber-700'} px-2.5 py-1 rounded-md">
-                      ${a.severity === 'critical' ? '🚨 ตรวจสอบด่วน' : '⚠️ ข้อสังเกต'}
-                    </span>
-                    <h3 class="font-bold text-sm text-white">${a.title}</h3>
-                  </div>
-                  ${a.durationText ? `
-                    <span class="text-[11px] px-2 py-0.5 rounded bg-red-500/20 text-red-300 font-bold font-mono">
-                      ⏱️ ${a.durationText}
-                    </span>
-                  ` : ''}
-                </div>
-
-                <p class="text-sm text-slate-300 leading-6">${a.desc}</p>
-
-                <div class="anomaly-recommendation p-3.5 bg-slate-900/90 rounded-xl border border-slate-800 text-sm text-blue-300 space-y-1.5">
-                  <p class="font-bold flex items-center gap-1 text-slate-200">
-                    💡 คำแนะนำที่ควรทำ:
-                  </p>
-                  <p class="text-slate-300">${a.recommendedAction}</p>
-                </div>
-
-                <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-                  <span>
-                    รถ: <b class="text-white">${a.vehicleCode}</b> (${a.driverName}) 
-                    ${a.driverPhone ? `• <a href="tel:${a.driverPhone}" class="text-blue-400 underline font-bold">📞 ${a.driverPhone}</a>` : ''}
-                  </span>
-                  
-                  <button onclick="adminDashboard.openAnomalyInspector('${a.referenceId}')" class="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-slate-950 font-black rounded-xl transition flex items-center gap-1.5 shadow">
-                    <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
-                    ตรวจสอบเที่ยววิ่งนี้
-                  </button>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Live Audit Trip Feed with Photos -->
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div class="flex items-center gap-2">
-              <i data-lucide="camera" class="w-5 h-5 text-blue-400"></i>
-              <h2 class="font-black text-lg text-white">ประวัติรอบวิ่งล่าสุดพร้อมรูปถ่ายหน้างาน (${todayTrips.length} เที่ยว)</h2>
-            </div>
-            <p class="text-xs text-slate-400">คลิกที่รูปเพื่อขยายดูลายน้ำและพิกัดดาวเทียม</p>
-          </div>
-
-          ${todayTrips.length === 0 ? `
-            <div class="text-center py-12 bg-slate-950/60 rounded-2xl border border-slate-800 text-slate-400 space-y-2">
-              <p class="text-base font-bold">ยังไม่มีการบันทึกรอบวิ่งในวันที่ ${currentDate}</p>
-              <p class="text-xs text-slate-500">เมื่อคนขับกดบันทึกรอบวิ่ง ข้อมูลและรูปถ่ายจะปรากฏที่นี่ทันที</p>
-            </div>
-          ` : `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-1">
-              ${todayTrips.slice(0, 30).map(t => `
-                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3 hover:border-slate-700 transition">
-                  <div class="flex items-start justify-between">
-                    <div>
-                      <span class="text-xs font-black bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-md">
-                        รอบ #${t.roundNumber} • ${t.truckPlate}
-                      </span>
-                      <p class="text-xs font-bold text-white mt-1">👤 ${t.driverName}</p>
-                    </div>
-                    <div class="text-right">
-                      <span class="font-black text-emerald-400 text-sm">฿${t.amount}</span>
-                      <p class="text-[10px] text-slate-400">${t.timestamp}</p>
-                    </div>
-                  </div>
-
-                  <!-- Photos Preview -->
-                  <div class="grid grid-cols-2 gap-2">
-                    ${(t.loadPhotoUrl || t.loadPhotoBase64) ? `
-                      <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-blue-500/40 bg-slate-950" onclick="adminDashboard.viewPhoto('${t.loadPhotoUrl || t.loadPhotoBase64}', 'จุดรับหิน', '${t.truckPlate}', '${t.timestamp}')">
-                        <img src="${t.loadPhotoUrl || t.loadPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
-                        <span class="absolute bottom-1 left-1 bg-blue-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">📍 จุดรับหิน</span>
-                      </div>
-                    ` : `
-                      <div class="h-24 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-[10px] text-slate-500 font-bold bg-slate-950">ไม่มีรูปรับหิน</div>
-                    `}
-                    ${(t.dumpPhotoUrl || t.dumpPhotoBase64) ? `
-                      <div class="cursor-pointer group relative rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-950" onclick="adminDashboard.viewPhoto('${t.dumpPhotoUrl || t.dumpPhotoBase64}', 'จุดเทหิน', '${t.truckPlate}', '${t.timestamp}')">
-                        <img src="${t.dumpPhotoUrl || t.dumpPhotoBase64}" class="w-full h-24 object-cover group-hover:scale-105 transition">
-                        <span class="absolute bottom-1 left-1 bg-emerald-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">🏁 จุดเทหิน</span>
-                      </div>
-                    ` : `
-                      <div class="h-24 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-[10px] text-slate-500 font-bold bg-slate-950">ไม่มีรูปเทหิน</div>
-                    `}
-                  </div>
-
-                  <div class="text-[11px] text-slate-400 flex items-center justify-between">
-                    <span>ประเภท: <b class="text-slate-300 font-semibold">${t.jobTypeName}</b></span>
-                    <button onclick="adminDashboard.openAnomalyInspector('${t.id}')" class="text-blue-400 hover:underline font-bold">
-                      ตรวจสอบละเอียด ➔
-                    </button>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          `}
         </div>
 
       </div>
