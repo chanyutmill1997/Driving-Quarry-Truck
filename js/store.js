@@ -119,12 +119,24 @@ class QuarryStore {
     this.refreshMasterDataFromCloud().then(() => this.notify());
     this.fetchRecentCloudData().then(() => this.notify());
 
-    // 3. เริ่มระบบ Auto Sync เบื้องหลัง
-    setInterval(() => this.processSyncQueue(), CONFIG.AUTO_SYNC_INTERVAL_MS);
-    window.addEventListener('online', () => {
+    // 3. เริ่มระบบ Auto Sync เบื้องหลัง (สองทาง: ส่งคิว และดึงข้อมูลอัปเดตจาก Cloud อัตโนมัติ)
+    setInterval(async () => {
+      await this.processSyncQueue();
+      if (navigator.onLine && this.supabase) {
+        await Promise.allSettled([
+          this.fetchRecentCloudData(),
+          this.refreshMasterDataFromCloud()
+        ]);
+        this.notify();
+      }
+    }, CONFIG.AUTO_SYNC_INTERVAL_MS);
+
+    window.addEventListener('online', async () => {
       this.cloudStatus = 'connecting';
-      this.processSyncQueue();
-      this.refreshMasterDataFromCloud();
+      await this.processSyncQueue();
+      await this.refreshMasterDataFromCloud();
+      await this.fetchRecentCloudData();
+      this.notify();
     });
     window.addEventListener('offline', () => {
       this.cloudStatus = 'offline';
@@ -377,6 +389,7 @@ class QuarryStore {
     // เพิ่มเข้าคิวซิงค์ขึ้น Supabase
     this.queueSync('saveTrip', tripData);
     this.notify();
+    setTimeout(() => this.processSyncQueue(), 50);
     return tripData;
   }
 
@@ -413,6 +426,7 @@ class QuarryStore {
     // เพิ่มเข้าคิวซิงค์ขึ้น Supabase
     this.queueSync('saveExcavatorLog', logData);
     this.notify();
+    setTimeout(() => this.processSyncQueue(), 50);
     return logData;
   }
 

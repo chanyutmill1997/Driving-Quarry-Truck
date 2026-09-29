@@ -442,11 +442,6 @@ class SettingsView {
             <i data-lucide="key" class="w-4 h-4 text-amber-400"></i>
             ตั้งค่า Supabase Anon Key
           </button>
-
-          <button onclick="settingsView.resetData()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 text-red-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm border border-slate-800 transition">
-            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-            รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นจาก Master Data
-          </button>
         </div>
       </div>
     `;
@@ -872,14 +867,6 @@ class SettingsView {
     if (newKey !== null && newKey.trim() !== '') {
       window.quarryStore.setSupabaseKey(newKey.trim());
       alert("✅ บันทึก Supabase Key เรียบร้อยแล้ว ระบบจะเริ่มเชื่อมต่อใหม่อัตโนมัติ");
-      window.app.render();
-    }
-  }
-
-  async resetData() {
-    if (confirm("⚠️ คุณแน่ใจว่าต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นจากไฟล์ Excel หรือไม่?")) {
-      await window.quarryStore.resetToSeedData();
-      alert("รีเซ็ตข้อมูลสำเร็จ");
       window.app.render();
     }
   }
