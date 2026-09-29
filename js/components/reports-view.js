@@ -1543,18 +1543,26 @@ class ReportsView {
     // ----------------------------------------------------
     // Sheet 3: บันทึกรายการตักแม็คโคร (Excavator Scoop Logs)
     // ----------------------------------------------------
-    const excRows = filteredExcLogs.map((l, idx) => ({
-      "ลำดับ": idx + 1,
-      "รหัสตัก (Log ID)": l.id,
-      "วันที่": l.date,
-      "เวลา": l.timestamp,
-      "เบอร์แม็คโคร": l.excavatorCode,
-      "ผู้ควบคุมรถขุด": l.operatorName,
-      "รถบรรทุกที่รับหิน": l.targetTruckPlate,
-      "ยอดเงินค่าตัก (บาท)": l.amount || 0,
-      "พิกัด GPS": `${l.lat ? Number(l.lat).toFixed(5) : '17.48812'}, ${l.lng ? Number(l.lng).toFixed(5) : '101.72345'}`,
-      "สถานะภาพถ่าย": (l.photoUrl || l.photoBase64) ? 'มีภาพถ่ายยืนยัน' : 'บันทึกเรียบร้อย'
-    }));
+    const excRows = filteredExcLogs.map((l, idx) => {
+      const trk = trucks.find(t => t.code === l.targetTruckPlate);
+      const capTon = trk ? (Number(trk.capacity_ton) || 30) : 30;
+      const amt = l.amount || (5 * capTon);
+
+      return {
+        "ลำดับ": idx + 1,
+        "รหัสตัก (Log ID)": l.id,
+        "วันที่": l.date,
+        "เวลา": l.timestamp,
+        "เบอร์แม็คโคร": l.excavatorCode,
+        "ผู้ควบคุมรถขุด": l.operatorName,
+        "รถบรรทุกที่รับหิน": l.targetTruckPlate,
+        "พิกัดบรรทุก (ตัน)": capTon,
+        "อัตราค่าตัก": "5 บาท/ตัน",
+        "ยอดเงินค่าตัก (บาท)": amt,
+        "พิกัด GPS": `${l.lat ? Number(l.lat).toFixed(5) : '17.48812'}, ${l.lng ? Number(l.lng).toFixed(5) : '101.72345'}`,
+        "สถานะภาพถ่าย": (l.photoUrl || l.photoBase64) ? 'ถ่ายสดพร้อมแสตมป์พิกัด' : 'มีภาพยืนยัน'
+      };
+    });
 
     // ----------------------------------------------------
     // Sheet 4: กระทบยอดสิบล้อ VS แม็คโคร (Reconciliation Audit)

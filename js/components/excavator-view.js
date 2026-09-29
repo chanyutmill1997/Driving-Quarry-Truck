@@ -1,12 +1,13 @@
 /**
  * หน้าจอสำหรับคนขับรถขุด / แม็คโคร (Excavator Operator PWA Flow)
- * รองรับ: เปิดกะเลือกรถ, สลับแม็คโครระหว่างวัน, อัปโหลดรูปจากโทรศัพท์/ถ่ายสด (ไม่บังคับถ่าย), ปรับเรทค่าตักตามขนาดรถ/กำหนดเอง
+ * กฎระเบียบโรงโม่:
+ * 1. ไม่อนุญาตให้อัปรูป ต้องถ่ายสดจากกล้องตอนนั้นเท่านั้น พร้อมแสตมป์ข้อมูลและพิกัด GPS ลงในรูป
+ * 2. ค่าตักคิดตามสูตร: 5 บาทต่อตัน คูณตามพิกัดน้ำหนักบรรทุกของรถคันนั้น (30T = ฿150, 45T = ฿225, 60T = ฿300)
  */
 class ExcavatorView {
   constructor() {
     this.selectedShiftExcavator = localStorage.getItem('quarry_excavator_shift') || null;
     this.selectedTargetTruck = null;
-    this.customScoopRate = null;
     this.scoopPhoto = null;
     this.scoopGPS = null;
 
@@ -85,27 +86,23 @@ class ExcavatorView {
     `;
   }
 
-  // คำนวณเรทค่าตักตามรถบรรทุกที่เลือก และเครื่องจักร
+  // คำนวณราคาค่าตัก: 5 บาทต่อตัน คูณตามพิกัดน้ำหนักบรรทุกของรถคันนั้น
   getEffectiveScoopRate(targetTruckCode) {
-    if (this.customScoopRate !== null && !isNaN(this.customScoopRate)) {
-      return Number(this.customScoopRate);
-    }
     return window.quarryStore.calculateExcavatorRate(this.selectedShiftExcavator, targetTruckCode);
-  }
-
-    return 5.0;
   }
 
   // 2. หน้าจอห้องควบคุมคนขับแม็คโคร
   renderActiveCockpit(user) {
     const excavators = window.quarryStore.getExcavators();
     const trucks = window.quarryStore.getTrucks();
-    const currentExcObj = excavators.find(e => e.code === this.selectedShiftExcavator) || { code: this.selectedShiftExcavator, rate_per_scoop: 5.0 };
+    const currentExcObj = excavators.find(e => e.code === this.selectedShiftExcavator) || { code: this.selectedShiftExcavator };
     
     // รถบรรทุกเป้าหมายที่เลือกอยู่
     if (!this.selectedTargetTruck && trucks.length > 0) {
       this.selectedTargetTruck = trucks[0].code;
     }
+    const currentTruck = trucks.find(t => t.code === this.selectedTargetTruck) || trucks[0] || { code: 'TRUCK', capacity_ton: 30 };
+    const truckCapacity = Number(currentTruck.capacity_ton) || 30;
     const activeRate = this.getEffectiveScoopRate(this.selectedTargetTruck);
 
     const today = new Date().toISOString().split('T')[0];
@@ -192,106 +189,87 @@ class ExcavatorView {
               <i data-lucide="plus-circle" class="w-5 h-5 text-blue-500"></i>
               บันทึกการตักให้รถบรรทุก
             </h2>
-            <div class="flex items-center gap-1.5">
-              <span class="text-[11px] text-slate-400 font-bold">เรทค่าตัก:</span>
-              <span class="text-xs font-black text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-700/60 font-mono">
+            <div class="text-right">
+              <span class="block text-[10px] text-slate-400 font-bold">เรท: 5 บาท / ตัน</span>
+              <span class="text-xs font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-lg border border-emerald-700/60 font-mono">
                 ฿${activeRate} / คัน
               </span>
             </div>
           </div>
 
           <!-- 1. Select Target Truck -->
-          <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">
               1. เลือกรถบรรทุกที่เข้ามาตักหิน (28 คัน)
             </label>
             <select id="target-truck-select" onchange="excavatorView.handleTargetTruckChange(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
               ${trucks.map(t => `
                 <option value="${t.code}" ${this.selectedTargetTruck === t.code ? 'selected' : ''}>
-                  🚚 ${t.code} (${t.capacity_ton} ตัน) ${t.nickname ? '• น้า' + t.nickname : ''}
+                  🚚 ${t.code} (พิกัด ${t.capacity_ton} ตัน) ${t.nickname ? '• น้า' + t.nickname : ''}
                 </option>
               `).join('')}
             </select>
           </div>
 
-          <!-- 2. Rate Adjustment Toolbar (แก้ไขราคาค่าตักได้ทันที) -->
-          <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-2">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <span>💰 ค่าตักต่อคันสำหรับเที่ยวนี้:</span>
-              </label>
-              <div class="flex items-center gap-1.5">
-                <span class="text-xs text-slate-400">฿</span>
-                <input type="number" id="scoop-rate-input" value="${activeRate}" onchange="excavatorView.handleCustomRateChange(this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-emerald-400 font-black text-sm text-right focus:outline-none focus:border-emerald-500 font-mono">
-                <span class="text-xs text-slate-400">บาท</span>
+          <!-- 2. Rate Formula Banner (5 บาท/ตัน × พิกัดตันรถ) -->
+          <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black text-sm">
+                💰
+              </div>
+              <div>
+                <p class="text-xs font-bold text-white">สูตรคำนวณค่าตักโรงโม่</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">
+                  5 บ./ตัน × <strong class="text-blue-400 font-mono">${truckCapacity} ตัน</strong> = <strong class="text-emerald-400 font-mono text-sm">฿${activeRate} บาท</strong>
+                </p>
               </div>
             </div>
-            <!-- Quick Rate Presets -->
-            <div class="flex items-center gap-1.5 pt-1">
-              <span class="text-[10px] text-slate-400 font-bold">ปรับด่วน:</span>
-              `[5, 8, 10, 15, 20].map(r => `
-                <button type="button" onclick="excavatorView.setCustomRate(${r})" class="px-2 py-0.5 rounded text-[11px] font-bold transition ${activeRate === r ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
-                  ${r} บ.
-                </button>
-              `).join('')`
-              ${this.customScoopRate !== null ? `
-                <button type="button" onclick="excavatorView.resetCustomRate()" class="text-[10px] text-blue-400 underline ml-auto">รีเซ็ตตามระบบ</button>
-              ` : ''}
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
+                ${truckCapacity === 60 ? 'รถดั้มใหญ่ 60T' : (truckCapacity === 45 ? 'รถดั้มเล็ก 45T' : 'รถสิบล้อ 30T')}
+              </span>
             </div>
           </div>
 
-          <!-- 3. Photo Box (ไม่บังคับถ่ายรูป: ถ่ายสด หรือ อัปโหลดจากโทรศัพท์ได้) -->
+          <!-- 3. Camera Live Capture Only (ไม่อนุญาตให้อัปรูป ต้องถ่ายสดตอนนั้นเท่านั้น พร้อมแสตมป์ในรูป) -->
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                2. แนบรูปถ่ายขณะตักหิน <span class="text-slate-400 font-normal">(ไม่บังคับถ่าย)</span>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>2. ถ่ายรูปสดขณะตักหิน</span>
+                <span class="text-red-400 font-black text-[11px]">*ต้องถ่ายสดตอนนั้น</span>
               </label>
               ${this.scoopPhoto ? `
                 <button onclick="excavatorView.clearScoopPhoto()" class="text-[11px] text-red-400 hover:text-red-300 font-bold flex items-center gap-0.5">
-                  ✕ ลบรูป
+                  ✕ ถ่ายใหม่
                 </button>
               ` : ''}
             </div>
 
-            <!-- Hidden File Input for Phone Gallery Upload -->
-            <input type="file" id="excavator-photo-file-input" accept="image/*" class="hidden" onchange="excavatorView.handlePhotoFileUpload(event)">
-
             ${this.scoopPhoto ? `
-              <div class="relative rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-md">
+              <div class="relative rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-lg">
                 <img src="${this.scoopPhoto}" class="w-full h-44 object-cover">
-                <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-slate-950/80 backdrop-blur-sm p-1.5 rounded-xl border border-slate-700/60 text-xs">
-                  <span class="text-emerald-400 font-bold flex items-center gap-1">
-                    ✓ แนบรูปภาพแล้ว
+                <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-slate-950/85 backdrop-blur-sm p-2 rounded-xl border border-slate-700/60 text-xs">
+                  <span class="text-emerald-400 font-bold flex items-center gap-1.5">
+                    ✓ ถ่ายรูปและแสตมป์พิกัดแล้ว
                   </span>
-                  <div class="flex items-center gap-2">
-                    <button onclick="excavatorView.captureScoopPhoto()" class="text-blue-400 underline font-bold text-[11px]">ถ่ายสดใหม่</button>
-                    <button onclick="document.getElementById('excavator-photo-file-input').click()" class="text-purple-400 underline font-bold text-[11px]">เลือกรูปอื่น</button>
-                  </div>
+                  <button onclick="excavatorView.captureScoopPhoto()" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-[11px] transition">
+                    📸 ถ่ายใหม่
+                  </button>
                 </div>
               </div>
             ` : `
-              <div class="grid grid-cols-2 gap-2.5">
-                <!-- Option 1: Live Camera -->
-                <button type="button" onclick="excavatorView.captureScoopPhoto()" class="p-4 bg-blue-950/40 hover:bg-blue-900/60 border border-blue-500/50 rounded-2xl flex flex-col items-center justify-center gap-1 text-blue-300 active:scale-95 transition">
-                  <i data-lucide="camera" class="w-7 h-7 text-blue-400"></i>
-                  <span class="text-xs font-black">📸 เปิดกล้องถ่ายสด</span>
-                  <span class="text-[10px] text-slate-400">ปั๊มพิกัด GPS บนรูป</span>
-                </button>
-
-                <!-- Option 2: Upload from Phone Storage / Gallery -->
-                <button type="button" onclick="document.getElementById('excavator-photo-file-input').click()" class="p-4 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/50 rounded-2xl flex flex-col items-center justify-center gap-1 text-purple-300 active:scale-95 transition">
-                  <i data-lucide="image-plus" class="w-7 h-7 text-purple-400"></i>
-                  <span class="text-xs font-black">📁 อัปโหลดจากมือถือ</span>
-                  <span class="text-[10px] text-slate-400">เลือกรูปจากคลังภาพ</span>
-                </button>
-              </div>
-              <p class="text-[11px] text-slate-400 text-center pt-0.5">
-                💡 หากไม่สะดวกถ่ายรูป สามารถกดปุ่มบันทึกด้านล่างได้ทันที
-              </p>
+              <button type="button" onclick="excavatorView.captureScoopPhoto()" class="w-full py-6 bg-gradient-to-br from-blue-950/60 to-slate-900 hover:from-blue-900/60 hover:to-slate-800 border-2 border-dashed border-blue-500/70 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-blue-300 active:scale-98 transition shadow-inner">
+                <div class="w-12 h-12 rounded-full bg-blue-600/30 flex items-center justify-center text-blue-400 mb-1">
+                  <i data-lucide="camera" class="w-6 h-6"></i>
+                </div>
+                <span class="text-sm font-black text-white">📸 กดเปิดกล้องถ่ายสดขณะตัก</span>
+                <span class="text-[11px] text-blue-300">ปั๊มชื่อผู้ควบคุม, เบอร์รถ, พิกัดตัน, ค่าตัก ฿${activeRate} และ GPS บนรูป</span>
+                <span class="text-[10px] text-amber-400/90 font-medium">(ระบบไม่อนุญาตให้อัปโหลดรูปภาพจากเครื่อง)</span>
+              </button>
             `}
           </div>
 
-          <!-- Submit Button (ไม่บังคับรูป กดบันทึกได้เสมอ) -->
+          <!-- Submit Button -->
           <button onclick="excavatorView.handleSaveScoopLog()" class="w-full py-4.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-98 text-white text-xl font-black rounded-2xl shadow-xl transition flex items-center justify-center gap-2 mt-2">
             <i data-lucide="check" class="w-7 h-7 text-white"></i>
             <span class="text-white">บันทึกการตักสำเร็จ (+฿${activeRate})</span>
@@ -356,7 +334,7 @@ class ExcavatorView {
                   </span>
                   <div>
                     <p class="font-bold text-xs text-white">ตักให้: ${l.targetTruckPlate}</p>
-                    <p class="text-[10px] text-slate-400">${l.timestamp || l.date} ${l.photoBase64 ? '• 📸 มีรูป' : '• 📄 ไม่แนบรูป'}</p>
+                    <p class="text-[10px] text-slate-400">${l.timestamp || l.date} ${l.photoBase64 ? '• 📸 แสตมป์สด' : ''}</p>
                   </div>
                 </div>
                 <div class="text-right">
@@ -384,25 +362,6 @@ class ExcavatorView {
 
   handleTargetTruckChange(truckCode) {
     this.selectedTargetTruck = truckCode;
-    this.customScoopRate = null;
-    window.app.render();
-  }
-
-  handleCustomRateChange(val) {
-    const num = parseFloat(val);
-    if (!isNaN(num) && num >= 0) {
-      this.customScoopRate = num;
-    }
-    window.app.render();
-  }
-
-  setCustomRate(rate) {
-    this.customScoopRate = rate;
-    window.app.render();
-  }
-
-  resetCustomRate() {
-    this.customScoopRate = null;
     window.app.render();
   }
 
@@ -421,7 +380,6 @@ class ExcavatorView {
 
     const newExc = excavators[num - 1];
     this.selectedShiftExcavator = newExc.code;
-    this.customScoopRate = null;
     localStorage.setItem('quarry_excavator_shift', this.selectedShiftExcavator);
 
     alert(`✅ เปลี่ยนเป็นแม็คโคร ${newExc.code} สำเร็จ!\nรายการตักถัดไปจะบันทึกด้วยเครื่องจักรนี้`);
@@ -458,7 +416,6 @@ class ExcavatorView {
   confirmEndShift() {
     if (confirm("⚠️ คุณต้องการ [ปิดกะประจำวัน] และสรุปยอดการตักทั้งหมดของวันนี้ใช่หรือไม่?\n(หากแค่จะพักชั่วคราว ให้กดปุ่ม 'พัก/ออก' แทน)")) {
       this.selectedShiftExcavator = null;
-      this.customScoopRate = null;
       this.scoopPhoto = null;
       this.scoopGPS = null;
       localStorage.removeItem('quarry_excavator_shift');
@@ -466,18 +423,25 @@ class ExcavatorView {
     }
   }
 
-  // ถ่ายภาพสดจากกล้องพร้อมปั๊มลายน้ำ
+  // ถ่ายภาพสดจากกล้องตอนนั้นเท่านั้น พร้อมปั๊มลายน้ำและพิกัด GPS (ไม่อนุญาตให้อัปรูป)
   async captureScoopPhoto() {
     const user = window.authService.getUser();
     const truckSelect = document.getElementById('target-truck-select');
-    const targetTruck = truckSelect ? truckSelect.value : (this.selectedTargetTruck || 'TRUCK');
+    const targetTruckCode = truckSelect ? truckSelect.value : (this.selectedTargetTruck || 'TRUCK');
+    const trucks = window.quarryStore.getTrucks();
+    const targetTruckObj = trucks.find(t => t.code === targetTruckCode);
+    const capacityTon = targetTruckObj ? Number(targetTruckObj.capacity_ton) || 30 : 30;
+    const rate = this.getEffectiveScoopRate(targetTruckCode);
 
     try {
       const result = await window.cameraEngine.captureWithWatermark({
         stepType: 'excavator',
         vehicleCode: this.selectedShiftExcavator,
         driverName: user.name,
-        jobName: `ตักให้ ${targetTruck}`
+        capacity: capacityTon,
+        targetTruck: targetTruckCode,
+        amount: rate,
+        jobName: `ตักให้ ${targetTruckCode} (${capacityTon} ตัน) | ค่าตัก ฿${rate} (5บ./ตัน)`
       });
 
       this.scoopPhoto = result.photoBase64;
@@ -490,66 +454,19 @@ class ExcavatorView {
     }
   }
 
-  // อัปโหลดรูปภาพจากโทรศัพท์ / คลังภาพ (Mobile File Picker)
-  handlePhotoFileUpload(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    const user = window.authService.getUser();
-    const truckSelect = document.getElementById('target-truck-select');
-    const targetTruck = truckSelect ? truckSelect.value : (this.selectedTargetTruck || 'TRUCK');
-
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const img = new Image();
-      img.onload = () => {
-        // ย่อขนาดให้เหมาะสมกับการบันทึกและการพิมพ์ (สูงสุด 1280px)
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 1280;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // ปั๊มข้อความแสดงการอัปโหลด ทะเบียนรถ และเวลา
-        const timestamp = new Date().toLocaleString('th-TH');
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
-        ctx.fillRect(10, height - 52, width - 20, 42);
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.fillText(`🚜 ${this.selectedShiftExcavator} → 🚚 ${targetTruck}`, 22, height - 30);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '13px sans-serif';
-        ctx.fillText(`${timestamp} | อัปโหลดจากโทรศัพท์ (${user.name})`, 22, height - 14);
-
-        this.scoopPhoto = canvas.toDataURL('image/jpeg', 0.82);
-        this.scoopGPS = { lat: 17.48812, lng: 101.72345 };
-        window.app.render();
-      };
-      img.src = uploadEvent.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
   clearScoopPhoto() {
     this.scoopPhoto = null;
     this.scoopGPS = null;
     window.app.render();
   }
 
-  // บันทึกรายการตักหิน (ไม่บังคับรูปถ่าย)
+  // บันทึกรายการตักหิน (บังคับถ่ายรูปสดและแสตมป์ข้อมูลเท่านั้น)
   handleSaveScoopLog() {
+    if (!this.scoopPhoto) {
+      alert("⚠️ ตามระเบียบโรงโม่ ต้องถ่ายรูปสดขณะตักหินตอนนั้นเท่านั้น และมีรายละเอียดแสตมป์ในรูปยืนยันก่อนกดบันทึกครับ");
+      return;
+    }
+
     const user = window.authService.getUser();
     const truckSelect = document.getElementById('target-truck-select');
     const targetTruck = truckSelect ? truckSelect.value : (this.selectedTargetTruck || 'TRUCK');
@@ -564,19 +481,18 @@ class ExcavatorView {
       excavatorCode: this.selectedShiftExcavator,
       targetTruckPlate: targetTruck,
       amount: rate,
-      photoBase64: this.scoopPhoto || null,
-      photoUrl: this.scoopPhoto || null,
-      lat: this.scoopGPS ? this.scoopGPS.lat : 17.48812,
-      lng: this.scoopGPS ? this.scoopGPS.lng : 101.72345
+      photoBase64: this.scoopPhoto,
+      photoUrl: this.scoopPhoto,
+      lat: this.scoopGPS && this.scoopGPS.lat ? this.scoopGPS.lat : 17.48812,
+      lng: this.scoopGPS && this.scoopGPS.lng ? this.scoopGPS.lng : 101.72345
     };
 
     window.quarryStore.saveExcavatorLog(logRecord);
 
-    const hadPhoto = !!this.scoopPhoto;
     this.scoopPhoto = null;
     this.scoopGPS = null;
 
-    alert(`🎉 บันทึกการตักให้รถ ${targetTruck} สำเร็จ!\n💰 ค่าตักที่ได้รับ: +${rate} บาท${hadPhoto ? ' (แนบรูปเรียบร้อย)' : ' (บันทึกแบบไม่แนบรูป)'}`);
+    alert(`🎉 บันทึกการตักให้รถ ${targetTruck} สำเร็จ!\n💰 ค่าตักที่ได้รับ: +${rate} บาท (5 บ./ตัน)`);
     window.app.render();
   }
 }

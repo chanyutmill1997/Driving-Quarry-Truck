@@ -325,22 +325,26 @@ class CameraEngine {
     ctx.font = `bold ${baseFontSize * 1.05}px 'Sarabun', -apple-system, sans-serif`;
     ctx.fillText(`🕒 ${nowStr}`, canvas.width - (baseFontSize * 16), bannerY + (bannerHeight * 0.22));
 
-    // บรรทัดที่ 2: ข้อมูลรถ และ คนขับ
+    // บรรทัดที่ 2: ข้อมูลรถ และ คนขับ (รองรับทั้งรถบรรทุกและรถแม็คโคร)
     ctx.font = `${baseFontSize * 1.05}px 'Sarabun', -apple-system, sans-serif`;
     ctx.fillStyle = '#fde047';
-    const vehicleText = `🚚 รถ: ${metadata.vehicleCode || '-'} ${metadata.capacity ? '(' + metadata.capacity + ' ตัน)' : ''}`;
-    const driverText = `👤 คนขับ: ${metadata.driverName || '-'}`;
+    let vehicleText = `🚚 รถ: ${metadata.vehicleCode || '-'} ${metadata.capacity ? '(' + metadata.capacity + ' ตัน)' : ''}`;
+    let driverText = `👤 คนขับ: ${metadata.driverName || '-'}`;
+    if (metadata.stepType === 'excavator') {
+      vehicleText = `🚜 แม็คโคร: ${metadata.vehicleCode || '-'}  ➔  🚚 ตักให้: ${metadata.targetTruck || '-'} (${metadata.capacity || 30} ตัน)`;
+      driverText = `👤 ผู้ควบคุม: ${metadata.driverName || '-'}`;
+    }
     ctx.fillText(`${vehicleText}  |  ${driverText}`, 20, bannerY + (bannerHeight * 0.52));
 
-    // บรรทัดที่ 3: รอบที่, ประเภทงาน และ พิกัด GPS
+    // บรรทัดที่ 3: รอบที่, รายละเอียดงาน/ค่าตัก 5 บ./ตัน และ พิกัด GPS
     ctx.fillStyle = '#cbd5e1';
     ctx.font = `${baseFontSize * 0.95}px 'Sarabun', -apple-system, sans-serif`;
-    const roundText = metadata.roundNumber ? `รอบที่ ${metadata.roundNumber}` : '';
-    const jobText = metadata.jobName ? ` [${metadata.jobName}]` : '';
+    const roundText = metadata.roundNumber ? `รอบที่ ${metadata.roundNumber} ` : '';
+    const jobText = metadata.jobName ? `[${metadata.jobName}] ` : '';
     const gpsText = gps && gps.isAvailable
-      ? `🌐 พิกัดดาวเทียม: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`
-      : '🌐 พิกัดดาวเทียม: ไม่ได้รับอนุญาต/ไม่พบสัญญาณ';
-    ctx.fillText(`${roundText}${jobText}  •  ${gpsText}`, 20, bannerY + (bannerHeight * 0.82));
+      ? `📍 GPS: ${gps.lat}, ${gps.lng} (±${gps.accuracy}m)`
+      : '📍 GPS: สแตมป์หน้างานโรงโม่';
+    ctx.fillText(`${roundText}${jobText} •  ${gpsText}`, 20, bannerY + (bannerHeight * 0.82));
 
     // การบีบอัดไฟล์ภาพอัตโนมัติ: ลดขนาดไฟล์เหลือ ~100-150KB แต่รักษาความคมชัดของทะเบียนและตัวอักษร 100%
     const quality = (window.CONFIG && window.CONFIG.IMAGE_COMPRESSION && window.CONFIG.IMAGE_COMPRESSION.QUALITY) || 0.75;

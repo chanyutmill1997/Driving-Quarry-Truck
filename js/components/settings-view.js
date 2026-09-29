@@ -183,9 +183,9 @@ class SettingsView {
                 <th class="p-3">เบอร์รถ / รุ่นเครื่องจักร</th>
                 <th class="p-3">ผู้ควบคุมประจำ</th>
                 <th class="p-3 text-center">สังกัด</th>
-                <th class="p-3 text-center text-blue-300">ตัก 30 ตัน</th>
-                <th class="p-3 text-center text-blue-300">ตัก 45 ตัน</th>
-                <th class="p-3 text-center text-blue-300">ตัก 60 ตัน</th>
+                <th class="p-3 text-center text-blue-300">ตัก 30 ตัน (฿150)</th>
+                <th class="p-3 text-center text-blue-300">ตัก 45 ตัน (฿225)</th>
+                <th class="p-3 text-center text-blue-300">ตัก 60 ตัน (฿300)</th>
                 <th class="p-3 text-center">สถานะ</th>
                 <th class="p-3 text-right">จัดการ</th>
               </tr>
@@ -200,9 +200,9 @@ class SettingsView {
                       ${e.is_contractor ? 'ทีม ผรม.' : 'ประจำโรงโม่'}
                     </span>
                   </td>
-                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_30_ton !== undefined && e.rate_30_ton !== null ? e.rate_30_ton : (e.rate_per_scoop || 5)}</td>
-                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_45_ton !== undefined && e.rate_45_ton !== null ? e.rate_45_ton : 8}</td>
-                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_60_ton !== undefined && e.rate_60_ton !== null ? e.rate_60_ton : 10}</td>
+                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_30_ton || 150}</td>
+                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_45_ton || 225}</td>
+                  <td class="p-3 text-center font-bold text-emerald-400 font-mono">฿${e.rate_60_ton || 300}</td>
                   <td class="p-3 text-center">
                     <span class="status-badge px-2 py-0.5 rounded text-[10px] font-bold ${e.status === 'repair' ? 'bg-red-950 text-red-300 border border-red-800' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'}">
                       ${e.status === 'repair' ? 'ซ่อม' : 'พร้อมใช้'}
@@ -546,9 +546,9 @@ class SettingsView {
     const exc = excs.find(e => e.id === excId);
     if (!exc) return;
 
-    const cur30 = exc.rate_30_ton !== undefined && exc.rate_30_ton !== null ? exc.rate_30_ton : (exc.rate_per_scoop || 5);
-    const cur45 = exc.rate_45_ton !== undefined && exc.rate_45_ton !== null ? exc.rate_45_ton : 8;
-    const cur60 = exc.rate_60_ton !== undefined && exc.rate_60_ton !== null ? exc.rate_60_ton : 10;
+    const cur30 = exc.rate_30_ton || 150;
+    const cur45 = exc.rate_45_ton || 225;
+    const cur60 = exc.rate_60_ton || 300;
 
     const r30Str = prompt(`🚜 กำหนดค่าตักสำหรับเครื่องจักร: ${exc.code}\n\n1. ค่าตักรถบรรทุก 30 ตัน (บาท):`, cur30);
     if (r30Str === null) return;
