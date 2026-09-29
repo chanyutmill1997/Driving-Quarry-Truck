@@ -25,6 +25,7 @@ const CONFIG = {
     CURRENT_WORK_MODE: "quarry_current_work_mode",
     TRIPS: "quarry_trips_data",
     EXCAVATOR_LOGS: "quarry_excavator_logs",
+    INCIDENT_AUDITS: "quarry_incident_audits",
     PENDING_SYNC: "quarry_pending_sync_queue",
     SETTINGS: "quarry_system_settings",
     SUPABASE_CUSTOM_KEY: "quarry_supabase_anon_key"
