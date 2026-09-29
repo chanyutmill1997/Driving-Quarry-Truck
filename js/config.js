@@ -10,7 +10,7 @@ const CONFIG = {
   VERSION: "2.3.0",
   // Supabase PostgreSQL & Storage Settings
   SUPABASE_URL: "https://gkkndbjgkzninlddfxyj.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdra25kYmpna3puaW5sZGRmeHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY3MjM4NTgsImV4cCI6MjA0MjI5OTg1OH0.kS9b24jYVb4XpWwO8Vv8nZpWlqZ3_placeholder",
+  SUPABASE_ANON_KEY: "sb_publishable_WTSz40n7tX2IzaJxZAN4TQ_IozqzRT0",
   STORAGE_BUCKET: "quarry-photos",
   IMAGE_COMPRESSION: {
     MAX_WIDTH: 1280,
@@ -36,4 +36,3 @@ const CONFIG = {
 };
 
 window.CONFIG = CONFIG;
-

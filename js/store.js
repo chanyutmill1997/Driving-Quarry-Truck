@@ -134,6 +134,13 @@ class QuarryStore {
         this.supabase.from('drivers').select('*').order('name')
       ]);
 
+      const cloudError = [trucksRes, excavatorsRes, ratesRes, driversRes]
+        .map(result => result.error)
+        .find(Boolean);
+      if (cloudError) {
+        throw cloudError;
+      }
+
       let hasUpdated = false;
       const cached = this.masterData || {};
 
@@ -195,7 +202,9 @@ class QuarryStore {
         .order('recorded_at', { ascending: false })
         .limit(200);
 
-      if (!tripErr && cloudTrips && cloudTrips.length > 0) {
+      if (tripErr) throw tripErr;
+
+      if (cloudTrips && cloudTrips.length > 0) {
         // ผสานเข้ากับ local trips โดยคงรายการที่ไม่ซ้ำ
         const localMap = new Map(this.trips.map(t => [t.id, t]));
         cloudTrips.forEach(ct => {
@@ -237,7 +246,9 @@ class QuarryStore {
         .order('recorded_at', { ascending: false })
         .limit(200);
 
-      if (!logErr && cloudLogs && cloudLogs.length > 0) {
+      if (logErr) throw logErr;
+
+      if (cloudLogs && cloudLogs.length > 0) {
         const logMap = new Map(this.excavatorLogs.map(l => [l.id, l]));
         cloudLogs.forEach(cl => {
           logMap.set(cl.id, {
