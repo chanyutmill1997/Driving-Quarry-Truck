@@ -157,16 +157,16 @@ class QuarryApp {
             <!-- Nav Links -->
             <nav class="app-nav hidden md:flex items-center gap-1 bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
               <button onclick="window.app.navigate('dashboard')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'dashboard' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                📊 แดชบอร์ดสด
+                <i data-lucide="layout-dashboard" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>แดชบอร์ดสด
               </button>
               <button onclick="window.app.navigate('ai-copilot')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'ai-copilot' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                🤖 AI ผู้ช่วย
+                <i data-lucide="sparkles" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>AI ผู้ช่วย
               </button>
               <button onclick="window.app.navigate('reports')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'reports' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                📑 รายงาน & Excel
+                <i data-lucide="file-chart-column" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>รายงาน & Excel
               </button>
               <button onclick="window.app.navigate('settings')" class="px-4 py-2 rounded-xl text-xs font-bold transition ${this.currentView === 'settings' ? 'bg-blue-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}">
-                ⚙️ ตั้งค่าข้อมูลหลัก
+                <i data-lucide="settings-2" class="w-4 h-4 inline-block mr-1.5 align-text-bottom"></i>ตั้งค่าข้อมูลหลัก
               </button>
             </nav>
 
@@ -203,10 +203,10 @@ class QuarryApp {
         </main>
 
         <nav class="mobile-nav md:hidden" aria-label="เมนูหลักบนโทรศัพท์">
-          <button onclick="window.app.navigate('dashboard')" class="${this.currentView === 'dashboard' ? 'active' : ''}"><span>📊</span><small>แดชบอร์ด</small></button>
-          <button onclick="window.app.navigate('ai-copilot')" class="${this.currentView === 'ai-copilot' ? 'active' : ''}"><span>🤖</span><small>AI ผู้ช่วย</small></button>
-          <button onclick="window.app.navigate('reports')" class="${this.currentView === 'reports' ? 'active' : ''}"><span>📄</span><small>รายงาน</small></button>
-          <button onclick="window.app.navigate('settings')" class="${this.currentView === 'settings' ? 'active' : ''}"><span>⚙️</span><small>ตั้งค่า</small></button>
+          <button onclick="window.app.navigate('dashboard')" class="${this.currentView === 'dashboard' ? 'active' : ''}"><i data-lucide="layout-dashboard"></i><small>แดชบอร์ด</small></button>
+          <button onclick="window.app.navigate('ai-copilot')" class="${this.currentView === 'ai-copilot' ? 'active' : ''}"><i data-lucide="sparkles"></i><small>AI ผู้ช่วย</small></button>
+          <button onclick="window.app.navigate('reports')" class="${this.currentView === 'reports' ? 'active' : ''}"><i data-lucide="file-chart-column"></i><small>รายงาน</small></button>
+          <button onclick="window.app.navigate('settings')" class="${this.currentView === 'settings' ? 'active' : ''}"><i data-lucide="settings-2"></i><small>ตั้งค่า</small></button>
         </nav>
 
         <!-- Footer -->

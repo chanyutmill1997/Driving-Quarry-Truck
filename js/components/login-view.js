@@ -62,9 +62,9 @@ class LoginView {
             <div>
               <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">1. เลือกประเภทผู้ใช้งาน</p>
               <div class="grid grid-cols-3 gap-2" id="role-buttons">
-                ${this.roleButton('driver', '🚚', 'พนักงานขับรถ')}
-                ${this.roleButton('supervisor', '📋', 'หัวหน้างาน')}
-                ${this.roleButton('admin', '💼', 'ผู้บริหาร')}
+                ${this.roleButton('driver', 'truck', 'พนักงานขับรถ')}
+                ${this.roleButton('supervisor', 'clipboard-list', 'หัวหน้างาน')}
+                ${this.roleButton('admin', 'briefcase-business', 'ผู้บริหาร')}
               </div>
             </div>
 
@@ -125,7 +125,7 @@ class LoginView {
 
   roleButton(role, icon, label) {
     const active = this.selectedRole === role;
-    return `<button data-role="${role}" onclick="loginView.selectRole('${role}')" class="role-button role-card min-h-20 p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center ${active ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-md font-black' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'}"><span class="block text-2xl mb-1">${icon}</span>${label}</button>`;
+    return `<button data-role="${role}" onclick="loginView.selectRole('${role}')" class="role-button role-card min-h-20 p-2.5 rounded-2xl border text-xs font-bold transition flex flex-col items-center justify-center ${active ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-md font-black' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'}"><i data-lucide="${icon}" class="w-6 h-6 mb-1.5"></i>${label}</button>`;
   }
 
   selectRole(role) {

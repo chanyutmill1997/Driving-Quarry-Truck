@@ -580,6 +580,7 @@ html.light .mobile-nav { background: rgba(255,255,255,.96); }
   font-weight: 700;
 }
 .mobile-nav button span { font-size: 17px; }
+.mobile-nav button svg { width: 18px; height: 18px; }
 .mobile-nav button small { font-size: 10px; }
 .mobile-nav button.active { color: #fff; background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 8px 18px rgba(37,99,235,.24); }
 
@@ -642,4 +643,285 @@ html.light .mobile-nav { background: rgba(255,255,255,.96); }
 @media (min-width: 1280px) {
   .app-main { max-width: 1420px !important; }
   .app-header > div { max-width: 1420px !important; }
+}
+
+/* ==========================================================================
+   Light Mode 2.0 — Industrial Executive
+   A purpose-built daylight theme, not an inverted dark theme.
+   ========================================================================== */
+html.light {
+  --light-canvas: #f2f5f9;
+  --light-canvas-deep: #e9eef5;
+  --light-surface: #ffffff;
+  --light-surface-soft: #f8fafc;
+  --light-navy: #0b1f3a;
+  --light-navy-soft: #132b4c;
+  --light-text: #172033;
+  --light-text-muted: #5b6b7e;
+  --light-border: #d9e1ea;
+  --light-border-strong: #c7d1dd;
+  --light-blue: #2563eb;
+  --light-blue-dark: #1d4ed8;
+  --light-blue-soft: #eaf1ff;
+  --light-shadow: 0 8px 24px rgba(15, 31, 54, 0.065);
+}
+
+html.light body,
+html.light .app-shell,
+html.light .work-mode-page {
+  color: var(--light-text) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.58), transparent 320px),
+    var(--light-canvas) !important;
+}
+
+/* Professional navy application header */
+html.light .app-header {
+  background: rgba(11, 31, 58, .97) !important;
+  border-bottom-color: rgba(255,255,255,.09) !important;
+  box-shadow: 0 8px 24px rgba(11,31,58,.18) !important;
+}
+html.light .app-header h1,
+html.light .app-header .text-white,
+html.light .app-header .text-slate-100,
+html.light .app-header .text-slate-200,
+html.light .app-header .text-slate-300 { color: #f8fafc !important; }
+html.light .app-header .text-blue-400,
+html.light .app-header .text-blue-300 { color: #93c5fd !important; }
+html.light .app-header .text-emerald-300,
+html.light .app-header .text-emerald-400 { color: #6ee7b7 !important; }
+html.light .app-header button.bg-slate-800 {
+  background: rgba(255,255,255,.075) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  color: #e2e8f0 !important;
+  box-shadow: none !important;
+}
+html.light .app-header button.bg-slate-800:hover { background: rgba(255,255,255,.14) !important; }
+html.light .app-header .app-nav {
+  background: rgba(2, 12, 27, .44) !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+html.light .app-header .app-nav button:not(.bg-blue-500) { color: #b8c5d6 !important; }
+html.light .app-header .app-nav button:not(.bg-blue-500):hover { color: #fff !important; background: rgba(255,255,255,.07) !important; }
+html.light .app-header .app-nav button.bg-blue-500 {
+  background: #f8fafc !important;
+  color: var(--light-navy) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12) !important;
+}
+html.light .app-header .app-nav button.bg-blue-500 * { color: var(--light-navy) !important; }
+
+/* Main page hierarchy */
+html.light .app-main { color: var(--light-text) !important; }
+html.light .app-main h1,
+html.light .app-main h2,
+html.light .app-main h3,
+html.light .app-main h4,
+html.light .app-main h5,
+html.light .app-main h6 { color: var(--light-text) !important; }
+html.light .app-main .text-white,
+html.light .app-main .text-slate-100,
+html.light .app-main .text-slate-200,
+html.light .app-main .text-slate-300 { color: #27364a !important; }
+html.light .app-main .text-slate-400,
+html.light .app-main .text-slate-500 { color: var(--light-text-muted) !important; }
+
+/* Surfaces: clear layers without excessive shadow */
+html.light .app-main .bg-slate-900,
+html.light .app-main .bg-slate-800,
+html.light .app-main .glass-card,
+html.light .app-main [class*="bg-gradient-to-br"] {
+  background: var(--light-surface) !important;
+  color: var(--light-text) !important;
+  border-color: var(--light-border) !important;
+  box-shadow: var(--light-shadow) !important;
+}
+html.light .app-main .bg-slate-950,
+html.light .app-main .bg-slate-950\/80,
+html.light .app-main .bg-slate-950\/60,
+html.light .app-main .bg-slate-950\/40 {
+  background: var(--light-surface-soft) !important;
+  color: var(--light-text) !important;
+  border-color: var(--light-border) !important;
+}
+html.light .app-main .border-slate-800,
+html.light .app-main .border-slate-700,
+html.light .app-main .border-slate-600 { border-color: var(--light-border) !important; }
+
+/* KPI values and meaningful semantic colour */
+html.light .app-main .text-blue-300,
+html.light .app-main .text-blue-400 { color: #1d4ed8 !important; }
+html.light .app-main .text-emerald-300,
+html.light .app-main .text-emerald-400 { color: #047857 !important; }
+html.light .app-main .text-amber-300,
+html.light .app-main .text-amber-400,
+html.light .app-main .text-yellow-400 { color: #9a5b00 !important; }
+html.light .app-main .text-red-300,
+html.light .app-main .text-red-400 { color: #b42335 !important; }
+html.light .app-main .text-purple-300,
+html.light .app-main .text-purple-400 { color: #6d3cb5 !important; }
+
+/* Buttons */
+html.light .app-main button.bg-blue-500,
+html.light .app-main button.bg-blue-600,
+html.light .app-main .primary-action {
+  background: linear-gradient(135deg, var(--light-blue), var(--light-blue-dark)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 16px rgba(37,99,235,.22) !important;
+}
+html.light .app-main button.bg-blue-500 *,
+html.light .app-main button.bg-blue-600 *,
+html.light .app-main .primary-action * { color: #fff !important; }
+html.light .app-main button.bg-slate-800,
+html.light .app-main button.bg-slate-700 {
+  background: #fff !important;
+  color: #34445a !important;
+  border: 1px solid var(--light-border-strong) !important;
+  box-shadow: 0 1px 2px rgba(15,31,54,.04) !important;
+}
+html.light .app-main button.bg-slate-800:hover,
+html.light .app-main button.bg-slate-700:hover { background: #f3f6fa !important; }
+
+/* Form controls */
+html.light .app-main input,
+html.light .app-main select,
+html.light .app-main textarea,
+html.light #global-modal-container input,
+html.light #global-modal-container select,
+html.light #global-modal-container textarea {
+  background: #fff !important;
+  color: var(--light-text) !important;
+  border-color: var(--light-border-strong) !important;
+  box-shadow: inset 0 1px 2px rgba(15,31,54,.035) !important;
+}
+html.light .app-main input::placeholder,
+html.light .app-main textarea::placeholder { color: #7a899b !important; }
+
+/* Tables */
+html.light .app-main table {
+  background: #fff !important;
+  border: 1px solid var(--light-border) !important;
+}
+html.light .app-main table th {
+  background: #edf2f7 !important;
+  color: #34445a !important;
+  border-bottom: 1px solid var(--light-border-strong) !important;
+  font-weight: 700 !important;
+}
+html.light .app-main table td {
+  color: var(--light-text) !important;
+  border-color: #e7ecf2 !important;
+}
+html.light .app-main table tr:hover td { background: #f7f9fc !important; }
+
+/* Semantic status panels */
+html.light .app-main .bg-blue-500\/20,
+html.light .app-main .bg-blue-900\/60,
+html.light .app-main .bg-blue-950\/80,
+html.light .app-main .bg-blue-950\/40 {
+  background: #eaf1ff !important;
+  border-color: #b9cffb !important;
+  color: #1e429f !important;
+  box-shadow: none !important;
+}
+html.light .app-main .bg-emerald-500\/20,
+html.light .app-main .bg-emerald-900\/60,
+html.light .app-main .bg-emerald-900\/90,
+html.light .app-main .bg-emerald-950\/80,
+html.light .app-main .bg-emerald-950\/40 {
+  background: #e8f6ef !important;
+  border-color: #addbc3 !important;
+  color: #075f42 !important;
+  box-shadow: none !important;
+}
+html.light .app-main .bg-amber-500\/20,
+html.light .app-main .bg-amber-900\/60,
+html.light .app-main .bg-amber-950\/80 {
+  background: #fff5dc !important;
+  border-color: #ecd08b !important;
+  color: #7a4700 !important;
+  box-shadow: none !important;
+}
+html.light .app-main .bg-red-500\/20,
+html.light .app-main .bg-red-900\/60,
+html.light .app-main .bg-red-950\/60,
+html.light .app-main .bg-red-950\/80 {
+  background: #fff0f1 !important;
+  border-color: #efb9bf !important;
+  color: #8f2632 !important;
+  box-shadow: none !important;
+}
+
+/* Login: strong brand area, calm white form */
+html.light .login-page {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(37,99,235,.10), transparent 28rem),
+    linear-gradient(145deg, #f5f8fc 0%, #eaf0f7 100%) !important;
+}
+html.light .login-shell {
+  background: #fff !important;
+  border-color: var(--light-border-strong) !important;
+  box-shadow: 0 28px 70px rgba(11,31,58,.14) !important;
+}
+html.light .login-hero { background: var(--light-navy) !important; border-color: rgba(255,255,255,.10) !important; }
+html.light .login-hero img { opacity: .68 !important; filter: saturate(.72) contrast(1.12); }
+html.light .login-hero .hero-branding,
+html.light .login-hero .hero-branding * { color: #fff !important; }
+html.light .login-hero .hero-branding .text-blue-300 { color: #bfdbfe !important; }
+html.light .login-hero .bg-emerald-900\/90 {
+  background: rgba(6, 78, 59, .90) !important;
+  border-color: rgba(110, 231, 183, .40) !important;
+}
+html.light .login-hero button {
+  background: rgba(11,31,58,.88) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.22) !important;
+}
+html.light .login-panel { color: var(--light-text) !important; }
+html.light .login-panel h2 { color: var(--light-text) !important; }
+html.light .login-panel .text-slate-400,
+html.light .login-panel .text-slate-500 { color: var(--light-text-muted) !important; }
+html.light .login-panel .role-card {
+  background: #fff !important;
+  color: #34445a !important;
+  border-color: var(--light-border-strong) !important;
+  box-shadow: 0 2px 6px rgba(15,31,54,.04) !important;
+}
+html.light .login-panel .role-card.bg-blue-500 {
+  background: linear-gradient(145deg, #3478ed, #2458c6) !important;
+  color: #fff !important;
+  border-color: #2458c6 !important;
+  box-shadow: 0 10px 22px rgba(37,99,235,.24) !important;
+}
+html.light .login-panel .role-card.bg-blue-500 * { color: #fff !important; }
+html.light .login-panel .field-control {
+  background: #fff !important;
+  color: var(--light-text) !important;
+  border-color: var(--light-border-strong) !important;
+}
+html.light .notice-card,
+html.light .login-footer { background: #f7f9fc !important; border-color: var(--light-border) !important; }
+
+/* Modal surfaces and mobile navigation */
+html.light #global-modal-container > .fixed > div,
+html.light .fixed.inset-0 > .bg-slate-900 {
+  background: #fff !important;
+  color: var(--light-text) !important;
+  border-color: var(--light-border) !important;
+}
+html.light .mobile-nav {
+  background: rgba(255,255,255,.97) !important;
+  border-top-color: var(--light-border) !important;
+  box-shadow: 0 -8px 24px rgba(15,31,54,.08);
+}
+html.light .mobile-nav button { color: #5d6e82 !important; }
+html.light .mobile-nav button.active {
+  color: #fff !important;
+  background: var(--light-navy) !important;
+  box-shadow: 0 6px 14px rgba(11,31,58,.18) !important;
+}
+html.light .app-footer {
+  background: #e9eef5 !important;
+  color: #64748b !important;
+  border-color: var(--light-border) !important;
 }
