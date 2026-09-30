@@ -101,22 +101,28 @@ class QuarryStore {
       }
     }
 
-    // 2. โหลดรายการ Trips และ Excavator Logs ในเครื่อง
-    this.trips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]').map(trip => {
-      return {
-        ...trip,
-        loadPhotoUrl: trip.loadPhotoUrl || trip.loadPhotoBase64 || trip.loadPhoto || null,
-        dumpPhotoUrl: trip.dumpPhotoUrl || trip.dumpPhotoBase64 || trip.dumpPhoto || null,
-        amount: trip.amount || this.calculateTruckRate(trip.jobTypeId, Number(trip.capacityTon) || 0)
-      };
-    });
+    // 2. โหลดรายการ Trips และ Excavator Logs ในเครื่อง (กรองข้อมูลจำลอง/Mock ออกทั้งหมด ให้เหลือเฉพาะข้อมูลจริง)
+    const rawTrips = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.TRIPS) || '[]');
+    this.trips = rawTrips
+      .filter(trip => trip && !trip.id?.startsWith('TRIP_2026') && !trip.loadPhotoUrl?.includes('<svg') && !trip.loadPhotoUrl?.startsWith('data:image/svg+xml'))
+      .map(trip => {
+        return {
+          ...trip,
+          loadPhotoUrl: trip.loadPhotoUrl || trip.loadPhotoBase64 || trip.loadPhoto || null,
+          dumpPhotoUrl: trip.dumpPhotoUrl || trip.dumpPhotoBase64 || trip.dumpPhoto || null,
+          amount: trip.amount || this.calculateTruckRate(trip.jobTypeId, Number(trip.capacityTon) || 0)
+        };
+      });
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips.slice(0, 200)));
+    } catch (e) {}
 
     // ล้างข้อมูลธุรกรรมเก่าครั้งแรกเมื่อเข้าเวอร์ชันใหม่ เพื่อความสะอาดพร้อมทดสอบจริง (Master Data ยังอยู่ครบ 100%)
-    const TX_RESET_FLAG = 'quarry_tx_v290_clean_reset';
+    const TX_RESET_FLAG = 'quarry_tx_v291_clean_real_only';
     if (!localStorage.getItem(TX_RESET_FLAG)) {
       this.clearTransactionalData(true);
       localStorage.setItem(TX_RESET_FLAG, 'true');
-      console.log('🧹 [v2.9.0] Transactional data reset cleanly for final pre-handover test.');
+      console.log('🧹 [v2.9.1] Cleaned all legacy mock data. Single source of truth is Supabase Cloud.');
     }
 
     this.excavatorLogs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS) || '[]');
@@ -255,10 +261,10 @@ class QuarryStore {
       if (tripErr) throw tripErr;
 
       if (cloudTrips && cloudTrips.length > 0) {
-        // ผสานเข้ากับ local trips โดยคงรายการที่ไม่ซ้ำ
-        const localMap = new Map(this.trips.map(t => [t.id, t]));
+        // ใช้ข้อมูลจาก Cloud เป็นแกนหลัก (Single Source of Truth) เพื่อความถูกต้อง 100%
+        const finalMap = new Map();
         cloudTrips.forEach(ct => {
-          localMap.set(ct.id, {
+          finalMap.set(ct.id, {
             id: ct.id,
             date: ct.trip_date,
             timestamp: ct.timestamp_text || new Date(ct.recorded_at).toLocaleTimeString('th-TH'),
@@ -281,7 +287,14 @@ class QuarryStore {
           });
         });
 
-        this.trips = Array.from(localMap.values()).sort((a, b) => (b.date + ' ' + b.timestamp).localeCompare(a.date + ' ' + a.timestamp));
+        // นำรายการจริงในเครื่องที่เพิ่งบันทึก (และยังไม่อยู่บน Cloud) มารวม โดยไม่เอา mock trips
+        this.trips.forEach(lt => {
+          if (!finalMap.has(lt.id) && !lt.id?.startsWith('TRIP_2026') && !lt.loadPhotoUrl?.includes('<svg')) {
+            finalMap.set(lt.id, lt);
+          }
+        });
+
+        this.trips = Array.from(finalMap.values()).sort((a, b) => (b.date + ' ' + b.timestamp).localeCompare(a.date + ' ' + a.timestamp));
         try {
           localStorage.setItem(CONFIG.STORAGE_KEYS.TRIPS, JSON.stringify(this.trips.slice(0, 200)));
         } catch (e) {
@@ -299,9 +312,9 @@ class QuarryStore {
       if (logErr) throw logErr;
 
       if (cloudLogs && cloudLogs.length > 0) {
-        const logMap = new Map(this.excavatorLogs.map(l => [l.id, l]));
+        const finalLogMap = new Map();
         cloudLogs.forEach(cl => {
-          logMap.set(cl.id, {
+          finalLogMap.set(cl.id, {
             id: cl.id,
             date: cl.log_date,
             timestamp: cl.timestamp_text || new Date(cl.recorded_at).toLocaleTimeString('th-TH'),
@@ -316,7 +329,15 @@ class QuarryStore {
             status: cl.status || 'completed'
           });
         });
-        this.excavatorLogs = Array.from(logMap.values()).sort((a, b) => (b.date + ' ' + b.timestamp).localeCompare(a.date + ' ' + a.timestamp));
+
+        // นำรายการตักจริงในเครื่องที่รอ Sync มารวมด้วย
+        this.excavatorLogs.forEach(ll => {
+          if (!finalLogMap.has(ll.id) && !ll.id?.startsWith('EXC_MOCK') && !ll.photoUrl?.includes('<svg')) {
+            finalLogMap.set(ll.id, ll);
+          }
+        });
+
+        this.excavatorLogs = Array.from(finalLogMap.values()).sort((a, b) => (b.date + ' ' + b.timestamp).localeCompare(a.date + ' ' + a.timestamp));
         try {
           localStorage.setItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS, JSON.stringify(this.excavatorLogs.slice(0, 200)));
         } catch (e) {
@@ -591,7 +612,8 @@ class QuarryStore {
           timestamp: dumpTimestampText,
           driverId: truck.id,
           driverName: truck.driver_name,
-          driverPhone: truck.phone,
+          driverPhone: truck.phone || truck.driver_phone || '-',
+          isDemo: true,
           truckPlate: truck.code,
           capacityTon: capacityTon,
           roundNumber: r,

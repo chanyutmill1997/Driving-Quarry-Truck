@@ -7,8 +7,9 @@
 class ReportsView {
   constructor() {
     this.viewMode = 'disbursement'; // 'disbursement', 'overview', 'individual', 'reconciliation', 'anomalies'
-    this.filterDateFrom = '';
-    this.filterDateTo = '';
+    const todayStr = new Date().toISOString().split('T')[0];
+    this.filterDateFrom = todayStr;
+    this.filterDateTo = todayStr;
     this.filterVehicle = '';
     this.filterDriver = '';
     this.filterJobType = '';
@@ -788,11 +789,15 @@ class ReportsView {
   // พิมพ์ใบปะหน้าเบิกจ่ายพร้อมชุดหลักฐานภาพถ่ายทุกคัน ทุกเที่ยว (A4 Print-Ready Voucher)
   // -------------------------------------------------------------
   printDisbursementVouchers(filterTruck = null) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dateFrom = this.filterDateFrom || todayStr;
+    const dateTo = this.filterDateTo || todayStr;
+
     const allTrips = window.quarryStore.getTrips();
     let trips = allTrips.filter(t => {
       if (filterTruck && t.truckPlate !== filterTruck) return false;
-      if (this.filterDateFrom && t.date < this.filterDateFrom) return false;
-      if (this.filterDateTo && t.date > this.filterDateTo) return false;
+      if (dateFrom && t.date < dateFrom) return false;
+      if (dateTo && t.date > dateTo) return false;
       if (!filterTruck && this.filterVehicle && t.truckPlate !== this.filterVehicle) return false;
       if (this.filterDriver && t.driverName !== this.filterDriver) return false;
       if (this.filterJobType && t.jobTypeId !== this.filterJobType) return false;
@@ -800,7 +805,7 @@ class ReportsView {
     });
 
     if (trips.length === 0) {
-      alert("ไม่พบรายการเที่ยววิ่งสำหรับพิมพ์เอกสารเบิกจ่าย");
+      alert(`ไม่พบรายการเที่ยววิ่งสำหรับพิมพ์เอกสารเบิกจ่าย (ประจำวันที่: ${dateFrom === dateTo ? dateFrom : `${dateFrom} ถึง ${dateTo}`})`);
       return;
     }
 
@@ -813,20 +818,27 @@ class ReportsView {
     const plantName = CONFIG.PLANT_NAME || 'โรงโม่หิน ป.ศรีวิไลลักษณ์';
     const compName = CONFIG.COMPANY_NAME || 'บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด';
     const totalAmount = trips.reduce((sum, t) => sum + (t.amount || 0), 0);
-    const dateRangeStr = (this.filterDateFrom || this.filterDateTo)
-      ? `ช่วงวันที่: ${this.filterDateFrom || 'เริ่มต้น'} ถึง ${this.filterDateTo || 'ปัจจุบัน'}`
-      : `ข้อมูลประจำวันที่: ${new Date().toLocaleDateString('th-TH', { dateStyle: 'full' })}`;
+    const dateRangeStr = (dateFrom !== dateTo)
+      ? `ช่วงวันที่: ${dateFrom} ถึง ${dateTo}`
+      : `ข้อมูลประจำวันที่: ${new Date(dateFrom).toLocaleDateString('th-TH', { dateStyle: 'full' })}`;
 
     // Group by truck for summary table
     const truckSummaryMap = {};
+    const allDrivers = window.quarryStore.getDrivers() || [];
+    const allTrucks = window.quarryStore.getTrucks() || [];
+
     trips.forEach(t => {
       const key = t.truckPlate;
       if (!truckSummaryMap[key]) {
+        const matchedDriver = allDrivers.find(d => d.name === t.driverName) 
+          || allTrucks.find(tr => tr.code === t.truckPlate);
+        const resolvedPhone = t.driverPhone || matchedDriver?.phone || matchedDriver?.driver_phone || '-';
+
         truckSummaryMap[key] = {
           truckPlate: t.truckPlate,
           capacityTon: t.capacityTon || 30,
           driverName: t.driverName,
-          driverPhone: t.driverPhone,
+          driverPhone: resolvedPhone,
           tripsCount: 0,
           totalAmount: 0
         };
