@@ -1878,14 +1878,31 @@ class ReportsView {
     `;
   }
 
+  getOrCreateModalContainer() {
+    let container = document.getElementById('export-modal-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'export-modal-container';
+      document.body.appendChild(container);
+    }
+    return container;
+  }
+
+  getAuditDocNumber(a) {
+    if (!a) return 'AUD-OFFICIAL';
+    if (a.docNumber && /^AUD-\d{8}-\d{3,}$/.test(a.docNumber)) return a.docNumber;
+    if (a.id && /^AUD-\d{8}-\d{3,}$/.test(a.id)) return a.id;
+    const d = (a.date || new Date().toISOString().split('T')[0]).replace(/-/g, '');
+    return a.docNumber || a.id || `AUD-${d}-001`;
+  }
+
   // -------------------------------------------------------------
   // EXPORT MODAL (2 วัตถุประสงค์: สรุปการเงินอนุมัติ VS หลักฐานรูปถ่ายรับ-เท)
   // -------------------------------------------------------------
   openExportModal() {
     const trucks = window.quarryStore.getTrucks();
     const drivers = window.quarryStore.getDrivers();
-    const container = document.getElementById('export-modal-container');
-    if (!container) return;
+    const container = this.getOrCreateModalContainer();
 
     container.innerHTML = `
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
@@ -2197,6 +2214,11 @@ class ReportsView {
   autoSyncLiveAnomalies() {
     const ai = window.quarryAI || window.aiEngine;
     if (!ai) return;
+
+    if (window.quarryStore && typeof window.quarryStore.migrateIncidentAuditIds === 'function') {
+      window.quarryStore.migrateIncidentAuditIds();
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const anomalies = ai.detectAnomalies(this.filterDateFrom || today, this.filterDateTo || today);
     if (!anomalies || anomalies.length === 0) return;
@@ -2205,11 +2227,12 @@ class ReportsView {
 
     anomalies.forEach(ano => {
       const anoRef = ano.id || ano.referenceId;
-      const auditId = 'AUD_AI_' + String(anoRef).replace(/[^a-zA-Z0-9]/g, '_');
-      const exists = existingAudits.some(a => a.id === auditId || a.referenceId === anoRef);
+      const exists = existingAudits.some(a => a.referenceId === anoRef || a.id === anoRef || a.legacyId === anoRef);
       if (!exists) {
+        const auditDocNumber = window.quarryStore.getNextAuditDocNumber(ano.date || today);
         window.quarryStore.saveIncidentAudit({
-          id: auditId,
+          id: auditDocNumber,
+          docNumber: auditDocNumber,
           title: ano.title,
           category: ano.type === 'speed_dump_fast' || ano.type === 'speed_consecutive' ? 'trip_speed' : (ano.type === 'gps_same_location' ? 'gps_location' : 'reconciliation'),
           severity: ano.severity || 'warning',
@@ -2370,6 +2393,7 @@ class ReportsView {
             const isCertified = a.status === 'certified';
             const isRejected = a.status === 'rejected';
             const isCritical = a.severity === 'critical';
+            const docNumber = this.getAuditDocNumber(a);
 
             return `
               <div class="bg-slate-900 border ${isCertified ? 'border-emerald-500/40' : (isRejected ? 'border-red-500/50' : (isCritical ? 'border-red-500/70 shadow-red-500/5 shadow-lg' : 'border-amber-500/50'))} rounded-2xl p-4 sm:p-5 shadow-md space-y-3.5 transition hover:border-blue-400">
@@ -2383,9 +2407,10 @@ class ReportsView {
                       ${isCritical ? '🚨 วิกฤต / ด่วน' : '⚠️ ข้อสังเกต'}
                     </span>
 
-                    <!-- ID Tag -->
-                    <span class="px-2 py-1 bg-slate-950 text-slate-400 border border-slate-800 rounded-lg text-xs font-mono font-bold">
-                      #${a.id}
+                    <!-- Professional Document Number Tag -->
+                    <span class="px-2.5 py-1 bg-slate-950 text-blue-400 border border-blue-500/40 rounded-lg text-xs font-mono font-black tracking-wide flex items-center gap-1 shadow-inner">
+                      <span class="text-slate-500 font-normal text-[10px]">เลขที่:</span>
+                      <span>${docNumber}</span>
                     </span>
 
                     <!-- Title -->
@@ -2494,14 +2519,16 @@ class ReportsView {
   // --------------------------------------------------------------------------
   openCertifyModal(auditId) {
     const audits = window.quarryStore.getIncidentAudits();
-    const audit = audits.find(a => a.id === auditId);
-    if (!audit) return;
+    const audit = audits.find(a => a.id === auditId || a.docNumber === auditId || a.legacyId === auditId);
+    if (!audit) return alert('ไม่พบข้อมูลเอกสารตรวจสอบนี้');
 
     const currentUser = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.CURRENT_USER) || '{}');
     const defaultSupervisor = currentUser.name || 'หัวหน้างานคุมลาน (Supervisor)';
+    const docNumber = this.getAuditDocNumber(audit);
 
-    const container = document.getElementById('export-modal-container');
-    if (!container) return;
+    const container = this.getOrCreateModalContainer();
+    this.canvasWasCleared = false;
+    this.canvasHasDrawn = false;
 
     container.innerHTML = `
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
@@ -2513,7 +2540,12 @@ class ReportsView {
                 <i data-lucide="check-square" class="w-5 h-5 text-emerald-400"></i>
                 บันทึกผลตรวจสอบ & เซ็นชื่อรับรอง
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">รหัสเอกสาร: #${audit.id} | ${audit.title}</p>
+              <p class="text-xs text-slate-300 mt-1 flex items-center gap-2 flex-wrap">
+                <span class="font-bold text-slate-400">เลขที่เอกสาร:</span>
+                <span class="px-2 py-0.5 bg-slate-950 text-blue-400 border border-blue-500/40 rounded font-mono font-black">${docNumber}</span>
+                <span class="text-slate-500">•</span>
+                <span class="text-slate-200 font-semibold">${audit.title}</span>
+              </p>
             </div>
             <button onclick="reportsView.closeExportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
           </div>
@@ -2706,6 +2738,7 @@ class ReportsView {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.canvasHasDrawn = false;
+    this.canvasWasCleared = true;
   }
 
   async saveCertification(auditId) {
@@ -2722,12 +2755,19 @@ class ReportsView {
       return alert('กรุณาระบุข้อสรุปการตัดสินหรือมาตรการ');
     }
 
-    let signatureDataUrl = null;
+    const audits = window.quarryStore.getIncidentAudits();
+    const existingAudit = audits.find(a => a.id === auditId || a.docNumber === auditId || a.legacyId === auditId);
+    let signatureDataUrl = existingAudit?.supervisorSignature || null;
+    if (this.canvasWasCleared) {
+      signatureDataUrl = null;
+    }
     if (canvas && this.canvasHasDrawn) {
       signatureDataUrl = canvas.toDataURL('image/png');
     }
 
-    await window.quarryStore.certifyIncidentAudit(auditId, {
+    const targetId = existingAudit ? existingAudit.id : auditId;
+
+    await window.quarryStore.certifyIncidentAudit(targetId, {
       investigationResult: result,
       resolution: resolution,
       status: status,
@@ -2740,13 +2780,16 @@ class ReportsView {
     window.app.render();
   }
 
+  openNewAnomalyModal() {
+    return this.openCreateAnomalyModal();
+  }
+
   openCreateAnomalyModal() {
     const trucks = window.quarryStore.getTrucks();
     const drivers = window.quarryStore.getDrivers();
     const today = new Date().toISOString().split('T')[0];
 
-    const container = document.getElementById('export-modal-container');
-    if (!container) return;
+    const container = this.getOrCreateModalContainer();
 
     container.innerHTML = `
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
@@ -2847,8 +2890,10 @@ class ReportsView {
     if (!title) return alert('กรุณาระบุหัวข้อความผิดปกติ');
     if (!details) return alert('กรุณาระบุข้อเท็จจริงและความผิดปกติที่พบ');
 
+    const docNumber = window.quarryStore.getNextAuditDocNumber(date);
     window.quarryStore.saveIncidentAudit({
-      id: 'AUD_' + Date.now().toString().slice(-6),
+      id: docNumber,
+      docNumber: docNumber,
       title: title,
       category: category,
       severity: severity,
@@ -2876,17 +2921,20 @@ class ReportsView {
     const existingAudits = window.quarryStore.getIncidentAudits();
 
     anomalies.forEach(ano => {
-      const exists = existingAudits.some(a => a.referenceId === (ano.referenceId || ano.id));
+      const anoRef = ano.referenceId || ano.id;
+      const exists = existingAudits.some(a => a.referenceId === anoRef || a.id === anoRef || a.legacyId === anoRef);
       if (!exists) {
+        const docNumber = window.quarryStore.getNextAuditDocNumber(ano.date || new Date().toISOString().split('T')[0]);
         window.quarryStore.saveIncidentAudit({
-          id: 'AUD_AI_' + Date.now().toString().slice(-5) + '_' + Math.random().toString(36).substr(2, 3),
+          id: docNumber,
+          docNumber: docNumber,
           title: ano.title,
           category: ano.type === 'speed_dump_fast' || ano.type === 'speed_consecutive' ? 'trip_speed' : (ano.type === 'gps_same_location' ? 'gps_location' : 'other'),
           severity: ano.severity || 'warning',
           targetVehicle: ano.vehicleCode || '',
           targetDriver: ano.driverName || '',
           date: ano.date || new Date().toISOString().split('T')[0],
-          referenceId: ano.referenceId || ano.id,
+          referenceId: anoRef,
           anomalyDetails: ano.desc,
           investigationResult: '',
           resolution: '',
@@ -2935,8 +2983,9 @@ class ReportsView {
   // Print Single Incident Certificate (Official A4 Format)
   printSingleAnomalyCertificate(auditId) {
     const audits = window.quarryStore.getIncidentAudits();
-    const a = audits.find(x => x.id === auditId);
-    if (!a) return;
+    const a = audits.find(x => x.id === auditId || x.docNumber === auditId || x.legacyId === auditId);
+    if (!a) return alert('ไม่พบข้อมูลเอกสารตรวจสอบนี้');
+    const docNumber = this.getAuditDocNumber(a);
 
     const printWin = window.open('', '_blank');
     if (!printWin) return alert('กรุณาอนุญาต Pop-up บนเบราว์เซอร์เพื่อพิมพ์เอกสาร');
@@ -2946,7 +2995,7 @@ class ReportsView {
       <html lang="th">
       <head>
         <meta charset="UTF-8">
-        <title>ใบรับรองผลการตรวจสอบความผิดปกติ - #${a.id}</title>
+        <title>ใบรับรองผลการตรวจสอบความผิดปกติ - ${docNumber}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800;900&display=swap');
@@ -2967,7 +3016,7 @@ class ReportsView {
           </div>
           <div class="text-right">
             <span class="px-3 py-1 bg-slate-900 text-white font-black text-xs rounded">เอกสารตรวจสอบภายใน</span>
-            <p class="text-xs font-mono font-bold mt-1">เลขที่: #${a.id}</p>
+            <p class="text-xs font-mono font-bold mt-1">เลขที่เอกสาร: <span class="text-blue-700">${docNumber}</span></p>
             <p class="text-xs text-slate-600">วันที่: ${a.date}</p>
           </div>
         </div>

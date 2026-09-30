@@ -127,7 +127,7 @@ class QuarryStore {
 
     this.excavatorLogs = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.EXCAVATOR_LOGS) || '[]');
     this.incidentAudits = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS) || '[]');
-
+    this.migrateIncidentAuditIds();
 
     this.pendingSyncQueue = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.PENDING_SYNC) || '[]');
 
@@ -948,12 +948,62 @@ class QuarryStore {
     return result.sort((a, b) => (b.date + ' ' + (b.recordedAt || '')).localeCompare(a.date + ' ' + (a.recordedAt || '')));
   }
 
-  saveIncidentAudit(auditData) {
-    if (!auditData.id) {
-      auditData.id = 'AUD_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+  getNextAuditDocNumber(dateStr) {
+    const cleanDate = (dateStr || new Date().toISOString().split('T')[0]).replace(/-/g, '');
+    const prefix = `AUD-${cleanDate}-`;
+    let maxSeq = 0;
+    this.incidentAudits.forEach(a => {
+      const doc = a.docNumber || a.id;
+      if (doc && String(doc).startsWith(prefix)) {
+        const num = parseInt(String(doc).substring(prefix.length), 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    });
+    return `${prefix}${String(maxSeq + 1).padStart(3, '0')}`;
+  }
+
+  migrateIncidentAuditIds() {
+    let changed = false;
+    const dateGroups = {};
+    this.incidentAudits.forEach((a) => {
+      const isProfessional = /^AUD-\d{8}-\d{3,}$/.test(a.docNumber || a.id);
+      if (!isProfessional) {
+        const dateKey = (a.date || new Date().toISOString().split('T')[0]).replace(/-/g, '');
+        dateGroups[dateKey] = (dateGroups[dateKey] || 0) + 1;
+        const newDocNumber = `AUD-${dateKey}-${String(dateGroups[dateKey]).padStart(3, '0')}`;
+        a.legacyId = a.legacyId || a.id;
+        a.id = newDocNumber;
+        a.docNumber = newDocNumber;
+        changed = true;
+      } else if (!a.docNumber) {
+        a.docNumber = a.id;
+        changed = true;
+      }
+    });
+    if (changed) {
+      try {
+        localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits));
+      } catch (e) {}
     }
+  }
+
+  saveIncidentAudit(auditData) {
     if (!auditData.date) {
       auditData.date = new Date().toISOString().split('T')[0];
+    }
+    if (!auditData.docNumber) {
+      if (auditData.id && /^AUD-\d{8}-\d{3,}$/.test(auditData.id)) {
+        auditData.docNumber = auditData.id;
+      } else {
+        auditData.docNumber = this.getNextAuditDocNumber(auditData.date);
+      }
+    }
+    if (!auditData.id || auditData.id.startsWith('AUD_AI_') || auditData.id.startsWith('AUD_')) {
+      if (!/^AUD-\d{8}-\d{3,}$/.test(auditData.id)) {
+        auditData.id = auditData.docNumber;
+      }
     }
     if (!auditData.recordedAt) {
       auditData.recordedAt = new Date().toISOString();
@@ -962,7 +1012,11 @@ class QuarryStore {
       auditData.status = 'investigating';
     }
 
-    const idx = this.incidentAudits.findIndex(a => a.id === auditData.id);
+    const idx = this.incidentAudits.findIndex(a => 
+      a.id === auditData.id || 
+      (auditData.docNumber && a.docNumber === auditData.docNumber) ||
+      (auditData.referenceId && a.referenceId === auditData.referenceId)
+    );
     if (idx >= 0) {
       this.incidentAudits[idx] = { ...this.incidentAudits[idx], ...auditData };
     } else {
@@ -981,13 +1035,15 @@ class QuarryStore {
   }
 
   certifyIncidentAudit(auditId, { investigationResult, resolution, supervisorName, signatureDataUrl, status = 'certified' }) {
-    const audit = this.incidentAudits.find(a => a.id === auditId);
+    const audit = this.incidentAudits.find(a => a.id === auditId || a.docNumber === auditId || a.legacyId === auditId);
     if (!audit) return null;
 
     audit.investigationResult = investigationResult;
     audit.resolution = resolution;
     audit.supervisorName = supervisorName;
-    audit.supervisorSignature = signatureDataUrl;
+    if (signatureDataUrl !== undefined) {
+      audit.supervisorSignature = signatureDataUrl;
+    }
     audit.status = status;
     audit.certifiedAt = new Date().toISOString();
 
@@ -995,13 +1051,15 @@ class QuarryStore {
   }
 
   deleteIncidentAudit(auditId) {
-    this.incidentAudits = this.incidentAudits.filter(a => a.id !== auditId);
+    const target = this.incidentAudits.find(a => a.id === auditId || a.docNumber === auditId || a.legacyId === auditId);
+    const targetId = target ? target.id : auditId;
+    this.incidentAudits = this.incidentAudits.filter(a => a.id !== targetId && a.docNumber !== targetId && a.legacyId !== targetId);
     try {
       localStorage.setItem(CONFIG.STORAGE_KEYS.INCIDENT_AUDITS, JSON.stringify(this.incidentAudits));
     } catch (e) {}
 
     if (this.supabase && navigator.onLine) {
-      this.supabase.from('incident_audits').delete().eq('id', auditId).then(() => {}).catch(err => console.warn(err));
+      this.supabase.from('incident_audits').delete().eq('id', targetId).then(() => {}).catch(err => console.warn(err));
     }
     this.notify();
   }
