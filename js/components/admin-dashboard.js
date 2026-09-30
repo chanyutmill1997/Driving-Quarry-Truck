@@ -786,9 +786,9 @@ class AdminDashboard {
   }
 
   openTruckDetail(code) {
-    const truck = window.quarryStore.getTrucks().find(t => t.code === code);
+    const truck = window.quarryStore.getTrucks().find(t => t.code === code || t.code.startsWith(code) || t.code.includes(code));
     if (!truck) return;
-    const allTrips = window.quarryStore.getTrips({ truckPlate: code });
+    const allTrips = window.quarryStore.getTrips({ truckPlate: truck.code });
     const today = this.selectedDate || new Date().toISOString().split('T')[0];
     const todayTrips = allTrips.filter(t => t.date === today);
     const totalToday = todayTrips.reduce((sum, t) => sum + Number(t.amount || 0), 0);
@@ -813,10 +813,11 @@ class AdminDashboard {
   }
 
   openExcavatorDetail(code) {
-    const excavator = window.quarryStore.getExcavators().find(e => e.code === code);
+    const excavator = window.quarryStore.getExcavators().find(e => e.code === code || e.code.startsWith(code) || e.code.includes(code));
     if (!excavator) return;
-    const allLogs = window.quarryStore.getExcavatorLogs({ excavatorCode: code });
+    const allLogs = window.quarryStore.getExcavatorLogs({ excavatorCode: excavator.code });
     const today = this.selectedDate || new Date().toISOString().split('T')[0];
+    const todayLogs = allLogs.filter(l => l.date === today);
     const trucks = window.quarryStore.getTrucks();
     const getAmt = (l) => {
       if (l.amount && Number(l.amount) > 0) return Number(l.amount);
@@ -850,12 +851,72 @@ class AdminDashboard {
 
   renderTruckHistory(items) {
     if (!items.length) return '<div class="text-center py-8 text-slate-500 text-sm bg-slate-950 rounded-2xl border border-slate-800">ยังไม่มีประวัติงานของรถคันนี้</div>';
-    return `<div><h4 class="font-black text-white mb-3">ประวัติเที่ยวล่าสุด</h4><div class="space-y-2">${items.map(t => `<div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3"><div><p class="text-sm font-bold text-white">รอบ ${t.roundNumber || '-'} • ${t.jobTypeName || '-'}</p><p class="text-[11px] text-slate-400">${t.date || ''} ${t.timestamp || ''} • ${t.driverName || '-'}</p></div><p class="font-black text-emerald-400">฿${Number(t.amount || 0).toLocaleString()}</p></div>`).join('')}</div></div>`;
+    return `
+      <div>
+        <h4 class="font-black text-white mb-3 flex items-center justify-between">
+          <span>ประวัติเที่ยวล่าสุด</span>
+          <span class="text-xs text-slate-400 font-normal">แตะรูปเพื่อขยาย</span>
+        </h4>
+        <div class="space-y-2.5">
+          ${items.map(t => {
+            const loadImg = t.loadPhotoUrl || t.loadPhotoBase64;
+            const dumpImg = t.dumpPhotoUrl || t.dumpPhotoBase64;
+            return `
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex-1">
+                  <p class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-blue-950 text-blue-300 text-xs rounded border border-blue-800">รอบ ${t.roundNumber || '-'}</span>
+                    <span>${t.jobTypeName || '-'}</span>
+                  </p>
+                  <p class="text-[11px] text-slate-400 mt-1">
+                    🕒 ${t.date || ''} ${t.timestamp || ''} • 👤 ${t.driverName || '-'}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  ${loadImg ? `<img src="${loadImg}" onclick="window.reportsView && window.reportsView.zoomPhoto ? window.reportsView.zoomPhoto('${t.id}', 'load') : window.open('${loadImg}')" class="w-12 h-12 object-cover rounded-lg border border-blue-500/40 cursor-pointer hover:scale-105 transition" title="รูปจุดรับหิน (แตะเพื่อขยาย)">` : ''}
+                  ${dumpImg ? `<img src="${dumpImg}" onclick="window.reportsView && window.reportsView.zoomPhoto ? window.reportsView.zoomPhoto('${t.id}', 'dump') : window.open('${dumpImg}')" class="w-12 h-12 object-cover rounded-lg border border-emerald-500/40 cursor-pointer hover:scale-105 transition" title="รูปจุดเทหิน (แตะเพื่อขยาย)">` : ''}
+                  <p class="font-black text-emerald-400 text-base min-w-[70px] text-right">฿${Number(t.amount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
   }
 
   renderExcavatorHistory(items) {
     if (!items.length) return '<div class="text-center py-8 text-slate-500 text-sm bg-slate-950 rounded-2xl border border-slate-800">ยังไม่มีประวัติงานของรถคันนี้</div>';
-    return `<div><h4 class="font-black text-white mb-3">ประวัติงานล่าสุด</h4><div class="space-y-2">${items.map(l => `<div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3"><div><p class="text-sm font-bold text-white">ตักให้รถ ${l.targetTruckPlate || '-'}</p><p class="text-[11px] text-slate-400">${l.date || ''} ${l.timestamp || ''} • ${l.operatorName || '-'}</p></div><p class="font-black text-emerald-400">฿${Number(l.amount || 0).toLocaleString()}</p></div>`).join('')}</div></div>`;
+    return `
+      <div>
+        <h4 class="font-black text-white mb-3 flex items-center justify-between">
+          <span>ประวัติงานล่าสุด</span>
+          <span class="text-xs text-slate-400 font-normal">แตะรูปเพื่อขยาย</span>
+        </h4>
+        <div class="space-y-2.5">
+          ${items.map(l => {
+            const scoopImg = l.photoUrl || l.photoBase64;
+            return `
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex-1">
+                  <p class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-cyan-950 text-cyan-300 text-xs rounded border border-cyan-800">ตักให้รถ</span>
+                    <span class="font-mono">${l.targetTruckPlate || '-'}</span>
+                  </p>
+                  <p class="text-[11px] text-slate-400 mt-1">
+                    🕒 ${l.date || ''} ${l.timestamp || ''} • 👤 ${l.operatorName || '-'}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  ${scoopImg ? `<img src="${scoopImg}" onclick="window.open('${scoopImg}')" class="w-12 h-12 object-cover rounded-lg border border-cyan-500/40 cursor-pointer hover:scale-105 transition" title="รูปตักหิน (แตะเพื่อขยาย)">` : ''}
+                  <p class="font-black text-emerald-400 text-base min-w-[70px] text-right">฿${Number(l.amount || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
   }
 
   showVehicleModal(titleText, contentHtml) {

@@ -646,7 +646,13 @@ class QuarryStore {
   // Excavator Logs Methods
   // -------------------------------------------------------------
   saveExcavatorLog(logData) {
-    const { photoBase64, ...localLog } = logData;
+    const logToSave = {
+      ...logData,
+      photoUrl: logData.photoUrl || logData.photoBase64 || null
+    };
+    const { photoBase64, ...localLog } = logToSave;
+    localLog.photoUrl = logToSave.photoUrl;
+
     const existingIndex = this.excavatorLogs.findIndex(l => l.id === localLog.id);
     if (existingIndex >= 0) {
       this.excavatorLogs[existingIndex] = { ...this.excavatorLogs[existingIndex], ...localLog };
@@ -813,11 +819,11 @@ class QuarryStore {
       job_type_name: trip.jobTypeName || '',
       amount: Number(trip.amount) || this.calculateTruckRate(trip.jobTypeId, Number(trip.capacityTon) || 0),
       load_photo_url: loadUrl,
-      load_lat: trip.loadGps && trip.loadGps.lat ? Number(trip.loadGps.lat) : null,
-      load_lng: trip.loadGps && trip.loadGps.lng ? Number(trip.loadGps.lng) : null,
+      load_lat: (trip.loadLat !== undefined && trip.loadLat !== '') ? Number(trip.loadLat) : (trip.loadGps && trip.loadGps.lat ? Number(trip.loadGps.lat) : null),
+      load_lng: (trip.loadLng !== undefined && trip.loadLng !== '') ? Number(trip.loadLng) : (trip.loadGps && trip.loadGps.lng ? Number(trip.loadGps.lng) : null),
       dump_photo_url: dumpUrl,
-      dump_lat: trip.dumpGps && trip.dumpGps.lat ? Number(trip.dumpGps.lat) : null,
-      dump_lng: trip.dumpGps && trip.dumpGps.lng ? Number(trip.dumpGps.lng) : null,
+      dump_lat: (trip.dumpLat !== undefined && trip.dumpLat !== '') ? Number(trip.dumpLat) : (trip.dumpGps && trip.dumpGps.lat ? Number(trip.dumpGps.lat) : null),
+      dump_lng: (trip.dumpLng !== undefined && trip.dumpLng !== '') ? Number(trip.dumpLng) : (trip.dumpGps && trip.dumpGps.lng ? Number(trip.dumpGps.lng) : null),
       status: trip.status || 'approved'
     };
 
@@ -862,8 +868,8 @@ class QuarryStore {
       target_truck_plate: log.targetTruckPlate,
       amount: Number(log.amount) || 5.0,
       photo_url: photoUrl,
-      lat: log.gps && log.gps.lat ? Number(log.gps.lat) : null,
-      lng: log.gps && log.gps.lng ? Number(log.gps.lng) : null,
+      lat: (log.lat !== undefined && log.lat !== '') ? Number(log.lat) : (log.gps && log.gps.lat ? Number(log.gps.lat) : null),
+      lng: (log.lng !== undefined && log.lng !== '') ? Number(log.lng) : (log.gps && log.gps.lng ? Number(log.gps.lng) : null),
       status: log.status || 'completed'
     };
 
