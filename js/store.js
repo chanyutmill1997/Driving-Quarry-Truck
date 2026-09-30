@@ -783,23 +783,23 @@ class QuarryStore {
 
   async syncTripToSupabase(trip) {
     const todayStr = trip.date || new Date().toISOString().split('T')[0];
-    // ปรับชื่อโฟลเดอร์รถให้สะอาด (เช่น C2-38 หรือ C2-38_HINO)
-    const cleanVehicle = (trip.truckPlate || 'TRUCK_UNKNOWN').replace(/[\/\s]+/g, '_');
+    // ปรับชื่อรหัสรถและชื่อไฟล์ให้เป็น Pure ASCII เพื่อให้ Supabase Storage (S3) ยอมรับ 100%
+    const cleanVehicle = (trip.truckPlate || 'TRUCK').split(' ')[0].replace(/[^\w\d.-]+/g, '_');
     const roundNumber = trip.roundNumber || 1;
     const timeSafe = (trip.timestamp || '').replace(/[:\s\/\.]+/g, '-').slice(0, 8) || Date.now().toString().slice(-6);
-    let loadUrl = trip.loadPhotoUrl || null;
-    let dumpUrl = trip.dumpPhotoUrl || null;
+    let loadUrl = (trip.loadPhotoUrl && trip.loadPhotoUrl.startsWith('http')) ? trip.loadPhotoUrl : null;
+    let dumpUrl = (trip.dumpPhotoUrl && trip.dumpPhotoUrl.startsWith('http')) ? trip.dumpPhotoUrl : null;
 
-    // 1. อัปโหลดรูปจุดรับหิน: เช่น trips/2026-09-28/C2-38/2026-09-28_C2-38_รอบที่1_จุดรับหิน_14-30-00.jpg
+    // 1. อัปโหลดรูปจุดรับหิน: Pure ASCII path (เช่น trips/2026-09-30/C2-38/2026-09-30_C2-38_r1_load_14-30-00.jpg)
     if (trip.loadPhotoBase64 && !loadUrl) {
-      const loadFileName = `${todayStr}_${cleanVehicle}_รอบที่${roundNumber}_จุดรับหิน_${timeSafe}.jpg`;
+      const loadFileName = `${todayStr}_${cleanVehicle}_r${roundNumber}_load_${timeSafe}.jpg`;
       const path = `trips/${todayStr}/${cleanVehicle}/${loadFileName}`;
       loadUrl = await this.uploadPhotoToSupabaseStorage(trip.loadPhotoBase64, path);
     }
 
-    // 2. อัปโหลดรูปจุดเทหิน: เช่น trips/2026-09-28/C2-38/2026-09-28_C2-38_รอบที่1_จุดเทหิน_14-45-00.jpg
+    // 2. อัปโหลดรูปจุดเทหิน: Pure ASCII path (เช่น trips/2026-09-30/C2-38/2026-09-30_C2-38_r1_dump_14-45-00.jpg)
     if (trip.dumpPhotoBase64 && !dumpUrl) {
-      const dumpFileName = `${todayStr}_${cleanVehicle}_รอบที่${roundNumber}_จุดเทหิน_${timeSafe}.jpg`;
+      const dumpFileName = `${todayStr}_${cleanVehicle}_r${roundNumber}_dump_${timeSafe}.jpg`;
       const path = `trips/${todayStr}/${cleanVehicle}/${dumpFileName}`;
       dumpUrl = await this.uploadPhotoToSupabaseStorage(trip.dumpPhotoBase64, path);
     }
@@ -846,14 +846,14 @@ class QuarryStore {
 
   async syncExcavatorLogToSupabase(log) {
     const todayStr = log.date || new Date().toISOString().split('T')[0];
-    const cleanExcCode = (log.excavatorCode || 'EXC_UNKNOWN').replace(/[\/\s]+/g, '_');
-    const cleanTruckPlate = (log.targetTruckPlate || 'TRUCK').replace(/[\/\s]+/g, '_');
+    const cleanExcCode = (log.excavatorCode || 'EXC').split(' ')[0].replace(/[^\w\d.-]+/g, '_');
+    const cleanTruckPlate = (log.targetTruckPlate || 'TRUCK').split(' ')[0].replace(/[^\w\d.-]+/g, '_');
     const timeSafe = (log.timestamp || '').replace(/[:\s\/\.]+/g, '-').slice(0, 8) || Date.now().toString().slice(-6);
-    let photoUrl = log.photoUrl || null;
+    let photoUrl = (log.photoUrl && log.photoUrl.startsWith('http')) ? log.photoUrl : null;
 
-    // เช่น: excavators/2026-09-28/CAT_320-01/2026-09-28_CAT_320-01_ตักให้_C2-38_14-30-00.jpg
+    // เช่น: excavators/2026-09-30/C1-49/2026-09-30_C1-49_scoop_C2-38_14-30-00.jpg
     if (log.photoBase64 && !photoUrl) {
-      const excFileName = `${todayStr}_${cleanExcCode}_ตักให้_${cleanTruckPlate}_${timeSafe}.jpg`;
+      const excFileName = `${todayStr}_${cleanExcCode}_scoop_${cleanTruckPlate}_${timeSafe}.jpg`;
       const path = `excavators/${todayStr}/${cleanExcCode}/${excFileName}`;
       photoUrl = await this.uploadPhotoToSupabaseStorage(log.photoBase64, path);
     }
