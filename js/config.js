@@ -7,7 +7,7 @@ const CONFIG = {
   COMPANY_NAME: "บริษัท ชาญยุทธการศิลาเลย (1997) จำกัด",
   COMPANY_ENG_NAME: "CHANYUTH MILL (1997) CO., LTD.",
   COMPANY_SLOGAN: "ให้บริการโม่หินผสมคลุก ยางแอสฟัลท์ติกคอนกรีต หินคลุก หินเกล็ด และวัสดุก่อสร้างครบวงจร",
-  VERSION: "2.9.0",
+  VERSION: "2.9.1",
   // Supabase PostgreSQL & Storage Settings
   SUPABASE_URL: "https://gkkndbjgkzninlddfxyj.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_WTSz40n7tX2IzaJxZAN4TQ_IozqzRT0",
