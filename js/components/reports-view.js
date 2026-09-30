@@ -2193,8 +2193,45 @@ class ReportsView {
 
   // --------------------------------------------------------------------------
   // 4. โหมดรายงานความผิดปกติ & การรับรองผล (Anomaly & Certification Audits - จัดระเบียบใหม่ สะอาดตา ไม่รก)
-  // --------------------------------------------------------------------------
+  // ซิงก์ความผิดปกติล่าสุดจาก AI Engine อัตโนมัติ เพื่อให้ยอดตรงกับแดชบอร์ด 100%
+  autoSyncLiveAnomalies() {
+    const ai = window.quarryAI || window.aiEngine;
+    if (!ai) return;
+    const today = new Date().toISOString().split('T')[0];
+    const anomalies = ai.detectAnomalies(this.filterDateFrom || today, this.filterDateTo || today);
+    if (!anomalies || anomalies.length === 0) return;
+
+    const existingAudits = window.quarryStore.getIncidentAudits();
+
+    anomalies.forEach(ano => {
+      const anoRef = ano.id || ano.referenceId;
+      const auditId = 'AUD_AI_' + String(anoRef).replace(/[^a-zA-Z0-9]/g, '_');
+      const exists = existingAudits.some(a => a.id === auditId || a.referenceId === anoRef);
+      if (!exists) {
+        window.quarryStore.saveIncidentAudit({
+          id: auditId,
+          title: ano.title,
+          category: ano.type === 'speed_dump_fast' || ano.type === 'speed_consecutive' ? 'trip_speed' : (ano.type === 'gps_same_location' ? 'gps_location' : 'reconciliation'),
+          severity: ano.severity || 'warning',
+          targetVehicle: ano.vehicleCode || '',
+          targetDriver: ano.driverName || '',
+          date: ano.date || today,
+          referenceId: anoRef,
+          anomalyDetails: ano.desc,
+          investigationResult: '',
+          resolution: '',
+          status: 'investigating',
+          supervisorName: '',
+          supervisorSignature: null,
+          certifiedAt: null
+        });
+      }
+    });
+  }
+
   renderAnomaliesMode(trips, excLogs, trucks, drivers) {
+    this.autoSyncLiveAnomalies();
+
     const audits = window.quarryStore.getIncidentAudits({
       status: this.filterAnomalyStatus,
       dateFrom: this.filterDateFrom,
@@ -2415,6 +2452,18 @@ class ReportsView {
                   </span>
 
                   <div class="flex items-center gap-2">
+                    ${(() => {
+                      const matchedTrip = trips.find(t => t.id === a.referenceId);
+                      if (matchedTrip && (matchedTrip.loadPhotoUrl || matchedTrip.dumpPhotoUrl || matchedTrip.loadPhotoBase64)) {
+                        return `
+                          <button onclick="reportsView.openZoomPhoto(window.quarryStore.getTrips().find(t => t.id === '${a.referenceId}'), 'load')" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow">
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            <span>📸 ดูรูปถ่าย</span>
+                          </button>
+                        `;
+                      }
+                      return '';
+                    })()}
                     <button onclick="reportsView.openCertifyModal('${a.id}')" class="px-3.5 py-2 ${isCertified ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-400 text-white font-black'} rounded-xl text-xs transition flex items-center gap-1.5 shadow-md">
                       <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                       ${isCertified ? '✏️ แก้ไขผล & เซ็นใหม่' : '✍️ บันทึกผลสอบ & เซ็นรับรอง'}
