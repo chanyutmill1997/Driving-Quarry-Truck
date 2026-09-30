@@ -264,6 +264,13 @@ class QuarryStore {
         // ใช้ข้อมูลจาก Cloud เป็นแกนหลัก (Single Source of Truth) เพื่อความถูกต้อง 100%
         const finalMap = new Map();
         cloudTrips.forEach(ct => {
+          const existingLocal = this.trips.find(t => t.id === ct.id);
+          const resolvedDuration = (existingLocal && existingLocal.durationSeconds !== undefined && existingLocal.durationSeconds !== null)
+            ? existingLocal.durationSeconds
+            : (ct.status === 'flagged_speed' ? 30 : null);
+          const isAnomaly = ct.status === 'flagged_speed' 
+            || (resolvedDuration !== null && resolvedDuration < 180);
+
           finalMap.set(ct.id, {
             id: ct.id,
             date: ct.trip_date,
@@ -283,6 +290,8 @@ class QuarryStore {
             loadLng: ct.load_lng,
             dumpLat: ct.dump_lat,
             dumpLng: ct.dump_lng,
+            durationSeconds: resolvedDuration,
+            isSpeedAnomaly: isAnomaly,
             status: ct.status || 'approved'
           });
         });
@@ -845,8 +854,7 @@ class QuarryStore {
       load_lng: (trip.loadLng !== undefined && trip.loadLng !== '') ? Number(trip.loadLng) : (trip.loadGps && trip.loadGps.lng ? Number(trip.loadGps.lng) : null),
       dump_photo_url: dumpUrl,
       dump_lat: (trip.dumpLat !== undefined && trip.dumpLat !== '') ? Number(trip.dumpLat) : (trip.dumpGps && trip.dumpGps.lat ? Number(trip.dumpGps.lat) : null),
-      dump_lng: (trip.dumpLng !== undefined && trip.dumpLng !== '') ? Number(trip.dumpLng) : (trip.dumpGps && trip.dumpGps.lng ? Number(trip.dumpGps.lng) : null),
-      status: trip.status || 'approved'
+      status: trip.status || (trip.isSpeedAnomaly ? 'flagged_speed' : 'approved')
     };
 
     const { error } = await this.supabase

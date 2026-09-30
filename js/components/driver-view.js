@@ -249,6 +249,30 @@ class DriverView {
 
           </div>
 
+          <!-- Speed Anomaly Warning Banner (Live Real-Time Detection) -->
+          ${(() => {
+            if (this.loadPhoto && this.dumpPhoto && this.loadTime && this.dumpTime) {
+              const diffSec = Math.max(1, Math.round((this.dumpTime - this.loadTime) / 1000));
+              if (diffSec < 180) {
+                const mins = Math.floor(diffSec / 60);
+                const secs = diffSec % 60;
+                const timeText = mins > 0 ? `${mins} นาที ${secs} วินาที` : `${secs} วินาที`;
+                return `
+                  <div class="p-3.5 bg-red-950/80 border-2 border-red-500/80 rounded-2xl flex items-start gap-3 mt-3 text-left shadow-lg">
+                    <span class="text-2xl animate-bounce">🚨</span>
+                    <div>
+                      <p class="font-black text-sm text-red-400">แจ้งเตือน: ถ่ายรูปจุดรับและจุดเทห่างกันเพียง ${timeText}</p>
+                      <p class="text-xs text-red-200 mt-1 leading-relaxed">
+                        เวลาเดินทางน้อยกว่าเกณฑ์ปกติของโรงโม่ (เกณฑ์มาตรฐานอย่างน้อย 3-5 นาที) เมื่อกดบันทึก ระบบจะส่งสัญญาณแจ้งเตือนไปยังหัวหน้างานเพื่อตรวจสอบหลักฐานภาพถ่าย
+                      </p>
+                    </div>
+                  </div>
+                `;
+              }
+            }
+            return '';
+          })()}
+
           <!-- Big Finish Round Button -->
           <button onclick="driverView.handleCompleteRound()" ${this.isCompletingRound ? 'disabled' : ''} class="w-full py-4.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 active:scale-98 disabled:opacity-60 text-white text-xl font-black rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 mt-3">
             <i data-lucide="check-circle-2" class="w-7 h-7 text-white"></i>
@@ -493,6 +517,27 @@ class DriverView {
       ? Math.max(1, Math.round((this.dumpTime - this.loadTime) / 1000))
       : null;
 
+    const isFastAnomaly = durationSec !== null && durationSec < 180;
+    const mins = Math.floor((durationSec || 0) / 60);
+    const secs = (durationSec || 0) % 60;
+    const timeText = mins > 0 ? `${mins} นาที ${secs} วินาที` : `${secs} วินาที`;
+
+    // แจ้งเตือนคนขับทันทีก่อนบันทึก หากพบว่าเวลาถ่ายจุดรับ-เทเร็วผิดปกติ
+    if (isFastAnomaly) {
+      const confirmed = confirm(
+        `🚨 แจ้งเตือนความผิดปกติ (ถ่ายรับ-เทเร็วเกินไป)\n\n` +
+        `ระบบตรวจพบว่าคุณถ่ายรูปจุดรับและจุดเทห่างกันเพียง ${timeText}\n` +
+        `(เกณฑ์มาตรฐานโรงโม่กำหนดอย่างน้อย 3-5 นาที)\n\n` +
+        `• ระบบจะบันทึกเที่ยววิ่งนี้พร้อมติดแท็ก [⚠️ ส่งสัญญาณเตือนให้หัวหน้างานตรวจสอบภาพถ่าย]\n\n` +
+        `ต้องการยืนยันบันทึกรอบนี้ใช่หรือไม่?`
+      );
+      if (!confirmed) {
+        this.isCompletingRound = false;
+        window.app.render();
+        return;
+      }
+    }
+
     const tripRecord = {
       id: 'TRIP_' + Date.now(),
       date: today,
@@ -511,6 +556,10 @@ class DriverView {
       dumpTime: this.dumpTime,
       dumpTimestampText: this.dumpTimestampText || new Date().toLocaleTimeString('th-TH'),
       durationSeconds: durationSec,
+      isSpeedAnomaly: isFastAnomaly,
+      status: isFastAnomaly ? 'flagged_speed' : 'approved',
+      disbursementStatus: isFastAnomaly ? 'pending' : 'approved',
+      disbursementNotes: isFastAnomaly ? `⚠️ ตรวจพบเวลาวิ่งเร็วผิดปกติ (${timeText}) รอหัวหน้างานตรวจสอบภาพถ่าย` : 'ตรวจสอบหลักฐานถูกต้อง',
       loadPhotoBase64: this.loadPhoto,
       loadLat: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lat : '',
       loadLng: this.loadGPS && this.loadGPS.isAvailable ? this.loadGPS.lng : '',
@@ -534,7 +583,11 @@ class DriverView {
       window.quarryStore.saveTrip(tripRecord);
       this.isCompletingRound = false;
       window.app.render();
-      alert(`🎉 บันทึกรอบที่ ${roundNumber} สำเร็จ!\nพร้อมเริ่มรอบที่ ${roundNumber + 1} ได้ทันที`);
+      if (isFastAnomaly) {
+        alert(`⚠️ บันทึกรอบที่ ${roundNumber} เรียบร้อยแล้ว!\n\n(ระบบได้ติดแท็กแจ้งเตือนส่งให้หัวหน้างานตรวจสอบ เนื่องจากเวลาจุดรับ-จุดเทห่างกันเพียง ${timeText})\n\nพร้อมเริ่มรอบที่ ${roundNumber + 1} ได้ทันที`);
+      } else {
+        alert(`🎉 บันทึกรอบที่ ${roundNumber} สำเร็จ!\nพร้อมเริ่มรอบที่ ${roundNumber + 1} ได้ทันที`);
+      }
     } catch (err) {
       this.isCompletingRound = false;
       window.app.render();

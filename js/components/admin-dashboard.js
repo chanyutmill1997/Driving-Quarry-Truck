@@ -51,8 +51,8 @@ class AdminDashboard {
       perTruckList: []
     };
 
-    // 2. เรียกใช้ AI ตรวจจับความผิดปกติ
-    const anomalies = window.quarryAI ? window.quarryAI.detectAnomalies() : [];
+    // 2. เรียกใช้ AI ตรวจจับความผิดปกติประจำวันที่เลือก
+    const anomalies = window.quarryAI ? window.quarryAI.detectAnomalies(currentDate, currentDate) : [];
     const speedAnomaliesCount = anomalies.filter(a => a.type === 'speed_dump_fast').length;
     const reconAnomaliesCount = anomalies.filter(a => a.type.startsWith('recon')).length;
 
@@ -104,6 +104,28 @@ class AdminDashboard {
             </button>
           </div>
         </div>
+
+        ${anomalies.length > 0 ? `
+          <!-- Anomaly High-Priority Notification Bar -->
+          <div class="bg-red-950/80 border-2 border-red-500/80 rounded-3xl p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl">
+            <div class="flex items-start sm:items-center gap-3">
+              <span class="text-3xl animate-bounce">🚨</span>
+              <div>
+                <p class="text-white font-black text-sm">
+                  ระบบ AI ตรวจพบความผิดปกติประจำวัน <span class="text-red-400 font-extrabold underline">${anomalies.length} รายการ</span>
+                  ${speedAnomaliesCount > 0 ? `(มีรอบวิ่งถ่ายรับ-เทเร็วผิดปกติ ${speedAnomaliesCount} เที่ยว)` : ''}
+                </p>
+                <p class="text-xs text-red-200/80 mt-0.5">
+                  โปรดตรวจสอบหลักฐานภาพถ่ายจุดรับและจุดเทหิน หรือพิกัด GPS ก่อนดำเนินการอนุมัติการเบิกจ่ายเงิน
+                </p>
+              </div>
+            </div>
+            <button onclick="window.app.navigate('anomalies')" class="px-4 py-2.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+              <span>🔍 ตรวจสอบภาพถ่ายทันที</span>
+              <span>➔</span>
+            </button>
+          </div>
+        ` : ''}
 
         <!-- KPI Cards Grid -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

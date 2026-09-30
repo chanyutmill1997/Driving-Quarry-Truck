@@ -31,17 +31,35 @@ class QuarryAIEngine {
     todayTrips.forEach(t => {
       let durationSec = t.durationSeconds;
       
-      // คำนวณจาก timestamp ถ้าไม่มี durationSeconds ใน record เก่า
+      // คำนวณจาก timestamp หรือ parse จากข้อความเวลา
       if (durationSec === undefined || durationSec === null) {
         if (t.loadTime && t.dumpTime) {
           durationSec = Math.max(1, Math.round((t.dumpTime - t.loadTime) / 1000));
+        } else if (t.loadTimestampText && t.dumpTimestampText) {
+          const parseTime = (str) => {
+            const m = String(str).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+            if (m) {
+              return parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseInt(m[3] || 0);
+            }
+            return null;
+          };
+          const t1 = parseTime(t.loadTimestampText);
+          const t2 = parseTime(t.dumpTimestampText);
+          if (t1 !== null && t2 !== null && t2 >= t1) {
+            durationSec = Math.max(1, t2 - t1);
+          }
         }
       }
 
+      const isFast = t.isSpeedAnomaly 
+        || t.status === 'flagged_speed' 
+        || (durationSec !== undefined && durationSec !== null && durationSec > 0 && durationSec < 180);
+
       // ตรวจสอบเงื่อนไขความเร็วผิดปกติ (น้อยกว่า 3 นาที / 180 วินาที)
-      if (durationSec !== undefined && durationSec !== null && durationSec > 0 && durationSec < 180) {
-        const mins = Math.floor(durationSec / 60);
-        const secs = durationSec % 60;
+      if (isFast) {
+        const finalSec = (durationSec && durationSec > 0) ? durationSec : 15;
+        const mins = Math.floor(finalSec / 60);
+        const secs = finalSec % 60;
         const durationStr = mins > 0 ? `${mins} นาที ${secs} วินาที` : `${secs} วินาที`;
 
         anomalies.unshift({
